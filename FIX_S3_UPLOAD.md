@@ -8,7 +8,7 @@ The S3 bucket `laduma-import-attachments` needs CORS configuration.
 
 ---
 
-## For Backend Team / DevOps
+## For Backend Team / DevOps txt
 
 ### Quick Fix (AWS Console) - 2 minutes
 
