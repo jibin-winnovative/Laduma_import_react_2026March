@@ -1,10 +1,16 @@
 import apiClient from './apiClient';
 
 const BASE = '/api/clearing-payments';
+const PAYMENT_BASE = '/api/Payments';
+
+export type PaymentStatus = 'Pending' | 'Requested' | 'Approved' | 'Rejected' | 'Paid';
 
 export interface ClearingPaymentDashboard {
-  draftCount: number;
-  completedCount: number;
+  pendingCount: number;
+  requestedCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  paidCount: number;
 }
 
 export interface ClearingPaymentSearchRequest {
@@ -23,7 +29,7 @@ export interface ClearingPaymentListItem {
   clearingAgentName: string;
   paymentDate: string;
   clearingAmount: number;
-  status: string;
+  status: PaymentStatus;
 }
 
 export interface ClearingPaymentSearchResponse {
@@ -68,9 +74,25 @@ export interface ClearingPaymentDetail {
   paymentDate: string;
   billDate: string;
   clearingAmount: number;
-  status: string;
+  status: PaymentStatus;
   purchaseOrders?: ClearingPaymentPO[];
   pOs?: ClearingPaymentPO[];
+  paymentRequestId?: number;
+}
+
+export interface PaymentRequestResponse {
+  purchaseOrderPaymentId?: number;
+  clearingPaymentId?: number;
+  sourceModule: string;
+  sourceId: number;
+  status: PaymentStatus;
+  paymentRequestId?: number;
+  vendorId?: number;
+  vendorName?: string;
+  vendorType?: string;
+  amount?: number;
+  dueDate?: string;
+  createdAt?: string;
 }
 
 export interface ContainerPOItem {
@@ -114,6 +136,27 @@ export const clearingPaymentsService = {
 
   getContainerPOs: async (containerId: number): Promise<ContainerPOItem[]> => {
     const response = await apiClient.get<ContainerPOItem[]>(`/api/containers/${containerId}/purchase-orders`);
+    return response.data;
+  },
+
+  requestPayment: async (id: number): Promise<PaymentRequestResponse> => {
+    const response = await apiClient.post<PaymentRequestResponse>(
+      `${PAYMENT_BASE}/clearing-payment/${id}/request`
+    );
+    return response.data;
+  },
+
+  approvePayment: async (id: number): Promise<PaymentRequestResponse> => {
+    const response = await apiClient.post<PaymentRequestResponse>(
+      `${PAYMENT_BASE}/clearing-payment/${id}/approve`
+    );
+    return response.data;
+  },
+
+  rejectPayment: async (id: number): Promise<PaymentRequestResponse> => {
+    const response = await apiClient.post<PaymentRequestResponse>(
+      `${PAYMENT_BASE}/clearing-payment/${id}/reject`
+    );
     return response.data;
   },
 };

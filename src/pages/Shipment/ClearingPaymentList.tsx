@@ -18,7 +18,13 @@ interface ClearingPaymentListProps {
 
 export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: ClearingPaymentListProps) => {
   const [items, setItems] = useState<ClearingPaymentListItem[]>([]);
-  const [dashboard, setDashboard] = useState<ClearingPaymentDashboard>({ draftCount: 0, completedCount: 0 });
+  const [dashboard, setDashboard] = useState<ClearingPaymentDashboard>({
+    pendingCount: 0,
+    requestedCount: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    paidCount: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -98,10 +104,16 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
 
   const getStatusConfig = (s: string) => {
     switch (s) {
-      case 'Draft':
-        return { icon: FileEdit, color: 'text-[rgb(209,115,3)]', badge: 'bg-yellow-100 text-yellow-800' };
-      case 'Completed':
+      case 'Pending':
+        return { icon: FileEdit, color: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' };
+      case 'Requested':
+        return { icon: FileText, color: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' };
+      case 'Approved':
         return { icon: CheckCheck, color: 'text-green-700', badge: 'bg-green-100 text-green-800' };
+      case 'Rejected':
+        return { icon: FileText, color: 'text-red-700', badge: 'bg-red-100 text-red-800' };
+      case 'Paid':
+        return { icon: DollarSign, color: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-800' };
       default:
         return { icon: FileText, color: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' };
     }
@@ -132,53 +144,63 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--color-textSecondary)]">Draft Clearing Payments</p>
-              <p className="text-2xl font-bold text-[var(--color-text)] mt-2">{dashboard.draftCount}</p>
+              <p className="text-xs font-medium text-[var(--color-textSecondary)]">Pending</p>
+              <p className="text-xl font-bold text-[var(--color-text)] mt-1">{dashboard.pendingCount}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <FileEdit className="w-6 h-6 text-yellow-600" />
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <FileEdit className="w-5 h-5 text-gray-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--color-textSecondary)]">Completed Clearing Payments</p>
-              <p className="text-2xl font-bold text-[var(--color-text)] mt-2">{dashboard.completedCount}</p>
+              <p className="text-xs font-medium text-[var(--color-textSecondary)]">Requested</p>
+              <p className="text-xl font-bold text-[var(--color-text)] mt-1">{dashboard.requestedCount}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCheck className="w-6 h-6 text-green-600" />
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-blue-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--color-textSecondary)]">Total Records</p>
-              <p className="text-2xl font-bold text-[var(--color-text)] mt-2">{totalRecords}</p>
+              <p className="text-xs font-medium text-[var(--color-textSecondary)]">Approved</p>
+              <p className="text-xl font-bold text-[var(--color-text)] mt-1">{dashboard.approvedCount}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600" />
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <CheckCheck className="w-5 h-5 text-green-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--color-textSecondary)]">Total Amount</p>
-              <p className="text-2xl font-bold text-[var(--color-text)] mt-2">
-                {formatAmount(items.reduce((s, i) => s + (i.clearingAmount || 0), 0))}
-              </p>
+              <p className="text-xs font-medium text-[var(--color-textSecondary)]">Rejected</p>
+              <p className="text-xl font-bold text-[var(--color-text)] mt-1">{dashboard.rejectedCount}</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-orange-600" />
+            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-red-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-[var(--color-textSecondary)]">Paid</p>
+              <p className="text-xl font-bold text-[var(--color-text)] mt-1">{dashboard.paidCount}</p>
+            </div>
+            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
             </div>
           </div>
         </Card>
@@ -221,8 +243,11 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             >
               <option value="">All Status</option>
-              <option value="Draft">Draft</option>
-              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+              <option value="Requested">Requested</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Paid">Paid</option>
             </select>
           </div>
 

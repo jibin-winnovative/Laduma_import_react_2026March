@@ -214,19 +214,17 @@ export const ClearingPaymentForm = ({
     return lines.length > 0 ? 'Entered' : 'Pending';
   };
 
-  const validateBeforeSave = (status: 'Draft' | 'Completed'): string | null => {
+  const validateBeforeSave = (): string | null => {
     if (!containerId) return 'Please select a container.';
     if (!clearingAgentId) return 'Please select a clearing agent.';
     if (!paymentDate) return 'Please enter a payment date.';
     if (!billDate) return 'Please enter a bill date.';
     if (clearingAmount === '' || Number(clearingAmount) <= 0) return 'Please enter a valid clearing amount.';
 
-    if (status === 'Completed') {
-      const amt = Number(clearingAmount);
-      const diff = Math.abs(amt - totalChargesAllPOs);
-      if (diff > 0.01) {
-        return `Clearing Amount (${fmt(amt)}) must equal total PO charges (${fmt(totalChargesAllPOs)}).`;
-      }
+    const amt = Number(clearingAmount);
+    const diff = Math.abs(amt - totalChargesAllPOs);
+    if (diff > 0.01) {
+      return `Clearing Amount (${fmt(amt)}) must equal total PO charges (${fmt(totalChargesAllPOs)}).`;
     }
     return null;
   };
@@ -234,14 +232,14 @@ export const ClearingPaymentForm = ({
   const toISODateTime = (dateStr: string) =>
     dateStr ? `${dateStr}T00:00:00` : '';
 
-  const buildPayload = (status: 'Draft' | 'Completed'): any => ({
+  const buildPayload = (): any => ({
     ...(mode === 'edit' && clearingPaymentId ? { clearingPaymentId } : {}),
     containerId: Number(containerId),
     clearingAgentId: Number(clearingAgentId),
     paymentDate: toISODateTime(paymentDate),
     billDate: toISODateTime(billDate),
     clearingAmount: Number(clearingAmount),
-    status,
+    status: 'Pending',
     pOs: poList
       .filter((po) => (chargeMap.get(po.purchaseOrderId) || []).length > 0)
       .map((po) => ({
@@ -255,8 +253,8 @@ export const ClearingPaymentForm = ({
       })),
   });
 
-  const handleSave = async (status: 'Draft' | 'Completed') => {
-    const err = validateBeforeSave(status);
+  const handleSave = async () => {
+    const err = validateBeforeSave();
     if (err) {
       setError(err);
       return;
@@ -264,7 +262,7 @@ export const ClearingPaymentForm = ({
     setError(null);
     setSaving(true);
     try {
-      const payload = buildPayload(status);
+      const payload = buildPayload();
       if (mode === 'add') {
         await clearingPaymentsService.create(payload);
       } else if (clearingPaymentId) {
@@ -557,20 +555,12 @@ export const ClearingPaymentForm = ({
             Cancel
           </Button>
           <Button
-            onClick={() => handleSave('Draft')}
-            disabled={saving}
-            className="flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white w-full sm:w-auto"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Temp Save'}
-          </Button>
-          <Button
-            onClick={() => handleSave('Completed')}
+            onClick={handleSave}
             disabled={saving}
             className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
           >
-            <CheckCheck className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Finish'}
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>

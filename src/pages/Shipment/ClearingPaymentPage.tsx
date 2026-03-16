@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ClearingPaymentList } from './ClearingPaymentList';
 import { ClearingPaymentForm } from './ClearingPaymentForm';
+import { ViewClearingPayment } from './ViewClearingPayment';
 import { clearingPaymentsService } from '../../services/clearingPaymentsService';
 
-type ViewMode = 'list' | 'add' | 'edit';
+type ViewMode = 'list' | 'add' | 'edit' | 'view';
 
 export const ClearingPaymentPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -23,7 +24,7 @@ export const ClearingPaymentPage = () => {
 
   const handleView = (id: number) => {
     setSelectedId(id);
-    setViewMode('edit');
+    setViewMode('view');
   };
 
   const handleDelete = (id: number) => {
@@ -77,6 +78,14 @@ export const ClearingPaymentPage = () => {
       {viewMode === 'edit' && selectedId !== undefined && (
         <ClearingPaymentForm
           mode="edit"
+          clearingPaymentId={selectedId}
+          onClose={handleClose}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {viewMode === 'view' && selectedId !== undefined && (
+        <ViewClearingPayment
           clearingPaymentId={selectedId}
           onClose={handleClose}
           onSuccess={handleSuccess}
