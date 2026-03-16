@@ -260,7 +260,7 @@ export const ClearingPaymentForm = ({
       })),
   });
 
-  const handleSave = async () => {
+  const handleSaveDraft = async () => {
     const err = validateBeforeSave();
     if (err) {
       setError(err);
@@ -284,8 +284,7 @@ export const ClearingPaymentForm = ({
     }
   };
 
-  const handleRequest = async () => {
-    if (!clearingPaymentId) return;
+  const handleRequestPayment = async () => {
     const err = validateBeforeSave();
     if (err) {
       setError(err);
@@ -296,8 +295,18 @@ export const ClearingPaymentForm = ({
     setError(null);
     try {
       const payload = buildPayload();
-      await clearingPaymentsService.update(clearingPaymentId, payload);
-      await clearingPaymentsService.requestPayment(clearingPaymentId);
+      let paymentId = clearingPaymentId;
+
+      if (mode === 'add') {
+        const result = await clearingPaymentsService.create(payload);
+        paymentId = result.clearingPaymentId;
+      } else if (clearingPaymentId) {
+        await clearingPaymentsService.update(clearingPaymentId, payload);
+      }
+
+      if (paymentId) {
+        await clearingPaymentsService.requestPayment(paymentId);
+      }
       onSuccess();
     } catch (e: any) {
       console.error('Request failed:', e);
@@ -647,20 +656,31 @@ export const ClearingPaymentForm = ({
           </Button>
 
           {mode === 'add' && (
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
+            <>
+              <Button
+                onClick={handleSaveDraft}
+                disabled={saving}
+                variant="outline"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Draft'}
+              </Button>
+              <Button
+                onClick={() => setShowRequestDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Send className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Request Payment'}
+              </Button>
+            </>
           )}
 
           {mode === 'edit' && status === 'Pending' && (
             <>
               <Button
-                onClick={handleSave}
+                onClick={handleSaveDraft}
                 disabled={saving}
                 className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
               >
@@ -701,7 +721,7 @@ export const ClearingPaymentForm = ({
 
           {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
             <Button
-              onClick={handleSave}
+              onClick={handleSaveDraft}
               disabled={saving}
               className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
             >
@@ -733,7 +753,9 @@ export const ClearingPaymentForm = ({
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Request Payment</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to request payment for this clearing payment?
+              {mode === 'add'
+                ? 'This will save the clearing payment and send it for approval. Continue?'
+                : 'Are you sure you want to request payment for this clearing payment?'}
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -744,7 +766,7 @@ export const ClearingPaymentForm = ({
                 Cancel
               </button>
               <button
-                onClick={handleRequest}
+                onClick={handleRequestPayment}
                 disabled={saving}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
               >
