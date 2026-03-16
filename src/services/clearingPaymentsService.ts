@@ -17,6 +17,7 @@ export interface ClearingPaymentSearchRequest {
   containerNumber?: string;
   clearingAgent?: string;
   status?: string;
+  statuses?: string[];
   fromDate?: string | null;
   toDate?: string | null;
   pageNumber: number;

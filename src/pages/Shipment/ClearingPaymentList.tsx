@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Eye, Pencil, Trash2, Plus, Search, File as FileEdit, CheckCheck, DollarSign, FileText } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { MultiSelect } from '../../components/ui/MultiSelect';
 import {
   clearingPaymentsService,
   ClearingPaymentListItem,
@@ -33,11 +34,20 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
 
   const [containerNumber, setContainerNumber] = useState('');
   const [clearingAgent, setClearingAgent] = useState('');
-  const [status, setStatus] = useState('');
+  const [statuses, setStatuses] = useState<string[]>(['Pending', 'Requested', 'Approved', 'Rejected']);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
+  const statusOptions = [
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Requested', label: 'Requested' },
+    { value: 'Approved', label: 'Approved' },
+    { value: 'Rejected', label: 'Rejected' },
+    { value: 'Paid', label: 'Paid' },
+  ];
+
   const [appliedFilters, setAppliedFilters] = useState<ClearingPaymentSearchRequest>({
+    statuses: ['Pending', 'Requested', 'Approved', 'Rejected'],
     pageNumber: 1,
     pageSize,
   });
@@ -80,11 +90,17 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
   };
 
   const handleSearch = () => {
+    if (statuses.includes('Paid')) {
+      if (!fromDate || !toDate) {
+        alert('From Date and To Date are required when "Paid" status is selected');
+        return;
+      }
+    }
     setCurrentPage(1);
     setAppliedFilters({
       containerNumber: containerNumber || undefined,
       clearingAgent: clearingAgent || undefined,
-      status: status || undefined,
+      statuses: statuses.length > 0 ? statuses : undefined,
       fromDate: fromDate || null,
       toDate: toDate || null,
       pageNumber: 1,
@@ -95,11 +111,15 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
   const handleReset = () => {
     setContainerNumber('');
     setClearingAgent('');
-    setStatus('');
+    setStatuses(['Pending', 'Requested', 'Approved', 'Rejected']);
     setFromDate('');
     setToDate('');
     setCurrentPage(1);
-    setAppliedFilters({ pageNumber: 1, pageSize });
+    setAppliedFilters({
+      statuses: ['Pending', 'Requested', 'Approved', 'Rejected'],
+      pageNumber: 1,
+      pageSize
+    });
   };
 
   const getStatusConfig = (s: string) => {
@@ -237,18 +257,12 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-            >
-              <option value="">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Requested">Requested</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Paid">Paid</option>
-            </select>
+            <MultiSelect
+              options={statusOptions}
+              value={statuses}
+              onChange={setStatuses}
+              placeholder="Select statuses..."
+            />
           </div>
 
           <div>
