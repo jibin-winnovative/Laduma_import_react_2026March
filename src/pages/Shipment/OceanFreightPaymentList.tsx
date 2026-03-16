@@ -259,7 +259,7 @@ export const OceanFreightPaymentList = ({ onAdd, onEdit, onView, onDelete }: Oce
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Status</label>
             <MultiSelect
               options={statusOptions}
-              value={statuses}
+              selectedValues={statuses}
               onChange={setStatuses}
               placeholder="Select statuses..."
             />
