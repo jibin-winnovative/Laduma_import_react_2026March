@@ -1,0 +1,208 @@
+import apiClient from './apiClient';
+
+export interface ContainerDashboard {
+  draftCount: number;
+  confirmedCount: number;
+  inShipmentCount: number;
+  closedCount: number;
+}
+
+export interface ContainerSearchRequest {
+  companyId?: number;
+  searchText?: string;
+  status?: string;
+  fromDate?: string | null;
+  toDate?: string | null;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface ContainerListItem {
+  containerId: number;
+  containerNumber: string;
+  containerDate: string;
+  shippingCompanyName: string;
+  totalPOs: number;
+  totalCBM: number;
+  totalAmount: number;
+  status: string;
+}
+
+export interface ContainerSearchApiResponse {
+  data: Array<{
+    id: number;
+    containerNumber: string;
+    containerDate: string;
+    shippingCompanyName: string;
+    totalPOs: number;
+    totalCBM: number;
+    totalAmount: number;
+    status: string;
+  }>;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  totalRecords: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+export interface ContainerSearchResponse {
+  items: ContainerListItem[];
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  totalRecords: number;
+}
+
+export interface ContainerItem {
+  purchaseOrderItemId: number;
+  productId: number;
+  loadedQty: number;
+  price: number;
+  cbm: number;
+  extraFreight: number;
+}
+
+export interface ContainerPO {
+  purchaseOrderId: number;
+  items: ContainerItem[];
+}
+
+export interface CreateContainerRequest {
+  containerNumber: string;
+  containerDate: string;
+  shippingCompanyId: number;
+  oceanFreightCompanyId: number;
+  etd: string;
+  eta: string;
+  status: string;
+  pOs: ContainerPO[];
+}
+
+export interface UpdateContainerRequest extends CreateContainerRequest {
+  containerId: number;
+}
+
+export interface ContainerDetails {
+  containerId: number;
+  containerNumber: string;
+  containerDate: string;
+  shippingCompanyId: number;
+  shippingCompanyName: string;
+  oceanFreightCompanyId: number;
+  oceanFreightCompanyName: string;
+  etd: string;
+  eta: string;
+  status: string;
+  pOs: ContainerPODetails[];
+  totalPOs: number;
+  totalCBM: number;
+  totalAmount: number;
+}
+
+export interface ContainerPODetails {
+  purchaseOrderId: number;
+  poNumber: string;
+  poDate: string;
+  supplierName: string;
+  totalAmount: number;
+  items: ContainerItemDetails[];
+}
+
+export interface ContainerItemDetails {
+  containerItemId: number;
+  purchaseOrderItemId: number;
+  productId: number;
+  productName: string;
+  itemCode: string;
+  itemName: string;
+  orderedQty: number;
+  loadedQty: number;
+  price: number;
+  cbm: number;
+  extraFreight: number;
+  amount: number;
+  totalCBM: number;
+  uom: string;
+}
+
+export interface POForSelection {
+  purchaseOrderId: number;
+  poNumber: string;
+  supplierName: string;
+  poAmount: number;
+  totalCBM: number;
+}
+
+export interface POItemForAllocation {
+  purchaseOrderItemId: number;
+  productId: number;
+  itemCode: string;
+  itemName: string;
+  orderedQty: number;
+  loadedQty: number;
+  remainingQty: number;
+  loadQty: number;
+  uom: string;
+  price: number;
+  cbm: number;
+  amount: number;
+  extraFreight: number;
+  totalCBM: number;
+}
+
+export const containersService = {
+  getDashboard: async (): Promise<ContainerDashboard> => {
+    const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
+    return response.data;
+  },
+
+  search: async (request: ContainerSearchRequest): Promise<ContainerSearchResponse> => {
+    const response = await apiClient.post<ContainerSearchApiResponse>('/api/containers/search', request);
+    const apiData = response.data;
+    return {
+      items: (apiData.data || []).map((item) => ({
+        containerId: item.id,
+        containerNumber: item.containerNumber,
+        containerDate: item.containerDate,
+        shippingCompanyName: item.shippingCompanyName,
+        totalPOs: item.totalPOs,
+        totalCBM: item.totalCBM,
+        totalAmount: item.totalAmount,
+        status: item.status,
+      })),
+      currentPage: apiData.currentPage,
+      pageSize: apiData.pageSize,
+      totalPages: apiData.totalPages,
+      totalRecords: apiData.totalRecords,
+    };
+  },
+
+  getById: async (id: number): Promise<ContainerDetails> => {
+    const response = await apiClient.get<ContainerDetails>(`/api/containers/${id}`);
+    return response.data;
+  },
+
+  create: async (request: CreateContainerRequest): Promise<void> => {
+    await apiClient.post('/api/containers', request);
+  },
+
+  update: async (id: number, request: UpdateContainerRequest): Promise<void> => {
+    await apiClient.put(`/api/containers/${id}`, request);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete(`/api/containers/${id}`);
+  },
+
+  getAvailablePOs: async (): Promise<POForSelection[]> => {
+    const response = await apiClient.get<POForSelection[]>('/api/containers/available-pos');
+    return response.data;
+  },
+
+  getPOItems: async (poId: number): Promise<POItemForAllocation[]> => {
+    const response = await apiClient.get<POItemForAllocation[]>(`/api/PurchaseOrders/${poId}/items`);
+    return response.data;
+  },
+};
