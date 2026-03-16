@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Save, CheckCheck, Trash2, CreditCard as Edit2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, CheckCheck, Trash2, CreditCard as Edit2, AlertCircle, Search } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService } from '../../services/containersService';
@@ -12,6 +12,7 @@ import {
   ContainerPOItem,
 } from '../../services/clearingPaymentsService';
 import { POChargeEntryModal } from './POChargeEntryModal';
+import { ContainerSearchModal } from './ContainerSearchModal';
 
 interface ClearingPaymentFormProps {
   mode: 'add' | 'edit';
@@ -41,6 +42,7 @@ export const ClearingPaymentForm = ({
   const [poList, setPoList] = useState<ContainerPOItem[]>([]);
   const [chargeMap, setChargeMap] = useState<Map<number, ClearingPaymentChargeLine[]>>(new Map());
   const [chargeModalPoId, setChargeModalPoId] = useState<number | null>(null);
+  const [showContainerSearch, setShowContainerSearch] = useState(false);
 
   const [containerId, setContainerId] = useState<number | ''>('');
   const [clearingAgentId, setClearingAgentId] = useState<number | ''>('');
@@ -175,6 +177,14 @@ export const ClearingPaymentForm = ({
     if (id) {
       await loadContainerPOs(id);
     }
+  };
+
+  const handleContainerSelect = async (id: number, containerNumber: string) => {
+    setContainers([{ containerId: id, containerNumber }]);
+    setContainerId(id);
+    setPoList([]);
+    setChargeMap(new Map());
+    await loadContainerPOs(id);
   };
 
   const handleChargesSaved = (poId: number, lines: ClearingPaymentChargeLine[]) => {
@@ -336,19 +346,31 @@ export const ClearingPaymentForm = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Container <span className="text-red-500">*</span>
             </label>
-            <select
-              value={containerId}
-              onChange={(e) => handleContainerChange(e.target.value)}
-              disabled={mode === 'edit'}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
-            >
-              <option value="">Select container...</option>
-              {containers.map((c) => (
-                <option key={c.containerId} value={c.containerId}>
-                  {c.containerNumber}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={containerId}
+                onChange={(e) => handleContainerChange(e.target.value)}
+                disabled={mode === 'edit'}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
+              >
+                <option value="">Select container...</option>
+                {containers.map((c) => (
+                  <option key={c.containerId} value={c.containerId}>
+                    {c.containerNumber}
+                  </option>
+                ))}
+              </select>
+              {mode === 'add' && (
+                <Button
+                  onClick={() => setShowContainerSearch(true)}
+                  variant="secondary"
+                  className="px-3"
+                  title="Search Containers"
+                >
+                  <Search className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div>
@@ -552,6 +574,12 @@ export const ClearingPaymentForm = ({
           </Button>
         </div>
       </div>
+
+      <ContainerSearchModal
+        isOpen={showContainerSearch}
+        onClose={() => setShowContainerSearch(false)}
+        onSelect={handleContainerSelect}
+      />
 
       {chargeModalPoId !== null && chargeModalPO && (
         <POChargeEntryModal
