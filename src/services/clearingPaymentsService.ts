@@ -45,12 +45,17 @@ export interface ClearingPaymentChargeLine {
 
 export interface ClearingPaymentPO {
   clearingPaymentPoId?: number;
+  clearingPaymentDetailId?: number;
   purchaseOrderId: number;
   poNumber?: string;
+  poDate?: string;
   supplierName?: string;
+  supplierId?: number;
   invoiceAmount?: number;
   totalCbm?: number;
-  chargeLines: ClearingPaymentChargeLine[];
+  totalCBM?: number;
+  chargeLines?: ClearingPaymentChargeLine[];
+  charges?: ClearingPaymentChargeLine[];
   totalCharges?: number;
 }
 
@@ -64,7 +69,8 @@ export interface ClearingPaymentDetail {
   billDate: string;
   clearingAmount: number;
   status: string;
-  purchaseOrders: ClearingPaymentPO[];
+  purchaseOrders?: ClearingPaymentPO[];
+  pOs?: ClearingPaymentPO[];
 }
 
 export interface ContainerPOItem {

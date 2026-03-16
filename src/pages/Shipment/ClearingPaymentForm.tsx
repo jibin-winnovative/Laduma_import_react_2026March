@@ -54,12 +54,10 @@ export const ClearingPaymentForm = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDropdowns();
-  }, []);
-
-  useEffect(() => {
     if (mode === 'edit' && clearingPaymentId) {
       loadExisting();
+    } else {
+      loadDropdowns();
     }
   }, [mode, clearingPaymentId]);
 
@@ -95,16 +93,35 @@ export const ClearingPaymentForm = ({
     if (!clearingPaymentId) return;
     setLoadingInit(true);
     try {
-      const data = await clearingPaymentsService.getById(clearingPaymentId);
+      const [data, agentRes] = await Promise.all([
+        clearingPaymentsService.getById(clearingPaymentId),
+        clearingAgentsService.getAll({ pageSize: 500 }),
+      ]);
+
       setContainerId(data.containerId);
       setClearingAgentId(data.clearingAgentId);
       setPaymentDate(data.paymentDate ? data.paymentDate.slice(0, 10) : '');
       setBillDate(data.billDate ? data.billDate.slice(0, 10) : '');
       setClearingAmount(data.clearingAmount);
 
-      if (data.containerId) {
-        await loadContainerPOs(data.containerId, data.purchaseOrders || []);
+      if (data.containerNumber) {
+        setContainers([{
+          containerId: data.containerId,
+          containerNumber: data.containerNumber,
+        }]);
       }
+
+      const agentRes2 = agentRes as any;
+      const agentArray: any[] =
+        agentRes2?.data?.data ?? agentRes2?.data ?? (Array.isArray(agentRes2) ? agentRes2 : []);
+      setAgents(
+        agentArray.map((a: any) => ({
+          clearingAgentId: a.clearingAgentId,
+          companyName: a.agentName || a.companyName || '',
+        }))
+      );
+
+      loadFromAPIData(data);
     } catch (err) {
       console.error('Failed to load clearing payment:', err);
       setError('Failed to load clearing payment data.');
@@ -113,19 +130,35 @@ export const ClearingPaymentForm = ({
     }
   };
 
-  const loadContainerPOs = async (cId: number, existingPOs: ClearingPaymentPO[] = []) => {
+  const loadFromAPIData = (data: ClearingPaymentDetail) => {
+    const purchaseOrders = data.pOs || data.purchaseOrders || [];
+
+    const pos: ContainerPOItem[] = purchaseOrders.map((po) => ({
+      purchaseOrderId: po.purchaseOrderId,
+      poNumber: po.poNumber || '',
+      poDate: po.poDate || '',
+      supplierName: po.supplierName || '',
+      invoiceAmount: po.invoiceAmount || 0,
+      totalCbm: po.totalCBM || po.totalCbm || 0,
+    }));
+    setPoList(pos);
+
+    const map = new Map<number, ClearingPaymentChargeLine[]>();
+    purchaseOrders.forEach((po) => {
+      const charges = po.charges || po.chargeLines || [];
+      if (charges.length > 0) {
+        map.set(po.purchaseOrderId, charges);
+      }
+    });
+    setChargeMap(map);
+  };
+
+  const loadContainerPOs = async (cId: number) => {
     setLoadingPOs(true);
     try {
       const pos = await clearingPaymentsService.getContainerPOs(cId);
       setPoList(pos);
-
-      const map = new Map<number, ClearingPaymentChargeLine[]>();
-      existingPOs.forEach((po) => {
-        if (po.chargeLines && po.chargeLines.length > 0) {
-          map.set(po.purchaseOrderId, po.chargeLines);
-        }
-      });
-      setChargeMap(map);
+      setChargeMap(new Map());
     } catch (err) {
       console.error('Failed to load POs:', err);
       setPoList([]);
