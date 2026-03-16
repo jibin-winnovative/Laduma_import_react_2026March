@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Save, CheckCheck, Trash2, CreditCard as Edit2, AlertCircle, Search } from 'lucide-react';
+import { ArrowLeft, Save, CheckCheck, Trash2, CreditCard as Edit2, AlertCircle, Search, Send, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService } from '../../services/containersService';
@@ -10,6 +10,7 @@ import {
   ClearingPaymentPO,
   ClearingPaymentChargeLine,
   ContainerPOItem,
+  PaymentStatus,
 } from '../../services/clearingPaymentsService';
 import { POChargeEntryModal } from './POChargeEntryModal';
 import { ContainerSearchModal } from './ContainerSearchModal';
@@ -49,11 +50,16 @@ export const ClearingPaymentForm = ({
   const [paymentDate, setPaymentDate] = useState('');
   const [billDate, setBillDate] = useState('');
   const [clearingAmount, setClearingAmount] = useState<number | ''>('');
+  const [status, setStatus] = useState<PaymentStatus>('Pending');
 
   const [loadingInit, setLoadingInit] = useState(mode === 'edit');
   const [loadingPOs, setLoadingPOs] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
 
   useEffect(() => {
     if (mode === 'edit' && clearingPaymentId) {
@@ -105,6 +111,7 @@ export const ClearingPaymentForm = ({
       setPaymentDate(data.paymentDate ? data.paymentDate.slice(0, 10) : '');
       setBillDate(data.billDate ? data.billDate.slice(0, 10) : '');
       setClearingAmount(data.clearingAmount);
+      setStatus(data.status);
 
       if (data.containerNumber) {
         setContainers([{
@@ -277,6 +284,68 @@ export const ClearingPaymentForm = ({
     }
   };
 
+  const handleRequest = async () => {
+    if (!clearingPaymentId) return;
+    const err = validateBeforeSave();
+    if (err) {
+      setError(err);
+      return;
+    }
+    setShowRequestDialog(false);
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = buildPayload();
+      await clearingPaymentsService.update(clearingPaymentId, payload);
+      await clearingPaymentsService.requestPayment(clearingPaymentId);
+      onSuccess();
+    } catch (e: any) {
+      console.error('Request failed:', e);
+      setError(e?.response?.data?.message || 'Failed to request payment.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!clearingPaymentId) return;
+    const err = validateBeforeSave();
+    if (err) {
+      setError(err);
+      return;
+    }
+    setShowApproveDialog(false);
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = buildPayload();
+      await clearingPaymentsService.update(clearingPaymentId, payload);
+      await clearingPaymentsService.approvePayment(clearingPaymentId);
+      onSuccess();
+    } catch (e: any) {
+      console.error('Approve failed:', e);
+      setError(e?.response?.data?.message || 'Failed to approve payment.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!clearingPaymentId) return;
+    setShowRejectDialog(false);
+    setSaving(true);
+    setError(null);
+    try {
+      await clearingPaymentsService.rejectPayment(clearingPaymentId);
+      onSuccess();
+    } catch (e: any) {
+      console.error('Reject failed:', e);
+      setError(e?.response?.data?.message || 'Failed to reject payment.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleClear = () => {
     setContainerId('');
     setClearingAgentId('');
@@ -308,6 +377,23 @@ export const ClearingPaymentForm = ({
     );
   }
 
+  const getStatusBadge = (s: PaymentStatus) => {
+    switch (s) {
+      case 'Pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'Requested':
+        return 'bg-blue-100 text-blue-800';
+      case 'Approved':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
+      case 'Paid':
+        return 'bg-emerald-100 text-emerald-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -318,7 +404,7 @@ export const ClearingPaymentForm = ({
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Back</span>
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">
             {mode === 'add' ? 'Add Clearing Payment' : 'Edit Clearing Payment'}
           </h1>
@@ -326,6 +412,11 @@ export const ClearingPaymentForm = ({
             {mode === 'add' ? 'Create a new clearing payment record' : 'Update clearing payment details'}
           </p>
         </div>
+        {mode === 'edit' && (
+          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusBadge(status)}`}>
+            {status}
+          </span>
+        )}
       </div>
 
       {error && (
@@ -554,14 +645,70 @@ export const ClearingPaymentForm = ({
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
+
+          {mode === 'add' && (
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
+
+          {mode === 'edit' && status === 'Pending' && (
+            <>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                onClick={() => setShowRequestDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Send className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Request Payment'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && status === 'Requested' && (
+            <>
+              <Button
+                onClick={() => setShowRejectDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+              >
+                <XCircle className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Reject'}
+              </Button>
+              <Button
+                onClick={() => setShowApproveDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+              >
+                <CheckCheck className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Approve'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -579,6 +726,87 @@ export const ClearingPaymentForm = ({
           onSave={(lines) => handleChargesSaved(chargeModalPoId, lines)}
           onClose={() => setChargeModalPoId(null)}
         />
+      )}
+
+      {showRequestDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Request Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to request payment for this clearing payment?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRequestDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRequest}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showApproveDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Approve Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to approve this clearing payment? This will create a payment request.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowApproveDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRejectDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Reject Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to reject this clearing payment request?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRejectDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
