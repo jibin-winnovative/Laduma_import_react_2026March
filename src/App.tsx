@@ -35,6 +35,7 @@ import { ContainerManagementPage } from './pages/Shipment/ContainerManagementPag
 import { ContainerForm } from './pages/Shipment/ContainerForm';
 import { ViewContainerDetails } from './pages/Shipment/ViewContainerDetails';
 import { ClearingPaymentPage } from './pages/Shipment/ClearingPaymentPage';
+import { OceanFreightPaymentPage } from './pages/Shipment/OceanFreightPaymentPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,6 +97,7 @@ function App() {
                         <Route path="/containers/edit/:id" element={<ContainerForm />} />
                         <Route path="/containers/view/:id" element={<ViewContainerDetails />} />
                         <Route path="/clearing-payments" element={<ClearingPaymentPage />} />
+                        <Route path="/ocean-freight-payments" element={<OceanFreightPaymentPage />} />
                       </Routes>
                     </MainLayout>
                   </ProtectedRoute>
