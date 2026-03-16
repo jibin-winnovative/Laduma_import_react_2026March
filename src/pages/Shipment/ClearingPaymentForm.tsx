@@ -513,16 +513,18 @@ export const ClearingPaymentForm = ({
         )}
       </Card>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-8">
-        <Button
-          onClick={handleClear}
-          variant="secondary"
-          disabled={saving}
-          className="flex items-center gap-2 w-full sm:w-auto"
-        >
-          <Trash2 className="w-4 h-4" />
-          Clear
-        </Button>
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pb-8">
+        {mode === 'add' && (
+          <Button
+            onClick={handleClear}
+            variant="secondary"
+            disabled={saving}
+            className="flex items-center gap-2 w-full sm:w-auto"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear
+          </Button>
+        )}
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <Button
             onClick={onClose}
