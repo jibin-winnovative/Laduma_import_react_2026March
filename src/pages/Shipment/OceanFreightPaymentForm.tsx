@@ -112,14 +112,11 @@ export const OceanFreightPaymentForm = ({
         }]);
       }
 
-      const [companyData] = await Promise.all([
-        data.containerId ? containersService.getOceanFreightCompany(data.containerId) : Promise.resolve(null),
-        loadDropdowns()
-      ]);
-
-      if (companyData) {
-        setOceanFreightCompanyName(companyData.oceanFreightCompanyName);
+      if (data.oceanFreightCompanyName) {
+        setOceanFreightCompanyName(data.oceanFreightCompanyName);
       }
+
+      await loadDropdowns();
     } catch (err) {
       console.error('Failed to load ocean freight payment:', err);
       setError('Failed to load ocean freight payment data.');
