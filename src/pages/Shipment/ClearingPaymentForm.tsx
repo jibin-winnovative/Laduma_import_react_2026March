@@ -3,7 +3,6 @@ import { ArrowLeft, Save, CheckCheck, Trash2, CreditCard as Edit2, AlertCircle, 
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService } from '../../services/containersService';
-import { clearingAgentsService } from '../../services/clearingAgentsService';
 import {
   clearingPaymentsService,
   ClearingPaymentDetail,
@@ -71,25 +70,11 @@ export const ClearingPaymentForm = ({
 
   const loadDropdowns = async () => {
     try {
-      const [containerRes, agentRes] = await Promise.all([
-        containersService.search({ pageNumber: 1, pageSize: 500 }),
-        clearingAgentsService.getAll({ pageSize: 500 }),
-      ]);
-
+      const containerRes = await containersService.search({ pageNumber: 1, pageSize: 500 });
       setContainers(
         (containerRes.items || []).map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
-        }))
-      );
-
-      const agentRes2 = agentRes as any;
-      const agentArray: any[] =
-        agentRes2?.data?.data ?? agentRes2?.data ?? (Array.isArray(agentRes2) ? agentRes2 : []);
-      setAgents(
-        agentArray.map((a: any) => ({
-          clearingAgentId: a.clearingAgentId,
-          companyName: a.agentName || a.companyName || '',
         }))
       );
     } catch (err) {
@@ -101,10 +86,7 @@ export const ClearingPaymentForm = ({
     if (!clearingPaymentId) return;
     setLoadingInit(true);
     try {
-      const [data, agentRes] = await Promise.all([
-        clearingPaymentsService.getById(clearingPaymentId),
-        clearingAgentsService.getAll({ pageSize: 500 }),
-      ]);
+      const data = await clearingPaymentsService.getById(clearingPaymentId);
 
       setContainerId(data.containerId);
       setClearingAgentId(data.clearingAgentId);
@@ -120,15 +102,9 @@ export const ClearingPaymentForm = ({
         }]);
       }
 
-      const agentRes2 = agentRes as any;
-      const agentArray: any[] =
-        agentRes2?.data?.data ?? agentRes2?.data ?? (Array.isArray(agentRes2) ? agentRes2 : []);
-      setAgents(
-        agentArray.map((a: any) => ({
-          clearingAgentId: a.clearingAgentId,
-          companyName: a.agentName || a.companyName || '',
-        }))
-      );
+      if (data.containerId) {
+        await loadClearingAgents(data.containerId);
+      }
 
       loadFromAPIData(data);
     } catch (err) {
@@ -162,6 +138,24 @@ export const ClearingPaymentForm = ({
     setChargeMap(map);
   };
 
+  const loadClearingAgents = async (cId: number) => {
+    try {
+      const agents = await containersService.getClearingAgents(cId);
+      setAgents(
+        agents.map((a) => ({
+          clearingAgentId: a.clearingAgentId,
+          companyName: a.companyName,
+        }))
+      );
+      if (agents.length === 1) {
+        setClearingAgentId(agents[0].clearingAgentId);
+      }
+    } catch (err) {
+      console.error('Failed to load clearing agents:', err);
+      setAgents([]);
+    }
+  };
+
   const loadContainerPOs = async (cId: number) => {
     setLoadingPOs(true);
     try {
@@ -179,19 +173,29 @@ export const ClearingPaymentForm = ({
   const handleContainerChange = async (val: string) => {
     const id = val ? Number(val) : '';
     setContainerId(id);
+    setClearingAgentId('');
+    setAgents([]);
     setPoList([]);
     setChargeMap(new Map());
     if (id) {
-      await loadContainerPOs(id);
+      await Promise.all([
+        loadClearingAgents(id),
+        loadContainerPOs(id)
+      ]);
     }
   };
 
   const handleContainerSelect = async (id: number, containerNumber: string) => {
     setContainers([{ containerId: id, containerNumber }]);
     setContainerId(id);
+    setClearingAgentId('');
+    setAgents([]);
     setPoList([]);
     setChargeMap(new Map());
-    await loadContainerPOs(id);
+    await Promise.all([
+      loadClearingAgents(id),
+      loadContainerPOs(id)
+    ]);
   };
 
   const handleChargesSaved = (poId: number, lines: ClearingPaymentChargeLine[]) => {
@@ -478,9 +482,12 @@ export const ClearingPaymentForm = ({
             <select
               value={clearingAgentId}
               onChange={(e) => setClearingAgentId(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              disabled={!containerId}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
             >
-              <option value="">Select clearing agent...</option>
+              <option value="">
+                {!containerId ? 'Select container first...' : agents.length === 0 ? 'No clearing agents available' : 'Select clearing agent...'}
+              </option>
               {agents.map((a) => (
                 <option key={a.clearingAgentId} value={a.clearingAgentId}>
                   {a.companyName}

@@ -152,6 +152,11 @@ export interface POItemForAllocation {
   totalCBM: number;
 }
 
+export interface ClearingAgentInfo {
+  clearingAgentId: number;
+  companyName: string;
+}
+
 export const containersService = {
   getDashboard: async (): Promise<ContainerDashboard> => {
     const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
@@ -203,6 +208,11 @@ export const containersService = {
 
   getPOItems: async (poId: number): Promise<POItemForAllocation[]> => {
     const response = await apiClient.get<POItemForAllocation[]>(`/api/PurchaseOrders/${poId}/items`);
+    return response.data;
+  },
+
+  getClearingAgents: async (containerId: number): Promise<ClearingAgentInfo[]> => {
+    const response = await apiClient.get<ClearingAgentInfo[]>(`/api/containers/${containerId}/clearing-agents`);
     return response.data;
   },
 };

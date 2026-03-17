@@ -4,7 +4,6 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { containersService } from '../../services/containersService';
-import { oceanFreightCompaniesService } from '../../services/oceanFreightCompaniesService';
 import {
   oceanFreightPaymentsService,
   OceanFreightPaymentDetail,
@@ -24,8 +23,8 @@ interface ContainerOption {
   containerNumber: string;
 }
 
-interface OceanFreightCompanyOption {
-  oceanFreightCompanyId: number;
+interface ClearingAgentOption {
+  clearingAgentId: number;
   companyName: string;
 }
 
@@ -36,11 +35,11 @@ export const OceanFreightPaymentForm = ({
   onSuccess,
 }: OceanFreightPaymentFormProps) => {
   const [containers, setContainers] = useState<ContainerOption[]>([]);
-  const [companies, setCompanies] = useState<OceanFreightCompanyOption[]>([]);
+  const [clearingAgents, setClearingAgents] = useState<ClearingAgentOption[]>([]);
   const [showContainerSearch, setShowContainerSearch] = useState(false);
 
   const [containerId, setContainerId] = useState<number | ''>('');
-  const [oceanFreightCompanyId, setOceanFreightCompanyId] = useState<number | ''>('');
+  const [clearingAgentId, setClearingAgentId] = useState<number | ''>('');
   const [oceanFreightUSD, setOceanFreightUSD] = useState<number | ''>('');
   const [exchangeRate, setExchangeRate] = useState<number | ''>('');
   const [paymentDate, setPaymentDate] = useState('');
@@ -69,25 +68,11 @@ export const OceanFreightPaymentForm = ({
 
   const loadDropdowns = async () => {
     try {
-      const [containerRes, companyRes] = await Promise.all([
-        containersService.search({ pageNumber: 1, pageSize: 500 }),
-        oceanFreightCompaniesService.getAll({ pageSize: 500 }),
-      ]);
-
+      const containerRes = await containersService.search({ pageNumber: 1, pageSize: 500 });
       setContainers(
         (containerRes.items || []).map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
-        }))
-      );
-
-      const companyRes2 = companyRes as any;
-      const companyArray: any[] =
-        companyRes2?.data?.data ?? companyRes2?.data ?? (Array.isArray(companyRes2) ? companyRes2 : []);
-      setCompanies(
-        companyArray.map((c: any) => ({
-          oceanFreightCompanyId: c.oceanFreightCompanyId,
-          companyName: c.companyName || '',
         }))
       );
     } catch (err) {
@@ -99,13 +84,10 @@ export const OceanFreightPaymentForm = ({
     if (!oceanFreightPaymentId) return;
     setLoadingInit(true);
     try {
-      const [data, companyRes] = await Promise.all([
-        oceanFreightPaymentsService.getById(oceanFreightPaymentId),
-        oceanFreightCompaniesService.getAll({ pageSize: 500 }),
-      ]);
+      const data = await oceanFreightPaymentsService.getById(oceanFreightPaymentId);
 
       setContainerId(data.containerId);
-      setOceanFreightCompanyId(data.oceanFreightCompanyId || '');
+      setClearingAgentId(data.clearingAgentId || '');
       setOceanFreightUSD(data.oceanFreightUSD);
       setExchangeRate(data.exchangeRate);
       setPaymentDate(data.paymentDate ? data.paymentDate.slice(0, 10) : '');
@@ -119,15 +101,9 @@ export const OceanFreightPaymentForm = ({
         }]);
       }
 
-      const companyRes2 = companyRes as any;
-      const companyArray: any[] =
-        companyRes2?.data?.data ?? companyRes2?.data ?? (Array.isArray(companyRes2) ? companyRes2 : []);
-      setCompanies(
-        companyArray.map((c: any) => ({
-          oceanFreightCompanyId: c.oceanFreightCompanyId,
-          companyName: c.companyName || '',
-        }))
-      );
+      if (data.containerId) {
+        await loadClearingAgents(data.containerId);
+      }
     } catch (err) {
       console.error('Failed to load ocean freight payment:', err);
       setError('Failed to load ocean freight payment data.');
@@ -136,17 +112,52 @@ export const OceanFreightPaymentForm = ({
     }
   };
 
-  const handleContainerSelect = (container: { containerId: number; containerNumber: string }) => {
+  const loadClearingAgents = async (cId: number) => {
+    try {
+      const agents = await containersService.getClearingAgents(cId);
+      setClearingAgents(
+        agents.map((a) => ({
+          clearingAgentId: a.clearingAgentId,
+          companyName: a.companyName,
+        }))
+      );
+      if (agents.length === 1) {
+        setClearingAgentId(agents[0].clearingAgentId);
+      }
+    } catch (err) {
+      console.error('Failed to load clearing agents:', err);
+      setClearingAgents([]);
+    }
+  };
+
+  const handleContainerChange = async (val: string) => {
+    const id = val ? Number(val) : '';
+    setContainerId(id);
+    setClearingAgentId('');
+    setClearingAgents([]);
+    if (id) {
+      await loadClearingAgents(id);
+    }
+  };
+
+  const handleContainerSelect = async (container: { containerId: number; containerNumber: string }) => {
     setContainerId(container.containerId);
+    setClearingAgentId('');
+    setClearingAgents([]);
     if (!containers.find(c => c.containerId === container.containerId)) {
       setContainers(prev => [...prev, container]);
     }
     setShowContainerSearch(false);
+    await loadClearingAgents(container.containerId);
   };
 
   const validateForm = () => {
     if (!containerId) {
       setError('Please select a container');
+      return false;
+    }
+    if (!clearingAgentId) {
+      setError('Please select a clearing agent');
       return false;
     }
     if (!oceanFreightUSD || Number(oceanFreightUSD) <= 0) {
@@ -176,7 +187,7 @@ export const OceanFreightPaymentForm = ({
     try {
       const payload: OceanFreightPaymentDetail = {
         containerId: Number(containerId),
-        oceanFreightCompanyId: oceanFreightCompanyId ? Number(oceanFreightCompanyId) : undefined,
+        clearingAgentId: clearingAgentId ? Number(clearingAgentId) : undefined,
         oceanFreightUSD: Number(oceanFreightUSD),
         exchangeRate: Number(exchangeRate),
         paymentDate,
@@ -325,8 +336,8 @@ export const OceanFreightPaymentForm = ({
             <div className="flex gap-2">
               <select
                 value={containerId}
-                onChange={(e) => setContainerId(e.target.value ? Number(e.target.value) : '')}
-                disabled={!canEdit}
+                onChange={(e) => handleContainerChange(e.target.value)}
+                disabled={!canEdit || mode === 'edit'}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="">Select Container</option>
@@ -350,18 +361,20 @@ export const OceanFreightPaymentForm = ({
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Ocean Freight Company
+              Clearing Agent <span className="text-red-500">*</span>
             </label>
             <select
-              value={oceanFreightCompanyId}
-              onChange={(e) => setOceanFreightCompanyId(e.target.value ? Number(e.target.value) : '')}
-              disabled={!canEdit}
+              value={clearingAgentId}
+              onChange={(e) => setClearingAgentId(e.target.value ? Number(e.target.value) : '')}
+              disabled={!containerId}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
             >
-              <option value="">Select Company (Optional)</option>
-              {companies.map((c) => (
-                <option key={c.oceanFreightCompanyId} value={c.oceanFreightCompanyId}>
-                  {c.companyName}
+              <option value="">
+                {!containerId ? 'Select container first...' : clearingAgents.length === 0 ? 'No clearing agents available' : 'Select clearing agent...'}
+              </option>
+              {clearingAgents.map((a) => (
+                <option key={a.clearingAgentId} value={a.clearingAgentId}>
+                  {a.companyName}
                 </option>
               ))}
             </select>

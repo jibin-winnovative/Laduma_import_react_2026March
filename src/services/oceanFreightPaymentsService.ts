@@ -46,8 +46,8 @@ export interface OceanFreightPaymentDetail {
   oceanFreightPaymentId?: number;
   containerId: number;
   containerNumber?: string;
-  oceanFreightCompanyId?: number;
-  oceanFreightCompanyName?: string;
+  clearingAgentId?: number;
+  clearingAgentName?: string;
   oceanFreightUSD: number;
   exchangeRate: number;
   amountInRand?: number;
