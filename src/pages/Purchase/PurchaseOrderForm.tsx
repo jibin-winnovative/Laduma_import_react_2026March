@@ -33,6 +33,8 @@ import { purchaseOrdersService } from '../../services/purchaseOrdersService';
 import { removeTrailingZeros } from '../../utils/numberUtils';
 import { SupplierForm } from '../Masters/SupplierForm';
 import { Modal } from '../../components/ui/Modal';
+import { multiply, divide, subtract, toMoney, toNumber, sum } from '../../utils/moneyUtils';
+import Decimal from 'decimal.js';
 
 // Simple validation schema that works with string values from select elements
 const poSchema = z.object({
@@ -176,16 +178,16 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   }, [selectedCurrencyId, currencies]);
 
   const invoiceTotal = useMemo(() => {
-    const sub = items.reduce((sum, item) => sum + item.amount, 0);
-    const chg = charges.reduce((sum, charge) => sum + charge.amount, 0);
-    return sub + chg;
+    const sub = sum(items.map(item => item.amount));
+    const chg = sum(charges.map(charge => charge.amount));
+    return toNumber(sub.plus(chg));
   }, [items, charges]);
 
   useEffect(() => {
     setPaymentTerms((prev) =>
       prev.map((term) => ({
         ...term,
-        amount: (invoiceTotal * term.percentage) / 100,
+        amount: toNumber(divide(multiply(invoiceTotal, term.percentage), 100)),
       }))
     );
   }, [invoiceTotal]);
@@ -426,25 +428,25 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     // Auto-calculate based on which field changed
     if (fieldChanged === 'qty' || fieldChanged === 'priceUSD') {
       // If qty or price changed, recalculate amount = qty * price
-      amount = roundTo4Decimals(qty * priceUSD);
-      totalCBM = roundTo4Decimals(qty * cbm);
+      amount = roundTo4Decimals(toNumber(multiply(qty, priceUSD)));
+      totalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
     } else if (fieldChanged === 'amount' && qty > 0) {
       // If amount changed, recalculate price = amount / qty
-      const calculatedPrice = amount / qty;
-      const calculatedTotalCBM = roundTo4Decimals(qty * cbm);
+      const calculatedPrice = toNumber(divide(amount, qty));
+      const calculatedTotalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
       return {
         ...item,
         priceUSD: calculatedPrice,
         amount: roundTo4Decimals(amount),
         totalCBM: calculatedTotalCBM,
-        balanceQty: qty - (item.receivedQty || 0),
+        balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
       };
     } else if (fieldChanged === 'cbm') {
       // If CBM changed, recalculate total CBM = qty * cbm
-      totalCBM = roundTo4Decimals(qty * cbm);
+      totalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
     } else if (fieldChanged === 'totalCBM' && qty > 0) {
       // If total CBM changed, recalculate cbm = totalCBM / qty
-      cbm = totalCBM / qty;
+      cbm = toNumber(divide(totalCBM, qty));
       totalCBM = roundTo4Decimals(totalCBM);
     }
 
@@ -453,8 +455,8 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       amount: roundTo4Decimals(amount),
       cbm: cbm,
       totalCBM: roundTo4Decimals(totalCBM),
-      balanceQty: qty - (item.receivedQty || 0),
-      priceUSD: amount > 0 && qty > 0 ? amount / qty : priceUSD,
+      balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
+      priceUSD: amount > 0 && qty > 0 ? toNumber(divide(amount, qty)) : priceUSD,
     };
   };
 
@@ -495,19 +497,19 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       if (term.id === id) {
         if (field === 'percentage') {
           const pct = value;
-          const calculatedAmount = (invoiceTotal * pct) / 100;
+          const calculatedAmount = toNumber(divide(multiply(invoiceTotal, pct), 100));
           return {
             ...term,
             percentage: pct,
-            amount: parseFloat(calculatedAmount.toPrecision(12))
+            amount: calculatedAmount
           };
         } else if (field === 'amount') {
           const amt = value;
-          const calculatedPercentage = invoiceTotal > 0 ? (amt / invoiceTotal) * 100 : 0;
+          const calculatedPercentage = invoiceTotal > 0 ? toNumber(multiply(divide(amt, invoiceTotal), 100)) : 0;
           return {
             ...term,
             amount: amt,
-            percentage: parseFloat(calculatedPercentage.toPrecision(12))
+            percentage: calculatedPercentage
           };
         }
         return { ...term, [field]: value };
@@ -720,17 +722,17 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     await uploadSingleAttachment(index, { ...attachment, status: 'pending', retryCount: 0 }, entityId);
   };
 
-  const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.amount, 0), [items]);
+  const subtotal = useMemo(() => toNumber(sum(items.map(item => item.amount))), [items]);
 
-  const totalCharges = useMemo(() => charges.reduce((sum, charge) => sum + charge.amount, 0), [charges]);
+  const totalCharges = useMemo(() => toNumber(sum(charges.map(charge => charge.amount))), [charges]);
 
-  const totalPaymentPercentage = useMemo(() => paymentTerms.reduce((sum, term) => sum + term.percentage, 0), [paymentTerms]);
+  const totalPaymentPercentage = useMemo(() => toNumber(sum(paymentTerms.map(term => term.percentage))), [paymentTerms]);
 
   const totalProducts = useMemo(() => items.length, [items]);
 
-  const totalQuantity = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items]);
+  const totalQuantity = useMemo(() => toNumber(sum(items.map(item => item.qty))), [items]);
 
-  const totalCBM = useMemo(() => items.reduce((sum, item) => sum + item.totalCBM, 0), [items]);
+  const totalCBM = useMemo(() => toNumber(sum(items.map(item => item.totalCBM))), [items]);
 
   const existingProductIds = useMemo(
     () => new Set(items.map((item) => parseInt(item.id.replace('item-', ''), 10)).filter((id) => !isNaN(id))),
@@ -780,8 +782,8 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           uom: product.uom || '',
           priceUSD: priceUSD,
           cbm: product.cbm || 0,
-          amount: qty * priceUSD,
-          totalCBM: qty * (product.cbm || 0),
+          amount: toNumber(multiply(qty, priceUSD)),
+          totalCBM: toNumber(multiply(qty, product.cbm || 0)),
           receivedQty: 0,
           balanceQty: qty,
         };
