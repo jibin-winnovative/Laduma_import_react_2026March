@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Send, CheckCheck, XCircle } from 'lucide-react';
+import { ArrowLeft, Save, Send, CheckCheck, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -196,11 +196,33 @@ export const OceanFreightPaymentForm = ({
   };
 
   const handleRequest = async () => {
-    if (!oceanFreightPaymentId) return;
+    setShowRequestDialog(false);
     setSaving(true);
+    setError(null);
+
     try {
-      await oceanFreightPaymentsService.requestPayment(oceanFreightPaymentId);
-      setShowRequestDialog(false);
+      if (mode === 'add') {
+        if (!validateForm()) {
+          setSaving(false);
+          return;
+        }
+
+        const payload: OceanFreightPaymentDetail = {
+          containerId: Number(containerId),
+          oceanFreightUSD: Number(oceanFreightUSD),
+          exchangeRate: Number(exchangeRate),
+          paymentDate,
+          billDate,
+          status: 'Pending',
+        };
+
+        const created = await oceanFreightPaymentsService.create(payload);
+        if (created.oceanFreightPaymentId) {
+          await oceanFreightPaymentsService.requestPayment(created.oceanFreightPaymentId);
+        }
+      } else if (oceanFreightPaymentId) {
+        await oceanFreightPaymentsService.requestPayment(oceanFreightPaymentId);
+      }
       onSuccess();
     } catch (err: any) {
       console.error('Failed to request payment:', err);
@@ -242,8 +264,10 @@ export const OceanFreightPaymentForm = ({
 
   if (loadingInit) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <p className="text-[var(--color-text-secondary)]">Loading...</p>
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]" />
+        </div>
       </div>
     );
   }
@@ -253,66 +277,59 @@ export const OceanFreightPaymentForm = ({
   const canApprove = mode === 'edit' && status === 'Requested';
   const canReject = mode === 'edit' && (status === 'Pending' || status === 'Requested');
 
+  const getStatusBadge = (s: PaymentStatus) => {
+    switch (s) {
+      case 'Pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'Requested':
+        return 'bg-blue-100 text-blue-800';
+      case 'Approved':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
+      case 'Paid':
+        return 'bg-emerald-100 text-emerald-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button onClick={onClose} variant="secondary" className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-          <h2 className="text-2xl font-bold text-[var(--color-text)]">
-            {mode === 'add' ? 'Add' : 'Edit'} Ocean Freight Payment
-          </h2>
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">
+            {mode === 'add' ? 'Add Ocean Freight Payment' : 'Edit Ocean Freight Payment'}
+          </h1>
+          <p className="text-[var(--color-text-secondary)] mt-1">
+            {mode === 'add' ? 'Create a new ocean freight payment record' : 'Update ocean freight payment details'}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          {canRequest && (
-            <Button
-              onClick={() => setShowRequestDialog(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              Request
-            </Button>
-          )}
-          {canApprove && (
-            <Button
-              onClick={() => setShowApproveDialog(true)}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-            >
-              <CheckCheck className="w-4 h-4" />
-              Approve
-            </Button>
-          )}
-          {canReject && (
-            <Button
-              onClick={() => setShowRejectDialog(true)}
-              className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
-            >
-              <XCircle className="w-4 h-4" />
-              Reject
-            </Button>
-          )}
-          {canEdit && (
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-[var(--color-primary)] hover:opacity-90 text-white flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          )}
-        </div>
+        {mode === 'edit' && (
+          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusBadge(status)}`}>
+            {status}
+          </span>
+        )}
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
         </div>
       )}
 
       <Card className="p-6">
+        <h2 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+          Payment Information
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
@@ -424,16 +441,82 @@ export const OceanFreightPaymentForm = ({
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
             />
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Status</label>
-            <input
-              type="text"
-              value={status}
-              disabled
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
-            />
-          </div>
+        <div className="mt-6 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+          {mode === 'add' && (
+            <>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Draft'}
+              </Button>
+              <Button
+                onClick={() => setShowRequestDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Send className="w-4 h-4" />
+                Request Payment
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && (status === 'Pending' || status === 'Rejected') && (
+            <>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                onClick={() => setShowRequestDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Send className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Request'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && status === 'Requested' && (
+            <>
+              <Button
+                onClick={() => setShowRejectDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+              >
+                <XCircle className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Reject'}
+              </Button>
+              <Button
+                onClick={() => setShowApproveDialog(true)}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+              >
+                <CheckCheck className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Approve'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -444,69 +527,86 @@ export const OceanFreightPaymentForm = ({
       />
 
       {showRequestDialog && (
-        <Modal
-          isOpen={showRequestDialog}
-          onClose={() => setShowRequestDialog(false)}
-          title="Request Payment"
-        >
-          <div className="space-y-4">
-            <p className="text-[var(--color-text)]">
-              Are you sure you want to request this ocean freight payment?
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Request Payment</h3>
+            <p className="text-gray-600 mb-6">
+              {mode === 'add'
+                ? 'This will save the ocean freight payment and send it for approval. Continue?'
+                : 'Are you sure you want to request payment for this ocean freight payment?'}
             </p>
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setShowRequestDialog(false)} variant="secondary">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRequestDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={handleRequest} className="bg-blue-600 hover:bg-blue-700 text-white">
-                {saving ? 'Requesting...' : 'Request'}
-              </Button>
+              </button>
+              <button
+                onClick={handleRequest}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Request'}
+              </button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
 
       {showApproveDialog && (
-        <Modal
-          isOpen={showApproveDialog}
-          onClose={() => setShowApproveDialog(false)}
-          title="Approve Payment"
-        >
-          <div className="space-y-4">
-            <p className="text-[var(--color-text)]">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Approve Payment</h3>
+            <p className="text-gray-600 mb-6">
               Are you sure you want to approve this ocean freight payment? This will create a payment request.
             </p>
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setShowApproveDialog(false)} variant="secondary">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowApproveDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white">
-                {saving ? 'Approving...' : 'Approve'}
-              </Button>
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Approve'}
+              </button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
 
       {showRejectDialog && (
-        <Modal
-          isOpen={showRejectDialog}
-          onClose={() => setShowRejectDialog(false)}
-          title="Reject Payment"
-        >
-          <div className="space-y-4">
-            <p className="text-[var(--color-text)]">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Reject Payment</h3>
+            <p className="text-gray-600 mb-6">
               Are you sure you want to reject this ocean freight payment?
             </p>
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setShowRejectDialog(false)} variant="secondary">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRejectDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={handleReject} className="bg-red-600 hover:bg-red-700 text-white">
-                {saving ? 'Rejecting...' : 'Reject'}
-              </Button>
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Reject'}
+              </button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );
