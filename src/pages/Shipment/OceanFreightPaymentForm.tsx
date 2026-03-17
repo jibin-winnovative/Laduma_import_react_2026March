@@ -35,7 +35,7 @@ export const OceanFreightPaymentForm = ({
   onSuccess,
 }: OceanFreightPaymentFormProps) => {
   const [containers, setContainers] = useState<ContainerOption[]>([]);
-  const [clearingAgentName, setClearingAgentName] = useState('');
+  const [clearingAgents, setClearingAgents] = useState<ClearingAgentOption[]>([]);
   const [showContainerSearch, setShowContainerSearch] = useState(false);
 
   const [containerId, setContainerId] = useState<number | ''>('');
@@ -88,7 +88,6 @@ export const OceanFreightPaymentForm = ({
 
       setContainerId(data.containerId);
       setClearingAgentId(data.clearingAgentId || '');
-      setClearingAgentName(data.clearingAgentName || '');
       setOceanFreightUSD(data.oceanFreightUSD);
       setExchangeRate(data.exchangeRate);
       setPaymentDate(data.paymentDate ? data.paymentDate.slice(0, 10) : '');
@@ -101,6 +100,10 @@ export const OceanFreightPaymentForm = ({
           containerNumber: data.containerNumber,
         }]);
       }
+
+      if (data.containerId) {
+        await loadClearingAgents(data.containerId);
+      }
     } catch (err) {
       console.error('Failed to load ocean freight payment:', err);
       setError('Failed to load ocean freight payment data.');
@@ -112,14 +115,18 @@ export const OceanFreightPaymentForm = ({
   const loadClearingAgents = async (cId: number) => {
     try {
       const agents = await containersService.getClearingAgents(cId);
-      if (agents.length > 0) {
+      setClearingAgents(
+        agents.map((a) => ({
+          clearingAgentId: a.clearingAgentId,
+          companyName: a.companyName,
+        }))
+      );
+      if (agents.length === 1) {
         setClearingAgentId(agents[0].clearingAgentId);
-        setClearingAgentName(agents[0].companyName);
       }
     } catch (err) {
       console.error('Failed to load clearing agents:', err);
-      setClearingAgentId('');
-      setClearingAgentName('');
+      setClearingAgents([]);
     }
   };
 
@@ -127,7 +134,7 @@ export const OceanFreightPaymentForm = ({
     const id = val ? Number(val) : '';
     setContainerId(id);
     setClearingAgentId('');
-    setClearingAgentName('');
+    setClearingAgents([]);
     if (id) {
       await loadClearingAgents(id);
     }
@@ -136,7 +143,7 @@ export const OceanFreightPaymentForm = ({
   const handleContainerSelect = async (containerId: number, containerNumber: string) => {
     setContainerId(containerId);
     setClearingAgentId('');
-    setClearingAgentName('');
+    setClearingAgents([]);
     if (!containers.find(c => c.containerId === containerId)) {
       setContainers(prev => [...prev, { containerId, containerNumber }]);
     }
@@ -356,13 +363,21 @@ export const OceanFreightPaymentForm = ({
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
               Clearing Agent <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              value={clearingAgentName}
-              disabled
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
-              placeholder={!containerId ? 'Select container first...' : 'Loading...'}
-            />
+            <select
+              value={clearingAgentId}
+              onChange={(e) => setClearingAgentId(e.target.value ? Number(e.target.value) : '')}
+              disabled={!containerId}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
+            >
+              <option value="">
+                {!containerId ? 'Select container first...' : clearingAgents.length === 0 ? 'No clearing agents available' : 'Select clearing agent...'}
+              </option>
+              {clearingAgents.map((a) => (
+                <option key={a.clearingAgentId} value={a.clearingAgentId}>
+                  {a.companyName}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
