@@ -180,7 +180,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const invoiceTotal = useMemo(() => {
     const sub = sum(items.map(item => item.amount));
     const chg = sum(charges.map(charge => charge.amount));
-    return toNumber(sub.plus(chg));
+    return roundTo4Decimals(toNumber(sub.plus(chg)));
   }, [items, charges]);
 
   useEffect(() => {
@@ -738,9 +738,9 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     await uploadSingleAttachment(index, { ...attachment, status: 'pending', retryCount: 0 }, entityId);
   };
 
-  const subtotal = useMemo(() => toNumber(sum(items.map(item => item.amount))), [items]);
+  const subtotal = useMemo(() => roundTo4Decimals(toNumber(sum(items.map(item => item.amount)))), [items]);
 
-  const totalCharges = useMemo(() => toNumber(sum(charges.map(charge => charge.amount))), [charges]);
+  const totalCharges = useMemo(() => roundTo4Decimals(toNumber(sum(charges.map(charge => charge.amount)))), [charges]);
 
   const totalPaymentPercentage = useMemo(() => toNumber(sum(paymentTerms.map(term => term.percentage))), [paymentTerms]);
 
@@ -1862,7 +1862,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                         {totalPaymentPercentage.toFixed(2)}%
                       </span>
                       <span className="font-semibold text-gray-900">
-                        {selectedCurrencyCode} {paymentTerms.reduce((sum, t) => sum + t.amount, 0).toFixed(2)}
+                        {selectedCurrencyCode} {removeTrailingZeros(roundTo4Decimals(paymentTerms.reduce((sum, t) => sum + t.amount, 0)))}
                       </span>
                     </div>
                   </div>
