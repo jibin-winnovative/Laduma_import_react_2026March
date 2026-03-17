@@ -71,7 +71,7 @@ export const OceanFreightPaymentForm = ({
     try {
       const [containerRes, agentsRes] = await Promise.all([
         containersService.search({ pageNumber: 1, pageSize: 500 }),
-        clearingAgentsService.getAll({ pageNumber: 1, pageSize: 500, isActive: true })
+        clearingAgentsService.getDropdown()
       ]);
 
       setContainers(
@@ -82,9 +82,9 @@ export const OceanFreightPaymentForm = ({
       );
 
       setClearingAgents(
-        (agentsRes.items || []).map((a) => ({
+        agentsRes.map((a) => ({
           clearingAgentId: a.clearingAgentId,
-          companyName: a.companyName,
+          companyName: a.agentName,
         }))
       );
     } catch (err) {

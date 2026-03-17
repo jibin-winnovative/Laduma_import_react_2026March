@@ -95,4 +95,11 @@ export const clearingAgentsService = {
     );
     return response.data;
   },
+
+  getDropdown: async (): Promise<Array<{ clearingAgentId: number; agentName: string }>> => {
+    const response = await api.get<{ data: Array<{ clearingAgentId: number; agentName: string }> }>(
+      '/api/ClearingAgents/dropdown'
+    );
+    return response.data;
+  },
 };
