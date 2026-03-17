@@ -430,6 +430,14 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       // If qty or price changed, recalculate amount = qty * price
       amount = roundTo4Decimals(toNumber(multiply(qty, priceUSD)));
       totalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
+      return {
+        ...item,
+        priceUSD: priceUSD,
+        amount: roundTo4Decimals(amount),
+        cbm: cbm,
+        totalCBM: roundTo4Decimals(totalCBM),
+        balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
+      };
     } else if (fieldChanged === 'amount' && qty > 0) {
       // If amount changed, recalculate price = amount / qty
       const calculatedPrice = toNumber(divide(amount, qty));
@@ -438,25 +446,33 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         ...item,
         priceUSD: calculatedPrice,
         amount: roundTo4Decimals(amount),
+        cbm: cbm,
         totalCBM: calculatedTotalCBM,
         balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
       };
     } else if (fieldChanged === 'cbm') {
       // If CBM changed, recalculate total CBM = qty * cbm
       totalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
+      return {
+        ...item,
+        cbm: cbm,
+        totalCBM: roundTo4Decimals(totalCBM),
+        balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
+      };
     } else if (fieldChanged === 'totalCBM' && qty > 0) {
       // If total CBM changed, recalculate cbm = totalCBM / qty
       cbm = toNumber(divide(totalCBM, qty));
-      totalCBM = roundTo4Decimals(totalCBM);
+      return {
+        ...item,
+        cbm: cbm,
+        totalCBM: roundTo4Decimals(totalCBM),
+        balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
+      };
     }
 
     return {
       ...item,
-      amount: roundTo4Decimals(amount),
-      cbm: cbm,
-      totalCBM: roundTo4Decimals(totalCBM),
       balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
-      priceUSD: amount > 0 && qty > 0 ? toNumber(divide(amount, qty)) : priceUSD,
     };
   };
 
