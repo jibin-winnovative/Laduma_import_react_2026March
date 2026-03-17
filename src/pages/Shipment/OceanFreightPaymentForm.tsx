@@ -41,6 +41,7 @@ export const OceanFreightPaymentForm = ({
 
   const [containerId, setContainerId] = useState<number | ''>('');
   const [clearingAgentId, setClearingAgentId] = useState<number | ''>('');
+  const [oceanFreightCompanyName, setOceanFreightCompanyName] = useState('');
   const [oceanFreightUSD, setOceanFreightUSD] = useState<number | ''>('');
   const [exchangeRate, setExchangeRate] = useState<number | ''>('');
   const [paymentDate, setPaymentDate] = useState('');
@@ -67,6 +68,12 @@ export const OceanFreightPaymentForm = ({
     }
   }, [mode, oceanFreightPaymentId]);
 
+  useEffect(() => {
+    if (containerId && mode === 'add') {
+      loadOceanFreightCompany();
+    }
+  }, [containerId, mode]);
+
   const loadDropdowns = async () => {
     try {
       const [containerRes, agentsRes] = await Promise.all([
@@ -92,6 +99,17 @@ export const OceanFreightPaymentForm = ({
     }
   };
 
+  const loadOceanFreightCompany = async () => {
+    if (!containerId) return;
+    try {
+      const companyData = await containersService.getOceanFreightCompany(Number(containerId));
+      setOceanFreightCompanyName(companyData.oceanFreightCompanyName);
+    } catch (err) {
+      console.error('Failed to load ocean freight company:', err);
+      setOceanFreightCompanyName('');
+    }
+  };
+
   const loadExisting = async () => {
     if (!oceanFreightPaymentId) return;
     setLoadingInit(true);
@@ -113,6 +131,11 @@ export const OceanFreightPaymentForm = ({
         }]);
       }
 
+      if (data.containerId) {
+        const companyData = await containersService.getOceanFreightCompany(data.containerId);
+        setOceanFreightCompanyName(companyData.oceanFreightCompanyName);
+      }
+
       await loadDropdowns();
     } catch (err) {
       console.error('Failed to load ocean freight payment:', err);
@@ -125,6 +148,9 @@ export const OceanFreightPaymentForm = ({
   const handleContainerChange = (val: string) => {
     const id = val ? Number(val) : '';
     setContainerId(id);
+    if (!id) {
+      setOceanFreightCompanyName('');
+    }
   };
 
   const handleContainerSelect = (containerId: number, containerNumber: string) => {
@@ -341,6 +367,19 @@ export const OceanFreightPaymentForm = ({
                 </Button>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+              Ocean Freight Company
+            </label>
+            <input
+              type="text"
+              value={oceanFreightCompanyName}
+              disabled
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              placeholder="Select a container first"
+            />
           </div>
 
           <div>

@@ -157,6 +157,11 @@ export interface ClearingAgentInfo {
   companyName: string;
 }
 
+export interface OceanFreightCompanyInfo {
+  oceanFreightCompanyId: number;
+  oceanFreightCompanyName: string;
+}
+
 export const containersService = {
   getDashboard: async (): Promise<ContainerDashboard> => {
     const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
@@ -213,6 +218,11 @@ export const containersService = {
 
   getClearingAgents: async (containerId: number): Promise<ClearingAgentInfo[]> => {
     const response = await apiClient.get<ClearingAgentInfo[]>(`/api/containers/${containerId}/clearing-agents`);
+    return response.data;
+  },
+
+  getOceanFreightCompany: async (containerId: number): Promise<OceanFreightCompanyInfo> => {
+    const response = await apiClient.get<OceanFreightCompanyInfo>(`/api/containers/${containerId}/ocean-freight-company`);
     return response.data;
   },
 };
