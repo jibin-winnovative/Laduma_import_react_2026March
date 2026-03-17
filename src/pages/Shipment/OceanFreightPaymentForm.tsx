@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { containersService } from '../../services/containersService';
+import { clearingAgentsService } from '../../services/clearingAgentsService';
 import {
   oceanFreightPaymentsService,
   OceanFreightPaymentDetail,
@@ -68,11 +69,22 @@ export const OceanFreightPaymentForm = ({
 
   const loadDropdowns = async () => {
     try {
-      const containerRes = await containersService.search({ pageNumber: 1, pageSize: 500 });
+      const [containerRes, agentsRes] = await Promise.all([
+        containersService.search({ pageNumber: 1, pageSize: 500 }),
+        clearingAgentsService.getAll({ pageNumber: 1, pageSize: 500, isActive: true })
+      ]);
+
       setContainers(
         (containerRes.items || []).map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
+        }))
+      );
+
+      setClearingAgents(
+        (agentsRes.items || []).map((a) => ({
+          clearingAgentId: a.clearingAgentId,
+          companyName: a.companyName,
         }))
       );
     } catch (err) {
@@ -101,9 +113,7 @@ export const OceanFreightPaymentForm = ({
         }]);
       }
 
-      if (data.containerId) {
-        await loadClearingAgents(data.containerId);
-      }
+      await loadDropdowns();
     } catch (err) {
       console.error('Failed to load ocean freight payment:', err);
       setError('Failed to load ocean freight payment data.');
@@ -112,43 +122,17 @@ export const OceanFreightPaymentForm = ({
     }
   };
 
-  const loadClearingAgents = async (cId: number) => {
-    try {
-      const agents = await containersService.getClearingAgents(cId);
-      setClearingAgents(
-        agents.map((a) => ({
-          clearingAgentId: a.clearingAgentId,
-          companyName: a.companyName,
-        }))
-      );
-      if (agents.length === 1) {
-        setClearingAgentId(agents[0].clearingAgentId);
-      }
-    } catch (err) {
-      console.error('Failed to load clearing agents:', err);
-      setClearingAgents([]);
-    }
-  };
-
-  const handleContainerChange = async (val: string) => {
+  const handleContainerChange = (val: string) => {
     const id = val ? Number(val) : '';
     setContainerId(id);
-    setClearingAgentId('');
-    setClearingAgents([]);
-    if (id) {
-      await loadClearingAgents(id);
-    }
   };
 
-  const handleContainerSelect = async (containerId: number, containerNumber: string) => {
+  const handleContainerSelect = (containerId: number, containerNumber: string) => {
     setContainerId(containerId);
-    setClearingAgentId('');
-    setClearingAgents([]);
     if (!containers.find(c => c.containerId === containerId)) {
       setContainers(prev => [...prev, { containerId, containerNumber }]);
     }
     setShowContainerSearch(false);
-    await loadClearingAgents(containerId);
   };
 
   const validateForm = () => {
@@ -366,11 +350,10 @@ export const OceanFreightPaymentForm = ({
             <select
               value={clearingAgentId}
               onChange={(e) => setClearingAgentId(e.target.value ? Number(e.target.value) : '')}
-              disabled={!containerId}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             >
               <option value="">
-                {!containerId ? 'Select container first...' : clearingAgents.length === 0 ? 'No clearing agents available' : 'Select clearing agent...'}
+                {clearingAgents.length === 0 ? 'No clearing agents available' : 'Select clearing agent...'}
               </option>
               {clearingAgents.map((a) => (
                 <option key={a.clearingAgentId} value={a.clearingAgentId}>
