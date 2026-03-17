@@ -140,15 +140,15 @@ export const OceanFreightPaymentForm = ({
     }
   };
 
-  const handleContainerSelect = async (container: { containerId: number; containerNumber: string }) => {
-    setContainerId(container.containerId);
+  const handleContainerSelect = async (containerId: number, containerNumber: string) => {
+    setContainerId(containerId);
     setClearingAgentId('');
     setClearingAgents([]);
-    if (!containers.find(c => c.containerId === container.containerId)) {
-      setContainers(prev => [...prev, container]);
+    if (!containers.find(c => c.containerId === containerId)) {
+      setContainers(prev => [...prev, { containerId, containerNumber }]);
     }
     setShowContainerSearch(false);
-    await loadClearingAgents(container.containerId);
+    await loadClearingAgents(containerId);
   };
 
   const validateForm = () => {
@@ -347,7 +347,7 @@ export const OceanFreightPaymentForm = ({
                   </option>
                 ))}
               </select>
-              {canEdit && (
+              {mode === 'add' && (
                 <Button
                   onClick={() => setShowContainerSearch(true)}
                   variant="secondary"
@@ -460,12 +460,11 @@ export const OceanFreightPaymentForm = ({
         </div>
       </Card>
 
-      {showContainerSearch && (
-        <ContainerSearchModal
-          onSelect={handleContainerSelect}
-          onClose={() => setShowContainerSearch(false)}
-        />
-      )}
+      <ContainerSearchModal
+        isOpen={showContainerSearch}
+        onSelect={handleContainerSelect}
+        onClose={() => setShowContainerSearch(false)}
+      />
 
       {showRequestDialog && (
         <Modal
