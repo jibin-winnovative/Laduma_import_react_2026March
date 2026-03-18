@@ -979,6 +979,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         purchaseOrderPaymentId: term.purchaseOrderPaymentId || null,
         description: term.description,
         percentage: term.percentage,
+        amount: term.amount,
         expectedDate: term.expectedDate,
       }));
 
@@ -1028,7 +1029,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           actionText = 'approved';
           console.log('Purchase Order approved successfully:', response);
         } else if (actionType === 'reject') {
-          response = await purchaseOrdersService.reject(purchaseOrderId);
+          response = await purchaseOrdersService.reject(purchaseOrderId, updatePayload);
           savedPurchaseOrderId = purchaseOrderId;
           actionText = 'rejected';
           console.log('Purchase Order rejected successfully:', response);

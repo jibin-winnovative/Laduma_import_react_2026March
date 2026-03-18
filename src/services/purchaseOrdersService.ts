@@ -20,6 +20,7 @@ export interface PurchaseOrderCharge {
 export interface PurchaseOrderPayment {
   description: string;
   percentage: number;
+  amount: number;
   expectedDate: string;
 }
 
@@ -147,8 +148,8 @@ export const purchaseOrdersService = {
     return response.data;
   },
 
-  reject: async (id: number): Promise<PurchaseOrderResponse> => {
-    const response = await apiClient.post(`/api/PurchaseOrders/${id}/reject`);
+  reject: async (id: number, data: UpdatePurchaseOrderRequest): Promise<PurchaseOrderResponse> => {
+    const response = await apiClient.post(`/api/PurchaseOrders/${id}/reject`, data);
     return response.data;
   },
 
