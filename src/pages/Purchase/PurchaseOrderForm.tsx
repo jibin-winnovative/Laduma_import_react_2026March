@@ -785,6 +785,10 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
 
   const totalPaymentPercentage = useMemo(() => toNumber(sum(paymentTerms.map(term => term.percentage))), [paymentTerms]);
 
+  const totalPaymentAmount = useMemo(() => {
+    return paymentTerms.reduce((sum, t) => sum + t.amount, 0);
+  }, [paymentTerms]);
+
   const totalProducts = useMemo(() => items.length, [items]);
 
   const totalQuantity = useMemo(() => toNumber(sum(items.map(item => item.qty))), [items]);
@@ -896,8 +900,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       return;
     }
 
-    if (Math.abs(totalPaymentPercentage - 100) > 0.01) {
-      alert('Total payment percentage must equal 100%');
+    const roundedPaymentTotal = Math.round(totalPaymentAmount * 100) / 100;
+    const roundedInvoiceTotal = Math.round(invoiceTotal * 100) / 100;
+
+    if (Math.abs(roundedPaymentTotal - roundedInvoiceTotal) > 0.01) {
+      alert(`Total payment amount (${selectedCurrencyCode} ${roundedPaymentTotal.toFixed(2)}) must equal Total Invoice Amount (${selectedCurrencyCode} ${roundedInvoiceTotal.toFixed(2)})`);
       return;
     }
 
@@ -1929,26 +1936,32 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                 </tbody>
               </table>
 
-              {paymentTerms.length > 0 && (
-                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Total:</span>
-                    <div className="flex gap-6">
-                      <span className={`font-semibold ${Math.abs(totalPaymentPercentage - 100) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
-                        {totalPaymentPercentage.toFixed(2)}%
-                      </span>
-                      <span className="font-semibold text-gray-900">
-                        {selectedCurrencyCode} {removeTrailingZeros(roundTo4Decimals(paymentTerms.reduce((sum, t) => sum + t.amount, 0)))}
-                      </span>
+              {paymentTerms.length > 0 && (() => {
+                const roundedPaymentTotal = Math.round(totalPaymentAmount * 100) / 100;
+                const roundedInvoiceTotal = Math.round(invoiceTotal * 100) / 100;
+                const isValid = Math.abs(roundedPaymentTotal - roundedInvoiceTotal) <= 0.01;
+
+                return (
+                  <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-700">Total:</span>
+                      <div className="flex gap-6">
+                        <span className={`font-semibold ${!isValid ? 'text-red-600' : 'text-green-600'}`}>
+                          {totalPaymentPercentage.toFixed(2)}%
+                        </span>
+                        <span className={`font-semibold ${!isValid ? 'text-red-600' : 'text-gray-900'}`}>
+                          {selectedCurrencyCode} {removeTrailingZeros(roundTo4Decimals(totalPaymentAmount))}
+                        </span>
+                      </div>
                     </div>
+                    {!isValid && (
+                      <p className="text-sm text-red-600 mt-2">
+                        Total payment amount must equal Total Invoice Amount ({selectedCurrencyCode} {roundedInvoiceTotal.toFixed(2)})
+                      </p>
+                    )}
                   </div>
-                  {Math.abs(totalPaymentPercentage - 100) > 0.01 && (
-                    <p className="text-sm text-red-600 mt-2">
-                      Total percentage must equal 100%
-                    </p>
-                  )}
-                </div>
-              )}
+                );
+              })()}
             </div>
           </Card>
 
