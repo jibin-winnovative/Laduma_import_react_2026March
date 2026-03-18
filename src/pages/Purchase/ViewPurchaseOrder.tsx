@@ -3,6 +3,7 @@ import { X, FileText, Calendar, User, Package, DollarSign, Ship, MapPin, File as
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
+import { attachmentService } from '../../services/attachmentService';
 
 interface ViewPurchaseOrderProps {
   purchaseOrderId: number;
@@ -180,9 +181,10 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
     return currencyCode ? `${currencyCode} ${formatted}` : formatted;
   };
 
-  const handleDownload = async (fileUrl: string, fileName: string) => {
+  const handleDownload = async (attachmentId: number, fileName: string) => {
     try {
-      const response = await fetch(fileUrl);
+      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId);
+      const response = await fetch(downloadUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -194,6 +196,15 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download file:', error);
+    }
+  };
+
+  const handleView = async (attachmentId: number) => {
+    try {
+      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId);
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Failed to view file:', error);
     }
   };
 
@@ -651,7 +662,7 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Button
-                    onClick={() => handleDownload(attachment.fileUrl, attachment.fileName)}
+                    onClick={() => handleDownload(attachment.attachmentId, attachment.fileName)}
                     variant="secondary"
                     className="flex items-center gap-2 px-3 py-2 text-sm"
                     title="Download"
@@ -660,7 +671,7 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                     Download
                   </Button>
                   <Button
-                    onClick={() => window.open(attachment.fileUrl, '_blank', 'noopener,noreferrer')}
+                    onClick={() => handleView(attachment.attachmentId)}
                     variant="secondary"
                     className="flex items-center gap-2 px-3 py-2 text-sm"
                     title="View in new tab"
