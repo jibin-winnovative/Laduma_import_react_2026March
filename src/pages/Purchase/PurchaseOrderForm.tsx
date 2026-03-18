@@ -1455,6 +1455,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           <input
                             type="text"
                             value={item.qty === 0 ? '' : item.qty}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
                               // Allow empty or valid integers only
@@ -1477,6 +1478,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             type="number"
                             step="any"
                             value={item.priceUSD}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '' || value === '-') {
@@ -1497,6 +1499,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             type="number"
                             step="any"
                             value={item.cbm}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '' || value === '-') {
@@ -1517,6 +1520,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             type="number"
                             step="any"
                             value={item.amount}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '' || value === '-') {
@@ -1537,6 +1541,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             type="number"
                             step="any"
                             value={item.totalCBM}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '' || value === '-') {
@@ -1653,6 +1658,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           type="number"
                           step="any"
                           value={charge.amount}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === '' || value === '-') {
@@ -1763,6 +1769,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           type="text"
                           inputMode="decimal"
                           value={term.percentageDisplay ?? term.percentage}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === '') {
@@ -1799,6 +1806,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           type="text"
                           inputMode="decimal"
                           value={term.amountDisplay ?? term.amount}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === '') {
