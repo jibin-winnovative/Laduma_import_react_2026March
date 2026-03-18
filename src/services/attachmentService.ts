@@ -70,9 +70,18 @@ export const attachmentService = {
     return api.delete(`${BASE_PATH}/${attachmentId}`);
   },
 
-  getDownloadUrl: async (attachmentId: number, expirationMinutes: number = 60): Promise<string> => {
-    console.log('📥 Requesting presigned download URL for attachment:', attachmentId);
-    const response: any = await api.get(`${BASE_PATH}/${attachmentId}/presigned-download?expirationMinutes=${expirationMinutes}`);
+  getDownloadUrl: async (
+    attachmentId: number,
+    expirationMinutes: number = 60,
+    isView: boolean = false
+  ): Promise<string> => {
+    console.log('📥 Requesting presigned download URL for attachment:', attachmentId, { isView });
+    const params = new URLSearchParams();
+    params.append('expirationMinutes', expirationMinutes.toString());
+    if (isView) {
+      params.append('isView', 'true');
+    }
+    const response: any = await api.get(`${BASE_PATH}/${attachmentId}/presigned-download?${params.toString()}`);
     const downloadData: PresignedDownloadResponse = response.data?.data || response.data || response;
     console.log('✅ Received presigned download URL');
     return downloadData.downloadUrl;

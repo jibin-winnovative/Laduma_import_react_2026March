@@ -216,7 +216,7 @@ export const ProductMasterForm = ({ mode, productId, onClose, onSuccess }: Produ
 
       if (product.images && product.images.length > 0) {
         const firstImage = product.images[0];
-        const presignedUrl = await attachmentService.getDownloadUrl(firstImage.attachmentId);
+        const presignedUrl = await attachmentService.getDownloadUrl(firstImage.attachmentId, 60, true);
         setExistingImage({
           attachmentId: firstImage.attachmentId,
           url: presignedUrl,

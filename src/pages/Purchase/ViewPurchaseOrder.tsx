@@ -183,7 +183,7 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
 
   const handleDownload = async (attachmentId: number, fileName: string) => {
     try {
-      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId);
+      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId, 60, false);
       const response = await fetch(downloadUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -201,8 +201,8 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
 
   const handleView = async (attachmentId: number) => {
     try {
-      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId);
-      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      const viewUrl = await attachmentService.getDownloadUrl(attachmentId, 60, true);
+      window.open(viewUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Failed to view file:', error);
     }

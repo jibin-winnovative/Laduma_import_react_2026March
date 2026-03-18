@@ -32,7 +32,7 @@ export const ViewProductMaster = ({ productId, onClose, onEdit }: ViewProductMas
 
       if (data.images && data.images.length > 0) {
         const firstImage = data.images[0];
-        const presignedUrl = await attachmentService.getDownloadUrl(firstImage.attachmentId);
+        const presignedUrl = await attachmentService.getDownloadUrl(firstImage.attachmentId, 60, true);
         setProductImageUrl(presignedUrl);
       }
     } catch (err) {

@@ -576,7 +576,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const handleDownloadAttachment = async (attachmentId: number, fileName: string) => {
     try {
       setDownloadingAttachmentId(attachmentId);
-      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId);
+      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId, 60, false);
 
       const link = document.createElement('a');
       link.href = downloadUrl;
