@@ -193,10 +193,20 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
 
   useEffect(() => {
     setPaymentTerms((prev) =>
-      prev.map((term) => ({
-        ...term,
-        amount: toNumber(divide(multiply(invoiceTotal, term.percentage), 100)),
-      }))
+      prev.map((term) => {
+        const isProtected = term.status && ['Requested', 'Approved', 'Paid'].includes(term.status);
+        if (isProtected) {
+          const calculatedPercentage = invoiceTotal > 0 ? toNumber(multiply(divide(term.amount, invoiceTotal), 100)) : 0;
+          return {
+            ...term,
+            percentage: calculatedPercentage,
+          };
+        }
+        return {
+          ...term,
+          amount: toNumber(divide(multiply(invoiceTotal, term.percentage), 100)),
+        };
+      })
     );
   }, [invoiceTotal]);
 
