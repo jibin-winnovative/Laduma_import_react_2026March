@@ -659,16 +659,15 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                     <Download className="w-4 h-4" />
                     Download
                   </Button>
-                  <a
-                    href={attachment.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                  <Button
+                    onClick={() => window.open(attachment.fileUrl, '_blank', 'noopener,noreferrer')}
+                    variant="secondary"
+                    className="flex items-center gap-2 px-3 py-2 text-sm"
                     title="View in new tab"
                   >
                     <ExternalLink className="w-4 h-4" />
                     View
-                  </a>
+                  </Button>
                 </div>
               </div>
             ))}
