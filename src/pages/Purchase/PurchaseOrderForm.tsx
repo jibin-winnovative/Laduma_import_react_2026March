@@ -136,6 +136,10 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  const roundTo4Decimals = (value: number): number => {
+    return Math.round(value * 10000) / 10000;
+  };
+
   const {
     register,
     handleSubmit,
@@ -412,10 +416,6 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         { id: `pt-${Date.now()}`, description: '', percentage: 0, amount: 0, expectedDate: '' }
       ]);
     }
-  };
-
-  const roundTo4Decimals = (value: number): number => {
-    return Math.round(value * 10000) / 10000;
   };
 
   const calculateItemTotals = (item: Partial<POItem>, fieldChanged?: 'qty' | 'priceUSD' | 'amount' | 'cbm' | 'totalCBM'): Partial<POItem> => {
