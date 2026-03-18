@@ -57,6 +57,7 @@ type POFormData = z.infer<typeof poSchema>;
 
 interface POItem {
   id: string;
+  purchaseOrderItemId?: number | null;
   productId?: number;
   itemCode: string;
   barcode: string;
@@ -79,10 +80,13 @@ interface Charge {
 
 interface PaymentTerm {
   id: string;
+  purchaseOrderPaymentId?: number | null;
   description: string;
   percentage: number;
   amount: number;
   expectedDate: string;
+  status?: string;
+  isPaid?: boolean;
   percentageDisplay?: string;
   amountDisplay?: string;
 }
@@ -330,6 +334,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       if (data.items && data.items.length > 0) {
         setItems(data.items.map((item: any) => ({
           id: `item-${item.purchaseOrderItemId}`,
+          purchaseOrderItemId: item.purchaseOrderItemId,
           productId: item.productId,
           itemCode: item.itemCode,
           barcode: item.barcode || '',
@@ -358,10 +363,13 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       if (data.payments && data.payments.length > 0) {
         setPaymentTerms(data.payments.map((payment: any) => ({
           id: `pt-${payment.purchaseOrderPaymentId}`,
+          purchaseOrderPaymentId: payment.purchaseOrderPaymentId,
           description: payment.description,
           percentage: payment.percentage,
           amount: payment.expectedAmount,
           expectedDate: payment.expectedDate ? payment.expectedDate.split('T')[0] : '',
+          status: payment.status,
+          isPaid: payment.isPaid,
         })));
       }
 
@@ -477,12 +485,25 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   };
 
   const updateItem = (id: string, updates: Partial<POItem>, fieldChanged?: 'qty' | 'priceUSD' | 'amount' | 'cbm' | 'totalCBM') => {
-    setItems(items.map(item =>
-      item.id === id ? { ...item, ...calculateItemTotals({ ...item, ...updates }, fieldChanged) } : item
-    ));
+    setItems(items.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, ...updates };
+        if (updates.qty !== undefined && item.receivedQty > 0 && updates.qty < item.receivedQty) {
+          alert(`Quantity cannot be less than received quantity (${item.receivedQty})`);
+          return item;
+        }
+        return calculateItemTotals(updatedItem, fieldChanged);
+      }
+      return item;
+    }));
   };
 
   const deleteItem = (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (item && item.receivedQty > 0) {
+      alert(`Cannot delete this item because ${item.receivedQty} units have already been received.`);
+      return;
+    }
     setItems(items.filter(item => item.id !== id));
   };
 
@@ -509,6 +530,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   };
 
   const updatePaymentTerm = (id: string, field: keyof PaymentTerm, value: any) => {
+    const term = paymentTerms.find(t => t.id === id);
+    if (term && term.status && ['Requested', 'Approved', 'Paid'].includes(term.status)) {
+      alert(`Cannot edit this payment term because its status is "${term.status}".`);
+      return;
+    }
     setPaymentTerms(paymentTerms.map(term => {
       if (term.id === id) {
         if (field === 'percentage') {
@@ -535,6 +561,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   };
 
   const deletePaymentTerm = (id: string) => {
+    const term = paymentTerms.find(t => t.id === id);
+    if (term && term.status && ['Requested', 'Approved', 'Paid'].includes(term.status)) {
+      alert(`Cannot delete this payment term because its status is "${term.status}".`);
+      return;
+    }
     setPaymentTerms(paymentTerms.filter(term => term.id !== id));
   };
 
@@ -903,6 +934,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         }
 
         return {
+          purchaseOrderItemId: item.purchaseOrderItemId || null,
           productId: productId && !isNaN(productId) ? productId : 0,
           itemCode: item.itemCode,
           barcode: item.barcode,
@@ -911,7 +943,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           orderedQty: item.qty,
           unitPriceForeign: item.priceUSD,
           cbm: item.cbm,
-          grossWeight: 0, // Default value, can be updated if needed
+          grossWeight: 0,
         };
       });
 
@@ -925,6 +957,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
 
       // Transform payment terms to payments
       const transformedPayments = paymentTerms.map(term => ({
+        purchaseOrderPaymentId: term.purchaseOrderPaymentId || null,
         description: term.description,
         percentage: term.percentage,
         expectedDate: term.expectedDate,
@@ -1747,21 +1780,27 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                       Expected Date <span className="text-red-500">*</span>
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      Status
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                       Action
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {paymentTerms.map((term, index) => (
-                    <tr key={term.id} className="hover:bg-gray-50">
+                  {paymentTerms.map((term, index) => {
+                    const isProtected = term.status && ['Requested', 'Approved', 'Paid'].includes(term.status);
+                    return (
+                    <tr key={term.id} className={`${isProtected ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3">
                         <input
                           type="text"
                           value={term.description}
                           onChange={(e) => updatePaymentTerm(term.id, 'description', e.target.value)}
                           placeholder="Enter payment description"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                          disabled={isProtected}
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${isProtected ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -1770,6 +1809,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           inputMode="decimal"
                           value={term.percentageDisplay ?? term.percentage}
                           onFocus={(e) => e.target.select()}
+                          disabled={isProtected}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === '') {
@@ -1798,7 +1838,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             }
                           }}
                           placeholder="0.00"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${isProtected ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -1807,6 +1847,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           inputMode="decimal"
                           value={term.amountDisplay ?? term.amount}
                           onFocus={(e) => e.target.select()}
+                          disabled={isProtected}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === '') {
@@ -1835,7 +1876,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             }
                           }}
                           placeholder="0.00"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${isProtected ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -1843,21 +1884,38 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           type="date"
                           value={term.expectedDate}
                           onChange={(e) => updatePaymentTerm(term.id, 'expectedDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                          disabled={isProtected}
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${isProtected ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        {term.status ? (
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            term.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                            term.status === 'Approved' ? 'bg-blue-100 text-blue-800' :
+                            term.status === 'Requested' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {term.status}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Draft</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={() => deletePaymentTerm(term.id)}
-                          className="text-red-600 hover:text-red-900 transition-colors"
-                          title="Delete"
+                          disabled={isProtected}
+                          className={`transition-colors ${isProtected ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
+                          title={isProtected ? 'Cannot delete - status is ' + term.status : 'Delete'}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
 
