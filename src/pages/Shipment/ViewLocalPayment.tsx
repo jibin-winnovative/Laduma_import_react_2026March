@@ -157,156 +157,157 @@ export const ViewLocalPayment = ({
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">
             Local Payment Details
           </h1>
+          <p className="text-[var(--color-text-secondary)] mt-1">
+            View local payment information
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onEdit}>
-            <Pencil className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          {canRequestPayment && (
-            <Button onClick={handleRequest} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700">
-              <Send className="w-4 h-4 mr-2" />
-              Request Payment
-            </Button>
-          )}
-          {canApprove && (
-            <Button onClick={handleApprove} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Approve
-            </Button>
-          )}
-          {canReject && (
-            <Button variant="outline" onClick={handleReject} disabled={actionLoading} className="bg-red-600 hover:bg-red-700 text-white">
-              <XCircle className="w-4 h-4 mr-2" />
-              Reject
-            </Button>
-          )}
-        </div>
+        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusBadge(data.status)}`}>
+          {data.status}
+        </span>
       </div>
 
       {error && (
-        <Card className="p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-          </div>
-        </Card>
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
       )}
 
       <Card className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">Payment Information</h2>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(data.status)}`}>
-            {data.status}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <h2 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+          Payment Information
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Container Number
-            </label>
-            <p className="text-base text-[var(--color-text)]">{data.containerNumber}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Container Number</label>
+            <p className="text-base font-semibold text-gray-900">{data.containerNumber}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Payment Nature
-            </label>
-            <p className="text-base text-[var(--color-text)]">{data.paymentNature}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Payment Nature</label>
+            <p className="text-base font-semibold text-gray-900">{data.paymentNature}</p>
           </div>
 
           {data.companyName && (
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                Company Name
-              </label>
-              <p className="text-base text-[var(--color-text)]">{data.companyName}</p>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Company Name</label>
+              <p className="text-base font-semibold text-gray-900">{data.companyName}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Amount Excl
-            </label>
-            <p className="text-base text-[var(--color-text)]">{fmt(data.amountExcl)}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Amount Excl</label>
+            <p className="text-base font-semibold text-gray-900">{fmt(data.amountExcl)}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              VAT
-            </label>
-            <p className="text-base text-[var(--color-text)]">{fmt(data.vat)}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">VAT</label>
+            <p className="text-base font-semibold text-gray-900">{fmt(data.vat)}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Amount Incl
-            </label>
-            <p className="text-base font-semibold text-[var(--color-text)]">{fmt(data.amountIncl)}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Amount Incl</label>
+            <p className="text-base font-semibold text-gray-900">{fmt(data.amountIncl)}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Payment Date
-            </label>
-            <p className="text-base text-[var(--color-text)]">{formatDate(data.paymentDate)}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Payment Date</label>
+            <p className="text-base font-semibold text-gray-900">{formatDate(data.paymentDate)}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Bill Date
-            </label>
-            <p className="text-base text-[var(--color-text)]">{formatDate(data.billDate)}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Bill Date</label>
+            <p className="text-base font-semibold text-gray-900">{formatDate(data.billDate)}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
+            <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadge(data.status)}`}>
+              {data.status}
+            </span>
           </div>
 
           {data.remarks && (
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                Remarks
-              </label>
-              <p className="text-base text-[var(--color-text)] whitespace-pre-wrap">{data.remarks}</p>
+            <div className="lg:col-span-3">
+              <label className="block text-sm font-medium text-gray-500 mb-1">Remarks</label>
+              <p className="text-base font-semibold text-gray-900 whitespace-pre-wrap">{data.remarks}</p>
             </div>
           )}
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold text-[var(--color-text)] mb-4">Audit Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Created Date
-            </label>
-            <p className="text-base text-[var(--color-text)]">{formatDate(data.createdDate)}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Created By
-            </label>
-            <p className="text-base text-[var(--color-text)]">{data.createdBy}</p>
-          </div>
-
-          {data.updatedDate && (
+      {data.createdDate && (
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+            Audit Information
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                Updated Date
-              </label>
-              <p className="text-base text-[var(--color-text)]">{formatDate(data.updatedDate)}</p>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Created Date</label>
+              <p className="text-base font-semibold text-gray-900">{formatDate(data.createdDate)}</p>
             </div>
-          )}
 
-          {data.updatedBy && (
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                Updated By
-              </label>
-              <p className="text-base text-[var(--color-text)]">{data.updatedBy}</p>
-            </div>
-          )}
-        </div>
-      </Card>
+            {data.createdBy && (
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Created By</label>
+                <p className="text-base font-semibold text-gray-900">{data.createdBy}</p>
+              </div>
+            )}
+
+            {data.updatedDate && (
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Updated Date</label>
+                <p className="text-base font-semibold text-gray-900">{formatDate(data.updatedDate)}</p>
+              </div>
+            )}
+
+            {data.updatedBy && (
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Updated By</label>
+                <p className="text-base font-semibold text-gray-900">{data.updatedBy}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pb-8">
+        <Button onClick={onClose} variant="secondary" className="w-full sm:w-auto">
+          Close
+        </Button>
+
+        {canRequestPayment && (
+          <Button
+            onClick={handleRequest}
+            disabled={actionLoading}
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+          >
+            <Send className="w-4 h-4" />
+            {actionLoading ? 'Processing...' : 'Request Payment'}
+          </Button>
+        )}
+
+        {canApprove && (
+          <>
+            <Button
+              onClick={handleReject}
+              disabled={actionLoading}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+            >
+              <XCircle className="w-4 h-4" />
+              {actionLoading ? 'Processing...' : 'Reject'}
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={actionLoading}
+              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+            >
+              <CheckCircle className="w-4 h-4" />
+              {actionLoading ? 'Processing...' : 'Approve'}
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 };

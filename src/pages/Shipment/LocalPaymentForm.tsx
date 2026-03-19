@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Send, XCircle, CheckCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Send, XCircle, CheckCheck, Trash2, Search, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService } from '../../services/containersService';
@@ -292,8 +292,10 @@ export const LocalPaymentForm = ({
 
   if (loadingInit) {
     return (
-      <div className="p-6">
-        <p>Loading...</p>
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]" />
+        </div>
       </div>
     );
   }
@@ -303,72 +305,72 @@ export const LocalPaymentForm = ({
   const canApprove = mode === 'edit' && status === 'Requested';
   const canReject = mode === 'edit' && (status === 'Requested' || status === 'Approved');
 
+  const getStatusBadge = (s: string) => {
+    switch (s) {
+      case 'Pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'Requested':
+        return 'bg-blue-100 text-blue-800';
+      case 'Approved':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
+      case 'Paid':
+        return 'bg-emerald-100 text-emerald-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
-      <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={onClose}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {mode === 'add' ? 'Create Local Payment' : 'Edit Local Payment'}
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">
+            {mode === 'add' ? 'Add Local Payment' : 'Edit Local Payment'}
           </h1>
+          <p className="text-[var(--color-text-secondary)] mt-1">
+            {mode === 'add' ? 'Create a new local payment record' : 'Update local payment details'}
+          </p>
         </div>
-        <div className="flex items-center space-x-2">
-          {mode === 'edit' && (
-            <Button variant="outline" onClick={handleDelete} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </Button>
-          )}
-          {canRequestPayment && (
-            <Button onClick={handleRequestPayment} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-              <Send className="w-4 h-4 mr-2" />
-              Request Payment
-            </Button>
-          )}
-          {canApprove && (
-            <Button onClick={handleApprove} disabled={saving} className="bg-green-600 hover:bg-green-700">
-              <CheckCheck className="w-4 h-4 mr-2" />
-              Approve
-            </Button>
-          )}
-          {canReject && (
-            <Button variant="outline" onClick={handleReject} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white">
-              <XCircle className="w-4 h-4 mr-2" />
-              Reject
-            </Button>
-          )}
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
+        {mode === 'edit' && (
+          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusBadge(status)}`}>
+            {status}
+          </span>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
-          </div>
-        )}
+      {error && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Payment Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+          Payment Information
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Container Number <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Container <span className="text-red-500">*</span>
                 </label>
-                <div className="flex space-x-2">
+                <div className="flex gap-2">
                   <select
                     value={containerId}
                     onChange={(e) => setContainerId(Number(e.target.value) || '')}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     disabled={mode === 'edit'}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
                   >
-                    <option value="">Select Container</option>
+                    <option value="">Select container...</option>
                     {containers.map((c) => (
                       <option key={c.containerId} value={c.containerId}>
                         {c.containerNumber}
@@ -376,15 +378,20 @@ export const LocalPaymentForm = ({
                     ))}
                   </select>
                   {mode === 'add' && (
-                    <Button variant="outline" onClick={() => setShowContainerSearch(true)}>
-                      Search
+                    <Button
+                      onClick={() => setShowContainerSearch(true)}
+                      variant="secondary"
+                      className="px-3"
+                      title="Search Containers"
+                    >
+                      <Search className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Payment Nature <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -395,9 +402,9 @@ export const LocalPaymentForm = ({
                       setLocalTransportCompanyId('');
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 >
-                  <option value="">Select Payment Nature</option>
+                  <option value="">Select payment nature...</option>
                   {PAYMENT_NATURES.map((nature) => (
                     <option key={nature} value={nature}>
                       {nature}
@@ -408,15 +415,15 @@ export const LocalPaymentForm = ({
 
               {showTransportCompanyField && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Transport Company <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={localTransportCompanyId}
                     onChange={(e) => setLocalTransportCompanyId(Number(e.target.value) || '')}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   >
-                    <option value="">Select Transport Company</option>
+                    <option value="">Select transport company...</option>
                     {transportCompanies.map((t) => (
                       <option key={t.localTransportCompanyId} value={t.localTransportCompanyId}>
                         {t.companyName}
@@ -427,181 +434,316 @@ export const LocalPaymentForm = ({
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Amount Excl <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  step="0.01"
                   value={amountExcl}
                   onChange={(e) => setAmountExcl(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  step="0.01"
+                  placeholder="0.00"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-right"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   VAT <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  step="0.01"
                   value={vat}
                   onChange={(e) => setVat(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  step="0.01"
+                  placeholder="0.00"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-right"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Amount Incl (Auto Calculated)
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount Incl (calculated)
                 </label>
-                <input
-                  type="text"
-                  value={amountIncl.toFixed(2)}
-                  readOnly
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white"
-                />
+                <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 text-right font-medium text-sm">
+                  {amountIncl.toFixed(2)}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Payment Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Bill Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={billDate}
                   onChange={(e) => setBillDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  disabled={mode === 'edit'}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {mode === 'edit' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    disabled
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <div className={showTransportCompanyField ? "lg:col-span-3" : "lg:col-span-2"}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Remarks
                 </label>
                 <textarea
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter remarks..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               </div>
             </div>
           </Card>
+
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pb-8">
+        {mode === 'add' && (
+          <Button
+            onClick={() => {
+              setContainerId('');
+              setPaymentNature('');
+              setLocalTransportCompanyId('');
+              setAmountExcl('');
+              setVat('');
+              setPaymentDate('');
+              setBillDate('');
+              setRemarks('');
+              setError(null);
+            }}
+            variant="secondary"
+            disabled={saving}
+            className="flex items-center gap-2 w-full sm:w-auto"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear
+          </Button>
+        )}
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button
+            onClick={onClose}
+            variant="secondary"
+            disabled={saving}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+
+          {mode === 'add' && (
+            <>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                variant="outline"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Draft'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && status === 'Pending' && (
+            <>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                onClick={handleRequestPayment}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Send className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Request Payment'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && status === 'Requested' && (
+            <>
+              <Button
+                onClick={handleReject}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+              >
+                <XCircle className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Reject'}
+              </Button>
+              <Button
+                onClick={handleApprove}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+              >
+                <CheckCheck className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Approve'}
+              </Button>
+            </>
+          )}
+
+          {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
         </div>
       </div>
 
       {showContainerSearch && (
         <ContainerSearchModal
-          onSelect={handleContainerSelect}
           onClose={() => setShowContainerSearch(false)}
+          onSelect={handleContainerSelect}
         />
       )}
 
       {showRequestDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Confirm Request Payment</h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Are you sure you want to submit this payment request?
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Request Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to request payment for this local payment?
             </p>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowRequestDialog(false)}>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRequestDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={confirmRequest}>
-                Confirm
-              </Button>
+              </button>
+              <button
+                onClick={confirmRequest}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Request'}
+              </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
 
       {showApproveDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Confirm Approve Payment</h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Are you sure you want to approve this payment?
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Approve Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to approve this local payment? This will create a payment request.
             </p>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowApproveDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={confirmApprove} className="bg-green-600 hover:bg-green-700">
-                Approve
-              </Button>
+              </button>
+              <button
+                onClick={confirmApprove}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Approve'}
+              </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
 
       {showRejectDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Confirm Reject Payment</h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Are you sure you want to reject this payment?
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Reject Payment</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to reject this local payment request?
             </p>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRejectDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={confirmReject} className="bg-red-600 hover:bg-red-700">
-                Reject
-              </Button>
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Reject'}
+              </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
 
       {showDeleteDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Confirm Delete</h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Payment</h3>
+            <p className="text-gray-600 mb-6">
               Are you sure you want to delete this local payment? This action cannot be undone.
             </p>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
                 Cancel
-              </Button>
-              <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-                Delete
-              </Button>
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Processing...' : 'Delete'}
+              </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
