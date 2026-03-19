@@ -175,12 +175,29 @@ export const ClearingPaymentForm = ({
   };
 
   const handleContainerSelect = async (id: number, containerNumber: string) => {
-    setContainers([{ containerId: id, containerNumber }]);
-    setContainerId(id);
-    setClearingAgentId('');
-    setPoList([]);
-    setChargeMap(new Map());
-    await loadContainerPOs(id);
+    try {
+      const paymentStatus = await containersService.getClearingPaymentStatus(id);
+
+      if (paymentStatus.hasClearingPayment) {
+        alert(
+          `A clearing payment already exists for this container.\n\n` +
+          `Clearing Payment ID: ${paymentStatus.clearingPaymentId}\n` +
+          `Status: ${paymentStatus.status}\n\n` +
+          `Please select a different container or edit the existing payment.`
+        );
+        return;
+      }
+
+      setContainers([{ containerId: id, containerNumber }]);
+      setContainerId(id);
+      setClearingAgentId('');
+      setPoList([]);
+      setChargeMap(new Map());
+      await loadContainerPOs(id);
+    } catch (err) {
+      console.error('Failed to check clearing payment status:', err);
+      alert('Failed to verify container payment status. Please try again.');
+    }
   };
 
   const handleChargesSaved = (poId: number, lines: ClearingPaymentChargeLine[]) => {

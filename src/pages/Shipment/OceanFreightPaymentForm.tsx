@@ -133,12 +133,27 @@ export const OceanFreightPaymentForm = ({
     }
   };
 
-  const handleContainerSelect = (containerId: number, containerNumber: string) => {
-    setContainerId(containerId);
-    if (!containers.find(c => c.containerId === containerId)) {
-      setContainers(prev => [...prev, { containerId, containerNumber }]);
+  const handleContainerSelect = async (containerId: number, containerNumber: string) => {
+    try {
+      const paymentStatus = await containersService.getOceanFreightPaymentStatus(containerId);
+
+      if (paymentStatus.hasOceanFreightPayment) {
+        alert(
+          `An ocean freight payment already exists for this container.\n\n` +
+          `Ocean Freight Payment ID: ${paymentStatus.oceanFreightPaymentId}\n` +
+          `Status: ${paymentStatus.status}\n\n` +
+          `Please select a different container or edit the existing payment.`
+        );
+        return;
+      }
+
+      setContainers([{ containerId, containerNumber }]);
+      setContainerId(containerId);
+      setShowContainerSearch(false);
+    } catch (err) {
+      console.error('Failed to check ocean freight payment status:', err);
+      alert('Failed to verify container payment status. Please try again.');
     }
-    setShowContainerSearch(false);
   };
 
   const validateForm = () => {

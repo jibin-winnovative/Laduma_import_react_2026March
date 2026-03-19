@@ -162,6 +162,20 @@ export interface OceanFreightCompanyInfo {
   oceanFreightCompanyName: string;
 }
 
+export interface ClearingPaymentStatus {
+  containerId: number;
+  hasClearingPayment: boolean;
+  clearingPaymentId: number | null;
+  status: string | null;
+}
+
+export interface OceanFreightPaymentStatus {
+  containerId: number;
+  hasOceanFreightPayment: boolean;
+  oceanFreightPaymentId: number | null;
+  status: string | null;
+}
+
 export const containersService = {
   getDashboard: async (): Promise<ContainerDashboard> => {
     const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
@@ -223,6 +237,16 @@ export const containersService = {
 
   getOceanFreightCompany: async (containerId: number): Promise<OceanFreightCompanyInfo> => {
     const response = await apiClient.get<OceanFreightCompanyInfo>(`/api/containers/${containerId}/ocean-freight-company`);
+    return response.data;
+  },
+
+  getClearingPaymentStatus: async (containerId: number): Promise<ClearingPaymentStatus> => {
+    const response = await apiClient.get<ClearingPaymentStatus>(`/api/containers/${containerId}/clearing-payment-status`);
+    return response.data;
+  },
+
+  getOceanFreightPaymentStatus: async (containerId: number): Promise<OceanFreightPaymentStatus> => {
+    const response = await apiClient.get<OceanFreightPaymentStatus>(`/api/containers/${containerId}/ocean-freight-payment-status`);
     return response.data;
   },
 };
