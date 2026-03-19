@@ -144,6 +144,10 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     return Math.round(value * 10000) / 10000;
   };
 
+  const roundTo10Decimals = (value: number): number => {
+    return Math.round(value * 10000000000) / 10000000000;
+  };
+
   const {
     register,
     handleSubmit,
@@ -449,19 +453,19 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     if (fieldChanged === 'qty' || fieldChanged === 'priceUSD') {
       // If qty or price changed, recalculate amount = qty * price
       amount = roundTo4Decimals(toNumber(multiply(qty, priceUSD)));
-      totalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
+      totalCBM = roundTo10Decimals(toNumber(multiply(qty, cbm)));
       return {
         ...item,
         priceUSD: priceUSD,
         amount: roundTo4Decimals(amount),
         cbm: cbm,
-        totalCBM: roundTo4Decimals(totalCBM),
+        totalCBM: roundTo10Decimals(totalCBM),
         balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
       };
     } else if (fieldChanged === 'amount' && qty > 0) {
       // If amount changed, recalculate price = amount / qty
       const calculatedPrice = toNumber(divide(amount, qty));
-      const calculatedTotalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
+      const calculatedTotalCBM = roundTo10Decimals(toNumber(multiply(qty, cbm)));
       return {
         ...item,
         priceUSD: calculatedPrice,
@@ -472,11 +476,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       };
     } else if (fieldChanged === 'cbm') {
       // If CBM changed, recalculate total CBM = qty * cbm
-      totalCBM = roundTo4Decimals(toNumber(multiply(qty, cbm)));
+      totalCBM = roundTo10Decimals(toNumber(multiply(qty, cbm)));
       return {
         ...item,
         cbm: cbm,
-        totalCBM: roundTo4Decimals(totalCBM),
+        totalCBM: roundTo10Decimals(totalCBM),
         balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
       };
     } else if (fieldChanged === 'totalCBM' && qty > 0) {
@@ -485,7 +489,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       return {
         ...item,
         cbm: cbm,
-        totalCBM: roundTo4Decimals(totalCBM),
+        totalCBM: roundTo10Decimals(totalCBM),
         balanceQty: toNumber(subtract(qty, item.receivedQty || 0)),
       };
     }
