@@ -66,8 +66,6 @@ export const LocalPaymentForm = ({
   useEffect(() => {
     if (mode === 'edit' && localPaymentId) {
       loadExisting();
-    } else {
-      loadContainers();
     }
   }, [mode, localPaymentId]);
 
@@ -79,20 +77,6 @@ export const LocalPaymentForm = ({
       setLocalTransportCompanyId('');
     }
   }, [paymentNature]);
-
-  const loadContainers = async () => {
-    try {
-      const containerRes = await containersService.search({ pageNumber: 1, pageSize: 500 });
-      setContainers(
-        (containerRes.items || []).map((c) => ({
-          containerId: c.containerId,
-          containerNumber: c.containerNumber,
-        }))
-      );
-    } catch (err) {
-      console.error('Failed to load containers:', err);
-    }
-  };
 
   const loadTransportCompanies = async () => {
     try {
@@ -131,8 +115,6 @@ export const LocalPaymentForm = ({
         }]);
       }
 
-      await loadContainers();
-
       if (data.paymentNature === 'Transport') {
         await loadTransportCompanies();
       }
@@ -145,11 +127,8 @@ export const LocalPaymentForm = ({
   };
 
   const handleContainerSelect = (cId: number, cNumber: string) => {
+    setContainers([{ containerId: cId, containerNumber: cNumber }]);
     setContainerId(cId);
-    const exists = containers.find(c => c.containerId === cId);
-    if (!exists) {
-      setContainers(prev => [...prev, { containerId: cId, containerNumber: cNumber }]);
-    }
     setShowContainerSearch(false);
   };
 
@@ -650,12 +629,11 @@ export const LocalPaymentForm = ({
         </div>
       </div>
 
-      {showContainerSearch && (
-        <ContainerSearchModal
-          onClose={() => setShowContainerSearch(false)}
-          onSelect={handleContainerSelect}
-        />
-      )}
+      <ContainerSearchModal
+        isOpen={showContainerSearch}
+        onClose={() => setShowContainerSearch(false)}
+        onSelect={handleContainerSelect}
+      />
 
       {showRequestDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
