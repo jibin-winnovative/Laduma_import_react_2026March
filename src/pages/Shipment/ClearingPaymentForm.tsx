@@ -165,6 +165,22 @@ export const ClearingPaymentForm = ({
 
   const handleContainerChange = async (val: string) => {
     const id = val ? Number(val) : '';
+
+    if (id) {
+      try {
+        const paymentStatus = await containersService.getClearingPaymentStatus(id);
+
+        if (paymentStatus.hasClearingPayment) {
+          alert('Payment already exists in this container. Please select a different container.');
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to check clearing payment status:', err);
+        alert('Failed to verify container payment status. Please try again.');
+        return;
+      }
+    }
+
     setContainerId(id);
     setClearingAgentId('');
     setPoList([]);

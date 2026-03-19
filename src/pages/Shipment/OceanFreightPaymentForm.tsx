@@ -125,8 +125,24 @@ export const OceanFreightPaymentForm = ({
     }
   };
 
-  const handleContainerChange = (val: string) => {
+  const handleContainerChange = async (val: string) => {
     const id = val ? Number(val) : '';
+
+    if (id) {
+      try {
+        const paymentStatus = await containersService.getOceanFreightPaymentStatus(id);
+
+        if (paymentStatus.hasOceanFreightPayment) {
+          alert('Payment already exists in this container. Please select a different container.');
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to check ocean freight payment status:', err);
+        alert('Failed to verify container payment status. Please try again.');
+        return;
+      }
+    }
+
     setContainerId(id);
     if (!id) {
       setOceanFreightCompanyName('');
