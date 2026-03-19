@@ -179,12 +179,7 @@ export const ClearingPaymentForm = ({
       const paymentStatus = await containersService.getClearingPaymentStatus(id);
 
       if (paymentStatus.hasClearingPayment) {
-        alert(
-          `A clearing payment already exists for this container.\n\n` +
-          `Clearing Payment ID: ${paymentStatus.clearingPaymentId}\n` +
-          `Status: ${paymentStatus.status}\n\n` +
-          `Please select a different container or edit the existing payment.`
-        );
+        alert('Payment already exists in this container. Please select a different container.');
         return;
       }
 

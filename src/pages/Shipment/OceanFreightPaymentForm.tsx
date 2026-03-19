@@ -138,12 +138,7 @@ export const OceanFreightPaymentForm = ({
       const paymentStatus = await containersService.getOceanFreightPaymentStatus(containerId);
 
       if (paymentStatus.hasOceanFreightPayment) {
-        alert(
-          `An ocean freight payment already exists for this container.\n\n` +
-          `Ocean Freight Payment ID: ${paymentStatus.oceanFreightPaymentId}\n` +
-          `Status: ${paymentStatus.status}\n\n` +
-          `Please select a different container or edit the existing payment.`
-        );
+        alert('Payment already exists in this container. Please select a different container.');
         return;
       }
 
