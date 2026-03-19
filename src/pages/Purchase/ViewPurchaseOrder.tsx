@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
 import { attachmentService } from '../../services/attachmentService';
+import { removeTrailingZeros } from '../../utils/numberUtils';
 
 interface ViewPurchaseOrderProps {
   purchaseOrderId: number;
@@ -463,10 +464,10 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                       {formatCurrency(item.lineTotalForeign, purchaseOrder.currencyCode)}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
-                      {item.cbm ? item.cbm.toFixed(2) : '0.00'}
+                      {item.cbm ? removeTrailingZeros(item.cbm.toFixed(10)) : '0'}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
-                      {item.totalCBM ? item.totalCBM.toFixed(2) : '0.00'}
+                      {item.totalCBM ? removeTrailingZeros(item.totalCBM.toFixed(10)) : '0'}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
                       {item.grossWeight ? item.grossWeight.toFixed(2) : '0.00'}
