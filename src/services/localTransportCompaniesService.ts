@@ -127,6 +127,11 @@ export const localTransportCompaniesService = {
     };
   },
 
+  getActive: async (): Promise<ApiResponse<LocalTransportCompany[]>> => {
+    const response = await api.get<ApiResponse<LocalTransportCompany[]>>(`${BASE_PATH}/active`);
+    return response;
+  },
+
   exportExcel: async (params: LocalTransportCompaniesListParams = {}): Promise<Blob> => {
     const queryParams = new URLSearchParams();
     if (params.searchTerm) queryParams.append('searchTerm', params.searchTerm);

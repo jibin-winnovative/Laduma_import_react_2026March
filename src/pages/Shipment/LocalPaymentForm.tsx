@@ -67,24 +67,36 @@ export const LocalPaymentForm = ({
     if (mode === 'edit' && localPaymentId) {
       loadExisting();
     } else {
-      loadDropdowns();
+      loadContainers();
     }
   }, [mode, localPaymentId]);
 
-  const loadDropdowns = async () => {
-    try {
-      const [containerRes, transportRes] = await Promise.all([
-        containersService.search({ pageNumber: 1, pageSize: 500 }),
-        localTransportCompaniesService.getActive()
-      ]);
+  useEffect(() => {
+    if (paymentNature === 'Transport') {
+      loadTransportCompanies();
+    } else {
+      setTransportCompanies([]);
+      setLocalTransportCompanyId('');
+    }
+  }, [paymentNature]);
 
+  const loadContainers = async () => {
+    try {
+      const containerRes = await containersService.search({ pageNumber: 1, pageSize: 500 });
       setContainers(
         (containerRes.items || []).map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
         }))
       );
+    } catch (err) {
+      console.error('Failed to load containers:', err);
+    }
+  };
 
+  const loadTransportCompanies = async () => {
+    try {
+      const transportRes = await localTransportCompaniesService.getActive();
       setTransportCompanies(
         (transportRes.data || []).map((t) => ({
           localTransportCompanyId: t.localTransportCompanyId,
@@ -92,7 +104,7 @@ export const LocalPaymentForm = ({
         }))
       );
     } catch (err) {
-      console.error('Failed to load dropdowns:', err);
+      console.error('Failed to load transport companies:', err);
     }
   };
 
@@ -119,7 +131,11 @@ export const LocalPaymentForm = ({
         }]);
       }
 
-      await loadDropdowns();
+      await loadContainers();
+
+      if (data.paymentNature === 'Transport') {
+        await loadTransportCompanies();
+      }
     } catch (err) {
       console.error('Failed to load local payment:', err);
       setError('Failed to load local payment data.');
@@ -423,7 +439,9 @@ export const LocalPaymentForm = ({
                     onChange={(e) => setLocalTransportCompanyId(Number(e.target.value) || '')}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   >
-                    <option value="">Select transport company...</option>
+                    <option value="">
+                      {transportCompanies.length === 0 ? 'No active transport companies available' : 'Select transport company...'}
+                    </option>
                     {transportCompanies.map((t) => (
                       <option key={t.localTransportCompanyId} value={t.localTransportCompanyId}>
                         {t.companyName}
