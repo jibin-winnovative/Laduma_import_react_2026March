@@ -261,7 +261,7 @@ export const LocalPaymentList = ({ onAdd, onEdit, onView, onDelete }: LocalPayme
             </label>
             <MultiSelect
               options={statusOptions}
-              value={statuses}
+              selectedValues={statuses}
               onChange={setStatuses}
               placeholder="Select statuses"
             />
