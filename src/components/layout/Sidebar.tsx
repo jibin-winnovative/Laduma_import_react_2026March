@@ -85,6 +85,7 @@ const menuItems: MenuItem[] = [
       { label: 'Container Management', path: '/containers', icon: Container },
       { label: 'Clearing Payment', path: '/clearing-payments', icon: Receipt },
       { label: 'Ocean Freight Payment', path: '/ocean-freight-payments', icon: Ship },
+      { label: 'Local Payment', path: '/local-payments', icon: Truck },
     ],
   },
 ];
