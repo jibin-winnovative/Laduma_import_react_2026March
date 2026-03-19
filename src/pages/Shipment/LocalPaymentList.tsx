@@ -226,156 +226,170 @@ export const LocalPaymentList = ({ onAdd, onEdit, onView, onDelete }: LocalPayme
         </Card>
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4 text-[var(--color-text)]">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <Card className="p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Container Number
-            </label>
-            <input
-              type="text"
-              value={containerNumber}
-              onChange={(e) => setContainerNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-text)]"
-              placeholder="Enter container number"
-            />
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Container Number</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search container number..."
+                value={containerNumber}
+                onChange={(e) => setContainerNumber(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Payment Nature
-            </label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Payment Nature</label>
             <input
               type="text"
+              placeholder="Search payment nature..."
               value={paymentNature}
               onChange={(e) => setPaymentNature(e.target.value)}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-text)]"
-              placeholder="Enter payment nature"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              Status
-            </label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Status</label>
             <MultiSelect
               options={statusOptions}
               selectedValues={statuses}
               onChange={setStatuses}
-              placeholder="Select statuses"
+              placeholder="Select statuses..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              From Date
-            </label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">From Date</label>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-text)]"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              To Date
-            </label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">To Date</label>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-text)]"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
-        </div>
 
-        <div className="flex gap-2 mt-4">
-          <Button onClick={handleSearch} className="flex items-center gap-2">
-            <Search className="w-4 h-4" />
-            Search
-          </Button>
-          <Button variant="outline" onClick={handleReset}>
-            Reset
-          </Button>
+          <div className="flex items-end gap-2">
+            <Button
+              onClick={handleSearch}
+              className="flex-1 bg-[var(--color-primary)] hover:opacity-90 text-white"
+            >
+              Search
+            </Button>
+            <Button onClick={handleReset} variant="secondary">
+              Reset
+            </Button>
+          </div>
         </div>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[var(--color-border)]">
-                <th className="text-left p-4 font-semibold text-[var(--color-text)]">Container Number</th>
-                <th className="text-left p-4 font-semibold text-[var(--color-text)]">Payment Nature</th>
-                <th className="text-left p-4 font-semibold text-[var(--color-text)]">Company</th>
-                <th className="text-right p-4 font-semibold text-[var(--color-text)]">Amount</th>
-                <th className="text-left p-4 font-semibold text-[var(--color-text)]">Payment Date</th>
-                <th className="text-left p-4 font-semibold text-[var(--color-text)]">Status</th>
-                <th className="text-center p-4 font-semibold text-[var(--color-text)]">Actions</th>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Container Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Nature
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Company
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Date
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center p-8 text-[var(--color-text-secondary)]">
+                  <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center p-8 text-[var(--color-text-secondary)]">
+                  <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">
                     No local payments found
                   </td>
                 </tr>
               ) : (
                 items.map((item) => {
-                  const statusCfg = getStatusConfig(item.status);
+                  const cfg = getStatusConfig(item.status);
+                  const StatusIcon = cfg.icon;
                   return (
-                    <tr
-                      key={item.localPaymentId}
-                      className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]"
-                    >
-                      <td className="p-4 text-[var(--color-text)]">{item.containerNumber}</td>
-                      <td className="p-4 text-[var(--color-text)]">{item.paymentNature}</td>
-                      <td className="p-4 text-[var(--color-text)]">{item.companyName || '-'}</td>
-                      <td className="p-4 text-right text-[var(--color-text)]">
+                    <tr key={item.localPaymentId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {item.containerNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item.paymentNature}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item.companyName || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(item.paymentDate)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                         {formatAmount(item.amountIncl)}
                       </td>
-                      <td className="p-4 text-[var(--color-text)]">{formatDate(item.paymentDate)}</td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCfg.badge}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${cfg.color}`}>
+                          <StatusIcon className="w-3.5 h-3.5" />
                           {item.status}
                         </span>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
                             onClick={() => onView(item.localPaymentId)}
+                            className="text-blue-600 hover:text-blue-900"
                             title="View"
                           >
                             <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          </button>
+                          <button
                             onClick={() => onEdit(item.localPaymentId)}
+                            className="text-yellow-600 hover:text-yellow-900"
                             title="Edit"
                           >
                             <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          </button>
+                          <button
                             onClick={() => onDelete(item.localPaymentId)}
+                            className="text-red-600 hover:text-red-900"
                             title="Delete"
                           >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -386,31 +400,34 @@ export const LocalPaymentList = ({ onAdd, onEdit, onView, onDelete }: LocalPayme
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-[var(--color-border)]">
-            <div className="text-sm text-[var(--color-text-secondary)]">
-              Showing {items.length} of {totalRecords} results
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-[var(--color-text)]">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
+        {!loading && items.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-200 sm:px-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Showing {(currentPage - 1) * pageSize + 1} to{' '}
+                {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  variant="secondary"
+                  className="px-3 py-1 text-sm"
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  variant="secondary"
+                  className="px-3 py-1 text-sm"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </div>
         )}
