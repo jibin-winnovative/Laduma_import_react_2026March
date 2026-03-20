@@ -488,7 +488,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {container.status !== 'InShipment' && container.status !== 'In Transit' && (
+                            {container.status !== 'InShipment' && container.status !== 'In Transit' && container.status !== 'Received' && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
                                 className="text-red-600 hover:text-red-900"
