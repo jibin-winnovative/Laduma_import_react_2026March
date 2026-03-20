@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
 import { attachmentService } from '../../services/attachmentService';
 import { removeTrailingZeros } from '../../utils/numberUtils';
+import Decimal from 'decimal.js';
 
 interface ViewPurchaseOrderProps {
   purchaseOrderId: number;
@@ -178,7 +179,8 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
   };
 
   const formatCurrency = (amount: number, currencyCode?: string | null) => {
-    const formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const rounded = Math.round((amount || 0) * 10000) / 10000;
+    const formatted = removeTrailingZeros(rounded.toFixed(4));
     return currencyCode ? `${currencyCode} ${formatted}` : formatted;
   };
 
@@ -464,13 +466,13 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                       {formatCurrency(item.lineTotalForeign, purchaseOrder.currencyCode)}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
-                      {item.cbm ? removeTrailingZeros(item.cbm.toFixed(10)) : '0'}
+                      {item.cbm ? removeTrailingZeros((Math.round(item.cbm * 10000000000) / 10000000000).toFixed(10)) : '0'}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
-                      {item.totalCBM ? removeTrailingZeros(item.totalCBM.toFixed(10)) : '0'}
+                      {item.totalCBM ? removeTrailingZeros((Math.round(item.totalCBM * 10000000000) / 10000000000).toFixed(10)) : '0'}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
-                      {item.grossWeight ? item.grossWeight.toFixed(2) : '0.00'}
+                      {item.grossWeight ? removeTrailingZeros((Math.round(item.grossWeight * 10000) / 10000).toFixed(4)) : '0'}
                     </td>
                   </tr>
                 ))
@@ -592,7 +594,7 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                   <tr key={payment.purchaseOrderPaymentId} className="hover:bg-gray-50">
                     <td className="px-4 py-4 text-sm text-gray-900">{payment.description}</td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-center">
-                      {payment.percentage.toFixed(2)}%
+                      {removeTrailingZeros((Math.round((payment.percentage || 0) * 10000) / 10000).toFixed(4))}%
                     </td>
                     <td className="px-4 py-4 text-sm font-medium text-gray-900 text-right">
                       {formatCurrency(payment.expectedAmount, purchaseOrder.currencyCode)}
@@ -624,17 +626,20 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                 <tr>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Total:</td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-center">
-                    {purchaseOrder.payments.reduce((sum, p) => sum + p.percentage, 0).toFixed(2)}%
+                    {(() => {
+                      const total = purchaseOrder.payments.reduce((sum, p) => new Decimal(sum).plus(new Decimal(p.percentage || 0)).toNumber(), 0);
+                      return removeTrailingZeros((Math.round(total * 10000) / 10000).toFixed(4));
+                    })()}%
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
                     {formatCurrency(
-                      purchaseOrder.payments.reduce((sum, p) => sum + p.expectedAmount, 0),
+                      purchaseOrder.payments.reduce((sum, p) => new Decimal(sum).plus(new Decimal(p.expectedAmount || 0)).toNumber(), 0),
                       purchaseOrder.currencyCode
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
                     {formatCurrency(
-                      purchaseOrder.payments.reduce((sum, p) => sum + p.paidAmount, 0),
+                      purchaseOrder.payments.reduce((sum, p) => new Decimal(sum).plus(new Decimal(p.paidAmount || 0)).toNumber(), 0),
                       purchaseOrder.currencyCode
                     )}
                   </td>
