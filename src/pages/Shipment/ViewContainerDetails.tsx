@@ -51,19 +51,23 @@ export const ViewContainerDetails = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { bg: string; text: string; label: string }> = {
-      Draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
-      Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Booked' },
-      InShipment: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'In Transit' },
-      Closed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Received' },
-      Canceled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Canceled' },
+    const statusMap: Record<string, { bgColor: string; textColor: string }> = {
+      'draft': { bgColor: '#F3F4F6', textColor: '#374151' },
+      'booked': { bgColor: '#DBEAFE', textColor: '#1D4ED8' },
+      'in transit': { bgColor: '#FED7AA', textColor: '#C2410C' },
+      'received': { bgColor: '#D1FAE5', textColor: '#047857' },
+      'canceled': { bgColor: '#FEE2E2', textColor: '#DC2626' },
     };
 
-    const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
+    const normalizedStatus = status?.toLowerCase().trim() || '';
+    const config = statusMap[normalizedStatus] || { bgColor: '#F3F4F6', textColor: '#374151' };
 
     return (
-      <span className={`px-3 py-1.5 text-sm font-semibold rounded-lg ${config.bg} ${config.text}`}>
-        {config.label}
+      <span
+        className="px-3 py-1.5 text-sm font-semibold rounded-lg"
+        style={{ backgroundColor: config.bgColor, color: config.textColor }}
+      >
+        {status}
       </span>
     );
   };

@@ -36,7 +36,7 @@ export const ContainerSearchModal = ({
     try {
       const response = await containersService.search({
         searchText: searchText || undefined,
-        status: 'Confirmed',
+        status: 'Booked',
         fromDate: fromDate || null,
         toDate: toDate || null,
         pageNumber: currentPage,

@@ -18,9 +18,9 @@ import { Company } from '../../types/api';
 const STATUS_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'Draft', label: 'Draft' },
-  { value: 'Confirmed', label: 'Booked' },
-  { value: 'InShipment', label: 'In Transit' },
-  { value: 'Closed', label: 'Received' },
+  { value: 'Booked', label: 'Booked' },
+  { value: 'In Transit', label: 'In Transit' },
+  { value: 'Received', label: 'Received' },
 ];
 
 export const ContainerManagementPage = () => {
@@ -207,59 +207,30 @@ export const ContainerManagementPage = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { bgColor: string; textColor: string; label: string; icon: JSX.Element }> = {
+    const statusMap: Record<string, { bgColor: string; textColor: string; icon: JSX.Element }> = {
       'draft': {
         bgColor: '#F3F4F6',
         textColor: '#374151',
-        label: 'Draft',
         icon: <FileText className="w-3 h-3" />
-      },
-      'confirmed': {
-        bgColor: '#DBEAFE',
-        textColor: '#1D4ED8',
-        label: 'Booked',
-        icon: <Ship className="w-3 h-3" />
       },
       'booked': {
         bgColor: '#DBEAFE',
         textColor: '#1D4ED8',
-        label: 'Booked',
         icon: <Ship className="w-3 h-3" />
-      },
-      'inshipment': {
-        bgColor: '#FED7AA',
-        textColor: '#C2410C',
-        label: 'In Transit',
-        icon: <Truck className="w-3 h-3" />
       },
       'in transit': {
         bgColor: '#FED7AA',
         textColor: '#C2410C',
-        label: 'In Transit',
         icon: <Truck className="w-3 h-3" />
-      },
-      'closed': {
-        bgColor: '#D1FAE5',
-        textColor: '#047857',
-        label: 'Received',
-        icon: <CheckCircle className="w-3 h-3" />
       },
       'received': {
         bgColor: '#D1FAE5',
         textColor: '#047857',
-        label: 'Received',
         icon: <CheckCircle className="w-3 h-3" />
       },
       'canceled': {
         bgColor: '#FEE2E2',
         textColor: '#DC2626',
-        label: 'Canceled',
-        icon: <XCircle className="w-3 h-3" />
-      },
-      'cancelled': {
-        bgColor: '#FEE2E2',
-        textColor: '#DC2626',
-        label: 'Canceled',
         icon: <XCircle className="w-3 h-3" />
       },
     };
@@ -268,7 +239,6 @@ export const ContainerManagementPage = () => {
     const config = statusMap[normalizedStatus] || {
       bgColor: '#F3F4F6',
       textColor: '#374151',
-      label: status || 'Unknown',
       icon: <Package className="w-3 h-3" />
     };
 
@@ -278,7 +248,7 @@ export const ContainerManagementPage = () => {
         style={{ backgroundColor: config.bgColor, color: config.textColor }}
       >
         {config.icon}
-        {config.label}
+        {status}
       </span>
     );
   };
@@ -507,7 +477,7 @@ export const ContainerManagementPage = () => {
                           <Eye className="w-4 h-4" />
                         </button>
 
-                        {container.status !== 'Closed' && container.status !== 'Canceled' && (
+                        {container.status !== 'Received' && container.status !== 'Canceled' && (
                           <>
                             <button
                               onClick={() => navigate(`/containers/edit/${container.containerId}`)}
@@ -527,7 +497,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {(container.status === 'Confirmed' || container.status === 'Booked') && (
+                            {container.status === 'Booked' && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'mark-in-transit', 'Mark In Transit')}
                                 className="text-orange-600 hover:text-orange-900"
@@ -537,7 +507,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {(container.status === 'InShipment' || container.status === 'In Transit') && (
+                            {container.status === 'In Transit' && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received')}
                                 className="text-green-600 hover:text-green-900"
@@ -547,7 +517,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {container.status !== 'InShipment' && container.status !== 'In Transit' && container.status !== 'Received' && (
+                            {container.status !== 'In Transit' && container.status !== 'Received' && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
                                 className="text-red-600 hover:text-red-900"

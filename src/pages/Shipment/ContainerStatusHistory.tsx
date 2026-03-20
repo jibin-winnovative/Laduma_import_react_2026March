@@ -28,26 +28,16 @@ export const ContainerStatusHistoryTimeline = ({ containerId }: StatusHistoryPro
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      Draft: 'Draft',
-      Confirmed: 'Booked',
-      InShipment: 'In Transit',
-      Closed: 'Received',
-      Canceled: 'Canceled',
-    };
-    return labels[status] || status;
-  };
-
   const getStatusColor = (status: string) => {
+    const normalizedStatus = status?.toLowerCase().trim() || '';
     const colors: Record<string, string> = {
-      Draft: 'text-gray-600',
-      Confirmed: 'text-blue-600',
-      InShipment: 'text-orange-600',
-      Closed: 'text-green-600',
-      Canceled: 'text-red-600',
+      'draft': 'text-gray-600',
+      'booked': 'text-blue-600',
+      'in transit': 'text-orange-600',
+      'received': 'text-green-600',
+      'canceled': 'text-red-600',
     };
-    return colors[status] || 'text-gray-600';
+    return colors[normalizedStatus] || 'text-gray-600';
   };
 
   const getStatusIcon = (status: string) => {
@@ -95,7 +85,7 @@ export const ContainerStatusHistoryTimeline = ({ containerId }: StatusHistoryPro
             <div className="flex-1 pb-4">
               <div className="flex items-baseline gap-2 mb-1">
                 <span className={`font-semibold ${getStatusColor(item.toStatus)}`}>
-                  {getStatusLabel(item.fromStatus)} → {getStatusLabel(item.toStatus)}
+                  {item.fromStatus} → {item.toStatus}
                 </span>
                 <span className="text-xs text-[var(--color-text-secondary)]">
                   {new Date(item.statusChangeDate).toLocaleString()}

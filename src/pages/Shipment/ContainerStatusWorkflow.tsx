@@ -106,7 +106,7 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
           </>
         )}
 
-        {currentStatus === 'Confirmed' && (
+        {currentStatus === 'Booked' && (
           <>
             <Button
               onClick={() => openModal('mark-in-transit')}
@@ -126,7 +126,7 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
           </>
         )}
 
-        {currentStatus === 'InShipment' && (
+        {currentStatus === 'In Transit' && (
           <Button
             onClick={() => openModal('mark-received')}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
