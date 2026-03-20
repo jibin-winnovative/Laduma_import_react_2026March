@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Ship, Truck, Archive, Search, Plus, Eye, CreditCard as Edit2, Trash2 } from 'lucide-react';
+import { Package, Ship, Truck, Archive, Search, Plus, Eye, CreditCard as Edit2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -10,6 +10,7 @@ import {
   ContainerDashboard,
   ContainerSearchRequest,
   ContainerListItem,
+  StatusChangeRequest,
 } from '../../services/containersService';
 import { companiesService } from '../../services/companiesService';
 import { Company } from '../../types/api';
@@ -34,9 +35,17 @@ export const ContainerManagementPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusAction, setStatusAction] = useState<{
+    containerId: number;
+    action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel';
+    label: string;
+  } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [statusFormData, setStatusFormData] = useState({
+    statusChangeDate: new Date().toISOString().split('T')[0],
+    remark: '',
+  });
 
   const [filters, setFilters] = useState<ContainerSearchRequest>({
     companyId: undefined,
@@ -142,25 +151,53 @@ export const ContainerManagementPage = () => {
     setTimeout(() => searchContainers(), 0);
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-
-    setDeleting(true);
-    try {
-      await containersService.delete(deleteId);
-      setShowDeleteModal(false);
-      setDeleteId(null);
-      await loadInitialData();
-    } catch (error) {
-      console.error('Failed to delete container:', error);
-    } finally {
-      setDeleting(false);
-    }
+  const openStatusModal = (
+    containerId: number,
+    action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel',
+    label: string
+  ) => {
+    setStatusAction({ containerId, action, label });
+    setStatusFormData({
+      statusChangeDate: new Date().toISOString().split('T')[0],
+      remark: '',
+    });
+    setShowStatusModal(true);
   };
 
-  const confirmDelete = (id: number) => {
-    setDeleteId(id);
-    setShowDeleteModal(true);
+  const handleStatusChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!statusAction) return;
+
+    setSubmitting(true);
+    try {
+      const request: StatusChangeRequest = {
+        statusChangeDate: new Date(statusFormData.statusChangeDate).toISOString(),
+        remark: statusFormData.remark || undefined,
+      };
+
+      switch (statusAction.action) {
+        case 'book':
+          await containersService.book(statusAction.containerId, request);
+          break;
+        case 'mark-in-transit':
+          await containersService.markInTransit(statusAction.containerId, request);
+          break;
+        case 'mark-received':
+          await containersService.markReceived(statusAction.containerId, request);
+          break;
+        case 'cancel':
+          await containersService.cancel(statusAction.containerId, request);
+          break;
+      }
+
+      setShowStatusModal(false);
+      setStatusAction(null);
+      await loadInitialData();
+    } catch (error) {
+      console.error('Failed to change status:', error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -169,6 +206,7 @@ export const ContainerManagementPage = () => {
       Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Booked' },
       InShipment: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'In Transit' },
       Closed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Received' },
+      Canceled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Canceled' },
     };
 
     const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
@@ -403,20 +441,64 @@ export const ContainerManagementPage = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => navigate(`/containers/edit/${container.containerId}`)}
-                          className="text-yellow-600 hover:text-yellow-900"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => confirmDelete(container.containerId)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+                        {(container.status === 'Draft' || container.status === 'Confirmed') && (
+                          <button
+                            onClick={() => navigate(`/containers/edit/${container.containerId}`)}
+                            className="text-yellow-600 hover:text-yellow-900"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {container.status === 'Draft' && (
+                          <>
+                            <button
+                              onClick={() => openStatusModal(container.containerId, 'book', 'Book')}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Book"
+                            >
+                              <Ship className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
+                              className="text-red-600 hover:text-red-900"
+                              title="Cancel"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+
+                        {container.status === 'Confirmed' && (
+                          <>
+                            <button
+                              onClick={() => openStatusModal(container.containerId, 'mark-in-transit', 'Mark In Transit')}
+                              className="text-orange-600 hover:text-orange-900"
+                              title="Mark In Transit"
+                            >
+                              <Truck className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
+                              className="text-red-600 hover:text-red-900"
+                              title="Cancel"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+
+                        {container.status === 'InShipment' && (
+                          <button
+                            onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received')}
+                            className="text-green-600 hover:text-green-900"
+                            title="Mark Received"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -460,25 +542,53 @@ export const ContainerManagementPage = () => {
         )}
       </Card>
 
-      {showDeleteModal && (
-        <Modal isOpen={true} onClose={() => setShowDeleteModal(false)} title="Confirm Delete">
-          <div className="space-y-4">
-            <p className="text-[var(--color-text)]">
-              Are you sure you want to delete this container? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <Button onClick={() => setShowDeleteModal(false)} variant="secondary" className="flex-1">
+      {showStatusModal && statusAction && (
+        <Modal
+          isOpen={true}
+          onClose={() => setShowStatusModal(false)}
+          title={statusAction.label}
+        >
+          <form onSubmit={handleStatusChange} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                Status Change Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={statusFormData.statusChangeDate}
+                onChange={(e) => setStatusFormData({ ...statusFormData, statusChangeDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                Remark
+              </label>
+              <textarea
+                value={statusFormData.remark}
+                onChange={(e) => setStatusFormData({ ...statusFormData, remark: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                rows={3}
+                placeholder="Optional remark about this status change..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowStatusModal(false)}
+                disabled={submitting}
+              >
                 Cancel
               </Button>
-              <Button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 bg-red-600 hover:bg-red-700"
-              >
-                {deleting ? 'Deleting...' : 'Delete'}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Processing...' : 'Confirm'}
               </Button>
             </div>
-          </div>
+          </form>
         </Modal>
       )}
     </div>
