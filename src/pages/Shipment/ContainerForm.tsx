@@ -17,9 +17,9 @@ import { oceanFreightCompaniesService } from '../../services/oceanFreightCompani
 
 const STATUS_OPTIONS = [
   { value: 'Draft', label: 'Draft' },
-  { value: 'Confirmed', label: 'Confirmed' },
-  { value: 'InShipment', label: 'In Shipment' },
-  { value: 'Closed', label: 'Closed' },
+  { value: 'Confirmed', label: 'Booked' },
+  { value: 'InShipment', label: 'In Transit' },
+  { value: 'Closed', label: 'Received' },
 ];
 
 interface AllocatedPOData {

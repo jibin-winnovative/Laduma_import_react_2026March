@@ -43,18 +43,18 @@ export const ViewContainerDetails = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { bg: string; text: string }> = {
-      Draft: { bg: 'bg-gray-100', text: 'text-gray-700' },
-      Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700' },
-      InShipment: { bg: 'bg-orange-100', text: 'text-orange-700' },
-      Closed: { bg: 'bg-green-100', text: 'text-green-700' },
+    const configs: Record<string, { bg: string; text: string; label: string }> = {
+      Draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
+      Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Booked' },
+      InShipment: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'In Transit' },
+      Closed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Received' },
     };
 
-    const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+    const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
 
     return (
       <span className={`px-3 py-1.5 text-sm font-semibold rounded-lg ${config.bg} ${config.text}`}>
-        {status}
+        {config.label}
       </span>
     );
   };

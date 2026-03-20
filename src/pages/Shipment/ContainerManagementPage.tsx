@@ -17,9 +17,9 @@ import { Company } from '../../types/api';
 const STATUS_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'Draft', label: 'Draft' },
-  { value: 'Confirmed', label: 'Confirmed' },
-  { value: 'InShipment', label: 'In Shipment' },
-  { value: 'Closed', label: 'Closed' },
+  { value: 'Confirmed', label: 'Booked' },
+  { value: 'InShipment', label: 'In Transit' },
+  { value: 'Closed', label: 'Received' },
 ];
 
 export const ContainerManagementPage = () => {
@@ -164,18 +164,18 @@ export const ContainerManagementPage = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { bg: string; text: string }> = {
-      Draft: { bg: 'bg-gray-100', text: 'text-gray-700' },
-      Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700' },
-      InShipment: { bg: 'bg-orange-100', text: 'text-orange-700' },
-      Closed: { bg: 'bg-green-100', text: 'text-green-700' },
+    const configs: Record<string, { bg: string; text: string; label: string }> = {
+      Draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
+      Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Booked' },
+      InShipment: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'In Transit' },
+      Closed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Received' },
     };
 
-    const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+    const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
 
     return (
       <span className={`px-2 py-1 text-xs font-semibold rounded ${config.bg} ${config.text}`}>
-        {status}
+        {config.label}
       </span>
     );
   };
@@ -217,7 +217,7 @@ export const ContainerManagementPage = () => {
         <Card className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white/80">Confirmed Containers</p>
+              <p className="text-sm text-white/80">Booked Containers</p>
               <p className="text-3xl font-bold mt-2">{dashboard.confirmedCount}</p>
             </div>
             <Ship className="w-12 h-12 text-white/50" />
@@ -227,7 +227,7 @@ export const ContainerManagementPage = () => {
         <Card className="p-6 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white/80">In Shipment</p>
+              <p className="text-sm text-white/80">In Transit</p>
               <p className="text-3xl font-bold mt-2">{dashboard.inShipmentCount}</p>
             </div>
             <Truck className="w-12 h-12 text-white/50" />
@@ -237,7 +237,7 @@ export const ContainerManagementPage = () => {
         <Card className="p-6 bg-gradient-to-br from-green-500 to-green-600 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white/80">Closed Containers</p>
+              <p className="text-sm text-white/80">Received Containers</p>
               <p className="text-3xl font-bold mt-2">{dashboard.closedCount}</p>
             </div>
             <Archive className="w-12 h-12 text-white/50" />
