@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, Ship, Calendar, Truck, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Package, Ship, Calendar, Truck, ExternalLink, FileCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService, ContainerDetails } from '../../services/containersService';
 import { ViewPurchaseOrder } from '../Purchase/ViewPurchaseOrder';
 import { ContainerStatusWorkflow } from './ContainerStatusWorkflow';
-import { ContainerStatusHistoryTimeline } from './ContainerStatusHistory';
+import { ContainerEventLogTimeline } from './ContainerEventLog';
 
 export const ViewContainerDetails = () => {
   const navigate = useNavigate();
@@ -114,9 +114,10 @@ export const ViewContainerDetails = () => {
           <ContainerStatusWorkflow
             containerId={details.containerId}
             currentStatus={details.status}
+            hasTelexReleased={details.hasTelexReleased}
             onStatusChanged={handleStatusChanged}
           />
-          {(details.status === 'Draft' || details.status === 'Confirmed') && (
+          {(details.status === 'Draft' || details.status === 'Booked') && (
             <Button onClick={() => navigate(`/containers/edit/${details.containerId}`)}>
               Edit Container
             </Button>
@@ -135,7 +136,15 @@ export const ViewContainerDetails = () => {
               </p>
             </div>
           </div>
-          {getStatusBadge(details.status)}
+          <div className="flex items-center gap-2">
+            {getStatusBadge(details.status)}
+            {details.hasTelexReleased && (
+              <span className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-purple-100 text-purple-700 flex items-center gap-1">
+                <FileCheck className="w-4 h-4" />
+                Telex Released
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -194,7 +203,7 @@ export const ViewContainerDetails = () => {
         </Card>
       </div>
 
-      <ContainerStatusHistoryTimeline containerId={details.containerId} />
+      <ContainerEventLogTimeline containerId={details.containerId} />
 
       {details.pOs.map((po) => {
         const poTotalAmount = po.items.reduce((sum, item) => sum + item.amount, 0);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Ship, Truck, Archive, Search, Plus, Eye, CreditCard as Edit2, CheckCircle, XCircle, FileText, Ship as ShipIcon } from 'lucide-react';
+import { Package, Ship, Truck, Archive, Search, Plus, Eye, CreditCard as Edit2, CheckCircle, XCircle, FileText, Ship as ShipIcon, FileCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -30,6 +30,7 @@ export const ContainerManagementPage = () => {
     bookedCount: 0,
     inTransitCount: 0,
     receivedCount: 0,
+    canceledCount: 0,
   });
   const [containers, setContainers] = useState<ContainerListItem[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -52,6 +53,7 @@ export const ContainerManagementPage = () => {
     companyId: undefined,
     searchText: '',
     status: '',
+    telexReleased: undefined,
     fromDate: null,
     toDate: null,
     pageNumber: 1,
@@ -144,6 +146,7 @@ export const ContainerManagementPage = () => {
       companyId: undefined,
       searchText: '',
       status: '',
+      telexReleased: undefined,
       fromDate: null,
       toDate: null,
       pageNumber: 1,
@@ -386,6 +389,21 @@ export const ContainerManagementPage = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+              Telex Released
+            </label>
+            <select
+              value={filters.telexReleased === undefined ? '' : filters.telexReleased ? 'true' : 'false'}
+              onChange={(e) => setFilters({ ...filters, telexReleased: e.target.value === '' ? undefined : e.target.value === 'true' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex gap-3 mt-4">
@@ -425,6 +443,9 @@ export const ContainerManagementPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Telex
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -433,13 +454,13 @@ export const ContainerManagementPage = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {searching ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : containers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
                     No containers found
                   </td>
                 </tr>
@@ -466,6 +487,11 @@ export const ContainerManagementPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(container.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {container.hasTelexReleased && (
+                        <FileCheck className="w-5 h-5 text-purple-600 mx-auto" title="Telex Released" />
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">

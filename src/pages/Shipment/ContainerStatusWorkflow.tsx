@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Clock, XCircle, Ship, Truck, Package } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, Ship, Truck, Package, FileCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { containersService, StatusChangeRequest } from '../../services/containersService';
@@ -7,12 +7,13 @@ import { containersService, StatusChangeRequest } from '../../services/container
 interface StatusWorkflowProps {
   containerId: number;
   currentStatus: string;
+  hasTelexReleased?: boolean;
   onStatusChanged: () => void;
 }
 
-export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusChanged }: StatusWorkflowProps) => {
+export const ContainerStatusWorkflow = ({ containerId, currentStatus, hasTelexReleased, onStatusChanged }: StatusWorkflowProps) => {
   const [showModal, setShowModal] = useState(false);
-  const [actionType, setActionType] = useState<'book' | 'mark-in-transit' | 'mark-received' | 'cancel' | null>(null);
+  const [actionType, setActionType] = useState<'book' | 'mark-in-transit' | 'mark-received' | 'cancel' | 'telex-release' | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     statusChangeDate: new Date().toISOString().split('T')[0],
@@ -20,7 +21,7 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
   });
   const [error, setError] = useState<string | null>(null);
 
-  const openModal = (action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel') => {
+  const openModal = (action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel' | 'telex-release') => {
     setActionType(action);
     setFormData({
       statusChangeDate: new Date().toISOString().split('T')[0],
@@ -56,6 +57,9 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
         case 'cancel':
           await containersService.cancel(containerId, request);
           break;
+        case 'telex-release':
+          await containersService.telexRelease(containerId, request);
+          break;
       }
 
       setShowModal(false);
@@ -78,6 +82,8 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
         return 'Mark Received';
       case 'cancel':
         return 'Cancel Container';
+      case 'telex-release':
+        return 'Telex Release';
       default:
         return '';
     }
@@ -135,6 +141,16 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
             Mark Received
           </Button>
         )}
+
+        {(currentStatus === 'Booked' || currentStatus === 'In Transit') && !hasTelexReleased && (
+          <Button
+            onClick={() => openModal('telex-release')}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+          >
+            <FileCheck className="w-4 h-4" />
+            Telex Release
+          </Button>
+        )}
       </div>
 
       <Modal
@@ -151,7 +167,7 @@ export const ContainerStatusWorkflow = ({ containerId, currentStatus, onStatusCh
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Status Change Date <span className="text-red-500">*</span>
+              {actionType === 'telex-release' ? 'Release Date' : 'Status Change Date'} <span className="text-red-500">*</span>
             </label>
             <input
               type="date"

@@ -5,12 +5,14 @@ export interface ContainerDashboard {
   bookedCount: number;
   inTransitCount: number;
   receivedCount: number;
+  canceledCount: number;
 }
 
 export interface ContainerSearchRequest {
   companyId?: number;
   searchText?: string;
   status?: string;
+  telexReleased?: boolean;
   fromDate?: string | null;
   toDate?: string | null;
   pageNumber: number;
@@ -26,6 +28,7 @@ export interface ContainerListItem {
   totalCBM: number;
   totalAmount: number;
   status: string;
+  hasTelexReleased?: boolean;
 }
 
 export interface ContainerSearchApiResponse {
@@ -38,6 +41,7 @@ export interface ContainerSearchApiResponse {
     totalCBM: number;
     totalAmount: number;
     status: string;
+    hasTelexReleased?: boolean;
   }>;
   currentPage: number;
   pageSize: number;
@@ -95,6 +99,7 @@ export interface ContainerDetails {
   etd: string;
   eta: string;
   status: string;
+  hasTelexReleased?: boolean;
   pOs: ContainerPODetails[];
   totalPOs: number;
   totalCBM: number;
@@ -200,6 +205,18 @@ export interface ContainerStatusHistory {
   createdAt: string;
 }
 
+export interface ContainerEventLog {
+  eventId: number;
+  eventType: string;
+  eventName: string;
+  fromStatus?: string;
+  toStatus?: string;
+  eventDate: string;
+  remark?: string;
+  changedBy: string;
+  createdAt: string;
+}
+
 export const containersService = {
   getDashboard: async (): Promise<ContainerDashboard> => {
     const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
@@ -219,6 +236,7 @@ export const containersService = {
         totalCBM: item.totalCBM,
         totalAmount: item.totalAmount,
         status: item.status,
+        hasTelexReleased: item.hasTelexReleased,
       })),
       currentPage: apiData.currentPage,
       pageSize: apiData.pageSize,
@@ -296,6 +314,16 @@ export const containersService = {
 
   getStatusHistory: async (id: number): Promise<ContainerStatusHistory[]> => {
     const response = await apiClient.get<ContainerStatusHistory[]>(`/api/containers/${id}/status-history`);
+    return response.data;
+  },
+
+  telexRelease: async (id: number, request: StatusChangeRequest): Promise<StatusChangeResponse> => {
+    const response = await apiClient.post<StatusChangeResponse>(`/api/containers/${id}/telex-release`, request);
+    return response.data;
+  },
+
+  getEventLog: async (id: number): Promise<ContainerEventLog[]> => {
+    const response = await apiClient.get<ContainerEventLog[]>(`/api/containers/${id}/event-log`);
     return response.data;
   },
 };
