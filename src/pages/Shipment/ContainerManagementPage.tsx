@@ -207,48 +207,76 @@ export const ContainerManagementPage = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { bg: string; text: string; label: string; icon: JSX.Element }> = {
-      Draft: {
-        bg: 'bg-gray-100',
-        text: 'text-gray-700',
+    const statusMap: Record<string, { bgColor: string; textColor: string; label: string; icon: JSX.Element }> = {
+      'draft': {
+        bgColor: '#F3F4F6',
+        textColor: '#374151',
         label: 'Draft',
         icon: <FileText className="w-3 h-3" />
       },
-      Confirmed: {
-        bg: 'bg-blue-100',
-        text: 'text-blue-700',
+      'confirmed': {
+        bgColor: '#DBEAFE',
+        textColor: '#1D4ED8',
         label: 'Booked',
         icon: <Ship className="w-3 h-3" />
       },
-      InShipment: {
-        bg: 'bg-orange-100',
-        text: 'text-orange-700',
+      'booked': {
+        bgColor: '#DBEAFE',
+        textColor: '#1D4ED8',
+        label: 'Booked',
+        icon: <Ship className="w-3 h-3" />
+      },
+      'inshipment': {
+        bgColor: '#FED7AA',
+        textColor: '#C2410C',
         label: 'In Transit',
         icon: <Truck className="w-3 h-3" />
       },
-      Closed: {
-        bg: 'bg-green-100',
-        text: 'text-green-700',
+      'in transit': {
+        bgColor: '#FED7AA',
+        textColor: '#C2410C',
+        label: 'In Transit',
+        icon: <Truck className="w-3 h-3" />
+      },
+      'closed': {
+        bgColor: '#D1FAE5',
+        textColor: '#047857',
         label: 'Received',
         icon: <CheckCircle className="w-3 h-3" />
       },
-      Canceled: {
-        bg: 'bg-red-100',
-        text: 'text-red-700',
+      'received': {
+        bgColor: '#D1FAE5',
+        textColor: '#047857',
+        label: 'Received',
+        icon: <CheckCircle className="w-3 h-3" />
+      },
+      'canceled': {
+        bgColor: '#FEE2E2',
+        textColor: '#DC2626',
+        label: 'Canceled',
+        icon: <XCircle className="w-3 h-3" />
+      },
+      'cancelled': {
+        bgColor: '#FEE2E2',
+        textColor: '#DC2626',
         label: 'Canceled',
         icon: <XCircle className="w-3 h-3" />
       },
     };
 
-    const config = configs[status] || {
-      bg: 'bg-gray-100',
-      text: 'text-gray-700',
-      label: status,
+    const normalizedStatus = status?.toLowerCase().trim() || '';
+    const config = statusMap[normalizedStatus] || {
+      bgColor: '#F3F4F6',
+      textColor: '#374151',
+      label: status || 'Unknown',
       icon: <Package className="w-3 h-3" />
     };
 
     return (
-      <span className={`px-2 py-1 text-xs font-semibold rounded ${config.bg} ${config.text} inline-flex items-center gap-1`}>
+      <span
+        className="px-2 py-1 text-xs font-semibold rounded inline-flex items-center gap-1"
+        style={{ backgroundColor: config.bgColor, color: config.textColor }}
+      >
         {config.icon}
         {config.label}
       </span>
