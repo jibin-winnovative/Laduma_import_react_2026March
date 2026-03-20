@@ -40,7 +40,7 @@ export const ContainerManagementPage = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState<{
     containerId: number;
-    action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel';
+    action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel' | 'telex-release';
     label: string;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -157,7 +157,7 @@ export const ContainerManagementPage = () => {
 
   const openStatusModal = (
     containerId: number,
-    action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel',
+    action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel' | 'telex-release',
     label: string
   ) => {
     setStatusAction({ containerId, action, label });
@@ -196,6 +196,9 @@ export const ContainerManagementPage = () => {
           break;
         case 'cancel':
           await containersService.cancel(statusAction.containerId, request);
+          break;
+        case 'telex-release':
+          await containersService.telexRelease(statusAction.containerId, request);
           break;
       }
 
@@ -543,6 +546,16 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
+                            {(container.status === 'Booked' || container.status === 'In Transit') && !container.hasTelexReleased && (
+                              <button
+                                onClick={() => openStatusModal(container.containerId, 'telex-release', 'Telex Release')}
+                                className="text-purple-600 hover:text-purple-900"
+                                title="Telex Release"
+                              >
+                                <FileCheck className="w-4 h-4" />
+                              </button>
+                            )}
+
                             {container.status !== 'In Transit' && container.status !== 'Received' && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
@@ -638,7 +651,7 @@ export const ContainerManagementPage = () => {
           <form onSubmit={handleStatusChange} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                Status Change Date <span className="text-red-500">*</span>
+                {statusAction.action === 'telex-release' ? 'Release Date' : 'Status Change Date'} <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
