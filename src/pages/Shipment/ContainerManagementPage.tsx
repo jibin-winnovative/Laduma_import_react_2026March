@@ -478,7 +478,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {container.status === 'InShipment' && (
+                            {(container.status === 'InShipment' || container.status === 'In Transit') && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received')}
                                 className="text-green-600 hover:text-green-900"
@@ -488,7 +488,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {container.status !== 'Closed' && container.status !== 'Received' && (
+                            {container.status !== 'InShipment' && container.status !== 'In Transit' && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
                                 className="text-red-600 hover:text-red-900"
