@@ -468,7 +468,7 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            {container.status === 'Confirmed' && (
+                            {(container.status === 'Confirmed' || container.status === 'Booked') && (
                               <button
                                 onClick={() => openStatusModal(container.containerId, 'mark-in-transit', 'Mark In Transit')}
                                 className="text-orange-600 hover:text-orange-900"
@@ -488,13 +488,15 @@ export const ContainerManagementPage = () => {
                               </button>
                             )}
 
-                            <button
-                              onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
-                              className="text-red-600 hover:text-red-900"
-                              title="Cancel"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
+                            {container.status !== 'Closed' && container.status !== 'Received' && (
+                              <button
+                                onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
+                                className="text-red-600 hover:text-red-900"
+                                title="Cancel"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
