@@ -347,7 +347,7 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
                         {item.containerNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.clearingAgentName || '-'}
+                        {item.clearingAgent || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(item.paymentDate)}

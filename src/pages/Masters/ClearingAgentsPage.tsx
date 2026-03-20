@@ -276,14 +276,14 @@ export const ClearingAgentsPage = () => {
               ) : (
                 agents.map((agent) => (
                   <tr
-                    key={agent.id}
+                    key={agent.clearingAgentId}
                     className="hover:bg-gray-50"
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-text)]">
-                      {agent.code}
+                      {agent.agentCode}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-[var(--color-text)]">
-                      {agent.name}
+                      {agent.agentName}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-[var(--color-text)]">
                       {agent.country}
@@ -311,14 +311,14 @@ export const ClearingAgentsPage = () => {
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setViewAgentId(Number(agent.id))}
+                          onClick={() => setViewAgentId(agent.clearingAgentId)}
                           className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
                           title="View"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setEditAgentId(Number(agent.id))}
+                          onClick={() => setEditAgentId(agent.clearingAgentId)}
                           className="p-1 text-[var(--color-primary)] hover:bg-gray-100 rounded"
                           title="Edit"
                         >
