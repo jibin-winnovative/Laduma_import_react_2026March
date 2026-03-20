@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, CheckCircle, XCircle, Pencil, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, Pencil, AlertCircle, FileText, Download, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import {
   localPaymentsService,
   LocalPayment,
 } from '../../services/localPaymentsService';
+import { attachmentService } from '../../services/attachmentService';
 
 interface ViewLocalPaymentProps {
   localPaymentId: number;
@@ -89,6 +90,31 @@ export const ViewLocalPayment = ({
       alert(err?.response?.data?.message || 'Failed to reject payment.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDownload = async (attachmentId: number, fileName: string) => {
+    try {
+      const downloadUrl = await attachmentService.getDownloadUrl(attachmentId, 60, false);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Failed to download attachment:', err);
+      alert('Failed to download file');
+    }
+  };
+
+  const handleView = async (attachmentId: number) => {
+    try {
+      const viewUrl = await attachmentService.getDownloadUrl(attachmentId, 60, true);
+      window.open(viewUrl, '_blank');
+    } catch (err) {
+      console.error('Failed to view attachment:', err);
+      alert('Failed to view file');
     }
   };
 
@@ -267,6 +293,47 @@ export const ViewLocalPayment = ({
                 <p className="text-base font-semibold text-gray-900">{data.updatedBy}</p>
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {data && data.attachments && data.attachments.length > 0 && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Attachments</h3>
+          <div className="grid grid-cols-1 gap-3">
+            {data.attachments.map((attachment: any, index: number) => (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                  <span className="text-sm text-[var(--color-text)] truncate">
+                    {attachment.fileName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    onClick={() => handleDownload(attachment.attachmentId, attachment.fileName)}
+                    variant="secondary"
+                    className="flex items-center gap-2 px-3 py-2 text-sm"
+                    title="Download"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
+                  <Button
+                    onClick={() => handleView(attachment.attachmentId)}
+                    variant="secondary"
+                    className="flex items-center gap-2 px-3 py-2 text-sm"
+                    title="View in new tab"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}
