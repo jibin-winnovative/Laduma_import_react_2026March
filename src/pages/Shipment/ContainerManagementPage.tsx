@@ -35,6 +35,7 @@ export const ContainerManagementPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState<{
     containerId: number;
@@ -161,6 +162,11 @@ export const ContainerManagementPage = () => {
       statusChangeDate: new Date().toISOString().split('T')[0],
       remark: '',
     });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmStatus = () => {
+    setShowConfirmModal(false);
     setShowStatusModal(true);
   };
 
@@ -442,25 +448,46 @@ export const ContainerManagementPage = () => {
                           <Eye className="w-4 h-4" />
                         </button>
 
-                        {(container.status === 'Draft' || container.status === 'Confirmed') && (
-                          <button
-                            onClick={() => navigate(`/containers/edit/${container.containerId}`)}
-                            className="text-yellow-600 hover:text-yellow-900"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {container.status === 'Draft' && (
+                        {container.status !== 'Closed' && container.status !== 'Canceled' && (
                           <>
                             <button
-                              onClick={() => openStatusModal(container.containerId, 'book', 'Book')}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Book"
+                              onClick={() => navigate(`/containers/edit/${container.containerId}`)}
+                              className="text-yellow-600 hover:text-yellow-900"
+                              title="Edit"
                             >
-                              <Ship className="w-4 h-4" />
+                              <Edit2 className="w-4 h-4" />
                             </button>
+
+                            {container.status === 'Draft' && (
+                              <button
+                                onClick={() => openStatusModal(container.containerId, 'book', 'Book')}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Book"
+                              >
+                                <Ship className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {container.status === 'Confirmed' && (
+                              <button
+                                onClick={() => openStatusModal(container.containerId, 'mark-in-transit', 'Mark In Transit')}
+                                className="text-orange-600 hover:text-orange-900"
+                                title="Mark In Transit"
+                              >
+                                <Truck className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {container.status === 'InShipment' && (
+                              <button
+                                onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received')}
+                                className="text-green-600 hover:text-green-900"
+                                title="Mark Received"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                            )}
+
                             <button
                               onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
                               className="text-red-600 hover:text-red-900"
@@ -469,35 +496,6 @@ export const ContainerManagementPage = () => {
                               <XCircle className="w-4 h-4" />
                             </button>
                           </>
-                        )}
-
-                        {container.status === 'Confirmed' && (
-                          <>
-                            <button
-                              onClick={() => openStatusModal(container.containerId, 'mark-in-transit', 'Mark In Transit')}
-                              className="text-orange-600 hover:text-orange-900"
-                              title="Mark In Transit"
-                            >
-                              <Truck className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openStatusModal(container.containerId, 'cancel', 'Cancel')}
-                              className="text-red-600 hover:text-red-900"
-                              title="Cancel"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-
-                        {container.status === 'InShipment' && (
-                          <button
-                            onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received')}
-                            className="text-green-600 hover:text-green-900"
-                            title="Mark Received"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
                         )}
                       </div>
                     </td>
@@ -541,6 +539,38 @@ export const ContainerManagementPage = () => {
           </div>
         )}
       </Card>
+
+      {showConfirmModal && statusAction && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowConfirmModal(false);
+            setStatusAction(null);
+          }}
+          title="Confirm Status Change"
+        >
+          <div className="space-y-4">
+            <p className="text-[var(--color-text)]">
+              Are you sure you want to {statusAction.label.toLowerCase()} this container?
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setStatusAction(null);
+                }}
+                variant="secondary"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmStatus} className="flex-1">
+                Yes, Proceed
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {showStatusModal && statusAction && (
         <Modal
