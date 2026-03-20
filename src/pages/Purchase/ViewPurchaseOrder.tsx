@@ -493,6 +493,38 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
             )}
           </table>
         </div>
+
+        {purchaseOrder.items.length > 0 && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-teal-50 to-green-50 border-2 border-teal-300 rounded-lg shadow-sm">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-1">Total Products</p>
+                <p className="text-2xl font-bold text-teal-700">{purchaseOrder.items.length}</p>
+              </div>
+              <div className="text-center border-l border-teal-200">
+                <p className="text-sm text-gray-600 mb-1">Total Quantity</p>
+                <p className="text-2xl font-bold text-teal-700">
+                  {purchaseOrder.items.reduce((sum, item) => sum + (item.orderedQty || 0), 0).toFixed(0)}
+                </p>
+              </div>
+              <div className="text-center border-l border-teal-200">
+                <p className="text-sm text-gray-600 mb-1">Total CBM</p>
+                <p className="text-2xl font-bold text-teal-700">
+                  {(() => {
+                    const total = purchaseOrder.items.reduce((sum, item) => sum + (item.totalCBM || 0), 0);
+                    return removeTrailingZeros((Math.round(total * 10000000000) / 10000000000).toFixed(10));
+                  })()}
+                </p>
+              </div>
+              <div className="text-center border-l border-teal-200 bg-green-100 -m-4 ml-0 p-4 rounded-r-lg">
+                <p className="text-sm text-gray-700 mb-1 font-medium">Total Amount</p>
+                <p className="text-2xl font-bold text-green-700">
+                  {purchaseOrder.currencyCode} {removeTrailingZeros((Math.round(purchaseOrder.subTotalForeign * 10000) / 10000).toFixed(4))}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
       {purchaseOrder.charges.length > 0 && (
