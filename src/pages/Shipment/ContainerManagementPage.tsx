@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Ship, Truck, Archive, Search, Plus, Eye, CreditCard as Edit2, CheckCircle, XCircle } from 'lucide-react';
+import { Package, Ship, Truck, Archive, Search, Plus, Eye, CreditCard as Edit2, CheckCircle, XCircle, FileText, Ship as ShipIcon } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -207,18 +207,49 @@ export const ContainerManagementPage = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { bg: string; text: string; label: string }> = {
-      Draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
-      Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Booked' },
-      InShipment: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'In Transit' },
-      Closed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Received' },
-      Canceled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Canceled' },
+    const configs: Record<string, { bg: string; text: string; label: string; icon: JSX.Element }> = {
+      Draft: {
+        bg: 'bg-gray-100',
+        text: 'text-gray-700',
+        label: 'Draft',
+        icon: <FileText className="w-3 h-3" />
+      },
+      Confirmed: {
+        bg: 'bg-blue-100',
+        text: 'text-blue-700',
+        label: 'Booked',
+        icon: <Ship className="w-3 h-3" />
+      },
+      InShipment: {
+        bg: 'bg-orange-100',
+        text: 'text-orange-700',
+        label: 'In Transit',
+        icon: <Truck className="w-3 h-3" />
+      },
+      Closed: {
+        bg: 'bg-green-100',
+        text: 'text-green-700',
+        label: 'Received',
+        icon: <CheckCircle className="w-3 h-3" />
+      },
+      Canceled: {
+        bg: 'bg-red-100',
+        text: 'text-red-700',
+        label: 'Canceled',
+        icon: <XCircle className="w-3 h-3" />
+      },
     };
 
-    const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
+    const config = configs[status] || {
+      bg: 'bg-gray-100',
+      text: 'text-gray-700',
+      label: status,
+      icon: <Package className="w-3 h-3" />
+    };
 
     return (
-      <span className={`px-2 py-1 text-xs font-semibold rounded ${config.bg} ${config.text}`}>
+      <span className={`px-2 py-1 text-xs font-semibold rounded ${config.bg} ${config.text} inline-flex items-center gap-1`}>
+        {config.icon}
         {config.label}
       </span>
     );
