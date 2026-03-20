@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService, ContainerDetails } from '../../services/containersService';
 import { ViewPurchaseOrder } from '../Purchase/ViewPurchaseOrder';
+import { ContainerStatusWorkflow } from './ContainerStatusWorkflow';
+import { ContainerStatusHistoryTimeline } from './ContainerStatusHistory';
 
 export const ViewContainerDetails = () => {
   const navigate = useNavigate();
@@ -42,12 +44,19 @@ export const ViewContainerDetails = () => {
     return cbm.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
   };
 
+  const handleStatusChanged = () => {
+    if (id) {
+      loadDetails(parseInt(id));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const configs: Record<string, { bg: string; text: string; label: string }> = {
       Draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
       Confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Booked' },
       InShipment: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'In Transit' },
       Closed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Received' },
+      Canceled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Canceled' },
     };
 
     const config = configs[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
@@ -97,9 +106,18 @@ export const ViewContainerDetails = () => {
             <p className="text-sm text-[var(--color-text-secondary)] mt-1">Container Details</p>
           </div>
         </div>
-        <Button onClick={() => navigate(`/containers/edit/${details.containerId}`)}>
-          Edit Container
-        </Button>
+        <div className="flex items-center gap-2">
+          <ContainerStatusWorkflow
+            containerId={details.containerId}
+            currentStatus={details.status}
+            onStatusChanged={handleStatusChanged}
+          />
+          {(details.status === 'Draft' || details.status === 'Confirmed') && (
+            <Button onClick={() => navigate(`/containers/edit/${details.containerId}`)}>
+              Edit Container
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="p-6 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white">
@@ -171,6 +189,8 @@ export const ViewContainerDetails = () => {
           <p className="text-3xl font-bold mt-2">{formatCBM(details.totalCBM)}</p>
         </Card>
       </div>
+
+      <ContainerStatusHistoryTimeline containerId={details.containerId} />
 
       {details.pOs.map((po) => {
         const poTotalAmount = po.items.reduce((sum, item) => sum + item.amount, 0);

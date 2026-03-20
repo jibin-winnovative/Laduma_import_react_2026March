@@ -401,7 +401,7 @@ export const ContainerForm = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-[var(--color-text)] mb-4">Container Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
                 Container Number <span className="text-red-500">*</span>
@@ -425,23 +425,6 @@ export const ContainerForm = () => {
                 onChange={(e) => setFormData({ ...formData, containerDate: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
             <div>

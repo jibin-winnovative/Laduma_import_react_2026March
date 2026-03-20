@@ -2,9 +2,9 @@ import apiClient from './apiClient';
 
 export interface ContainerDashboard {
   draftCount: number;
-  confirmedCount: number;
-  inShipmentCount: number;
-  closedCount: number;
+  bookedCount: number;
+  inTransitCount: number;
+  receivedCount: number;
 }
 
 export interface ContainerSearchRequest {
@@ -176,6 +176,30 @@ export interface OceanFreightPaymentStatus {
   status: string | null;
 }
 
+export interface StatusChangeRequest {
+  statusChangeDate: string;
+  remark?: string;
+}
+
+export interface StatusChangeResponse {
+  containerId: number;
+  status: string;
+  statusChangeDate: string;
+  remark?: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export interface ContainerStatusHistory {
+  containerStatusHistoryId: number;
+  fromStatus: string;
+  toStatus: string;
+  statusChangeDate: string;
+  remark?: string;
+  changedBy: string;
+  createdAt: string;
+}
+
 export const containersService = {
   getDashboard: async (): Promise<ContainerDashboard> => {
     const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
@@ -247,6 +271,31 @@ export const containersService = {
 
   getOceanFreightPaymentStatus: async (containerId: number): Promise<OceanFreightPaymentStatus> => {
     const response = await apiClient.get<OceanFreightPaymentStatus>(`/api/containers/${containerId}/ocean-freight-payment-status`);
+    return response.data;
+  },
+
+  book: async (id: number, request: StatusChangeRequest): Promise<StatusChangeResponse> => {
+    const response = await apiClient.post<StatusChangeResponse>(`/api/containers/${id}/book`, request);
+    return response.data;
+  },
+
+  markInTransit: async (id: number, request: StatusChangeRequest): Promise<StatusChangeResponse> => {
+    const response = await apiClient.post<StatusChangeResponse>(`/api/containers/${id}/mark-in-transit`, request);
+    return response.data;
+  },
+
+  markReceived: async (id: number, request: StatusChangeRequest): Promise<StatusChangeResponse> => {
+    const response = await apiClient.post<StatusChangeResponse>(`/api/containers/${id}/mark-received`, request);
+    return response.data;
+  },
+
+  cancel: async (id: number, request: StatusChangeRequest): Promise<StatusChangeResponse> => {
+    const response = await apiClient.post<StatusChangeResponse>(`/api/containers/${id}/cancel`, request);
+    return response.data;
+  },
+
+  getStatusHistory: async (id: number): Promise<ContainerStatusHistory[]> => {
+    const response = await apiClient.get<ContainerStatusHistory[]>(`/api/containers/${id}/status-history`);
     return response.data;
   },
 };

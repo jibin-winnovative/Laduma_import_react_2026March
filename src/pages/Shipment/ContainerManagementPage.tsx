@@ -26,9 +26,9 @@ export const ContainerManagementPage = () => {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<ContainerDashboard>({
     draftCount: 0,
-    confirmedCount: 0,
-    inShipmentCount: 0,
-    closedCount: 0,
+    bookedCount: 0,
+    inTransitCount: 0,
+    receivedCount: 0,
   });
   const [containers, setContainers] = useState<ContainerListItem[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -77,9 +77,9 @@ export const ContainerManagementPage = () => {
       ]);
       setDashboard(dashboardData || {
         draftCount: 0,
-        confirmedCount: 0,
-        inShipmentCount: 0,
-        closedCount: 0,
+        bookedCount: 0,
+        inTransitCount: 0,
+        receivedCount: 0,
       });
       setCompanies(companiesData || []);
       setContainers(searchResponse?.items || []);
@@ -93,9 +93,9 @@ export const ContainerManagementPage = () => {
       console.error('Failed to load initial data:', error);
       setDashboard({
         draftCount: 0,
-        confirmedCount: 0,
-        inShipmentCount: 0,
-        closedCount: 0,
+        bookedCount: 0,
+        inTransitCount: 0,
+        receivedCount: 0,
       });
       setCompanies([]);
       setContainers([]);
@@ -218,7 +218,7 @@ export const ContainerManagementPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-white/80">Booked Containers</p>
-              <p className="text-3xl font-bold mt-2">{dashboard.confirmedCount}</p>
+              <p className="text-3xl font-bold mt-2">{dashboard.bookedCount}</p>
             </div>
             <Ship className="w-12 h-12 text-white/50" />
           </div>
@@ -228,7 +228,7 @@ export const ContainerManagementPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-white/80">In Transit</p>
-              <p className="text-3xl font-bold mt-2">{dashboard.inShipmentCount}</p>
+              <p className="text-3xl font-bold mt-2">{dashboard.inTransitCount}</p>
             </div>
             <Truck className="w-12 h-12 text-white/50" />
           </div>
@@ -238,7 +238,7 @@ export const ContainerManagementPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-white/80">Received Containers</p>
-              <p className="text-3xl font-bold mt-2">{dashboard.closedCount}</p>
+              <p className="text-3xl font-bold mt-2">{dashboard.receivedCount}</p>
             </div>
             <Archive className="w-12 h-12 text-white/50" />
           </div>
