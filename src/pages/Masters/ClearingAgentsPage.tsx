@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Edit2, Users, Building2, Globe, Download } from 'lucide-react';
+import { Search, Plus, Eye, CreditCard as Edit2, Users, Building2, Globe, Download } from 'lucide-react';
 import { clearingAgentsService } from '../../services/clearingAgentsService';
 import { mastersService } from '../../services/mastersService';
 import { ClearingAgent, ClearingAgentSummary } from '../../types/api';
