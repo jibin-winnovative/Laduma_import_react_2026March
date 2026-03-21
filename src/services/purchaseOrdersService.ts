@@ -212,6 +212,7 @@ export const purchaseOrdersService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 180000,
     });
     return response.data;
   },
