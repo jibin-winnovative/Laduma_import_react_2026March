@@ -59,6 +59,7 @@ export interface OceanFreightPaymentDetail {
   createdBy?: string;
   updatedDate?: string;
   updatedBy?: string;
+  attachments?: any[];
 }
 
 export interface PaymentRequestResponse {

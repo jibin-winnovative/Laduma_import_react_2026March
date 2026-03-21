@@ -79,6 +79,7 @@ export interface ClearingPaymentDetail {
   purchaseOrders?: ClearingPaymentPO[];
   pOs?: ClearingPaymentPO[];
   paymentRequestId?: number;
+  attachments?: any[];
 }
 
 export interface PaymentRequestResponse {

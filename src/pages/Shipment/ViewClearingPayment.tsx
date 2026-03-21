@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, AlertCircle, FileText, Download, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, AlertCircle, FileText, Download, ExternalLink, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import {
@@ -8,6 +8,7 @@ import {
   PaymentStatus,
 } from '../../services/clearingPaymentsService';
 import { attachmentService } from '../../services/attachmentService';
+import { ViewContainerDetails } from './ViewContainerDetails';
 
 interface ViewClearingPaymentProps {
   clearingPaymentId: number;
@@ -24,6 +25,7 @@ export const ViewClearingPayment = ({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showContainerModal, setShowContainerModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -199,7 +201,20 @@ export const ViewClearingPayment = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Container</label>
-            <p className="text-base font-semibold text-gray-900">{data.containerNumber || '-'}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-base font-semibold text-gray-900">{data.containerNumber || '-'}</p>
+              {data.containerId && (
+                <Button
+                  onClick={() => setShowContainerModal(true)}
+                  variant="secondary"
+                  className="flex items-center gap-1 px-2 py-1 text-xs"
+                  title="View Container Details"
+                >
+                  <Package className="w-3 h-3" />
+                  View
+                </Button>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Clearing Agent</label>
@@ -376,6 +391,15 @@ export const ViewClearingPayment = ({
           </div>
         )}
       </div>
+
+      {showContainerModal && data.containerId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowContainerModal(false)} />
+          <div className="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <ViewContainerDetails containerId={data.containerId} onClose={() => setShowContainerModal(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,19 +8,25 @@ import { ViewPurchaseOrder } from '../Purchase/ViewPurchaseOrder';
 import { ContainerStatusWorkflow } from './ContainerStatusWorkflow';
 import { ContainerEventLogTimeline } from './ContainerEventLog';
 
-export const ViewContainerDetails = () => {
+interface ViewContainerDetailsProps {
+  containerId?: number;
+  onClose?: () => void;
+}
+
+export const ViewContainerDetails = ({ containerId: containerIdProp, onClose }: ViewContainerDetailsProps = {}) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const containerId = containerIdProp || (id ? parseInt(id) : null);
   const [details, setDetails] = useState<ContainerDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPOId, setSelectedPOId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (id) {
-      loadDetails(parseInt(id));
+    if (containerId) {
+      loadDetails(containerId);
     }
-  }, []);
+  }, [containerId]);
 
   const loadDetails = async (containerId: number) => {
     setLoading(true);
@@ -45,8 +51,16 @@ export const ViewContainerDetails = () => {
   };
 
   const handleStatusChanged = () => {
-    if (id) {
-      loadDetails(parseInt(id));
+    if (containerId) {
+      loadDetails(containerId);
+    }
+  };
+
+  const handleBack = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate('/containers');
     }
   };
 
@@ -82,9 +96,9 @@ export const ViewContainerDetails = () => {
 
   if (error || !details) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <div className="flex items-center gap-4">
-          <Button onClick={() => navigate('/containers')} variant="secondary" className="flex items-center gap-2">
+          <Button onClick={handleBack} variant="secondary" className="flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -98,10 +112,10 @@ export const ViewContainerDetails = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button onClick={() => navigate('/containers')} variant="secondary" className="flex items-center gap-2">
+          <Button onClick={handleBack} variant="secondary" className="flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -111,16 +125,20 @@ export const ViewContainerDetails = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ContainerStatusWorkflow
-            containerId={details.containerId}
-            currentStatus={details.status}
-            hasTelexReleased={details.hasTelexReleased}
-            onStatusChanged={handleStatusChanged}
-          />
-          {(details.status === 'Draft' || details.status === 'Booked') && (
-            <Button onClick={() => navigate(`/containers/edit/${details.containerId}`)}>
-              Edit Container
-            </Button>
+          {!onClose && (
+            <>
+              <ContainerStatusWorkflow
+                containerId={details.containerId}
+                currentStatus={details.status}
+                hasTelexReleased={details.hasTelexReleased}
+                onStatusChanged={handleStatusChanged}
+              />
+              {(details.status === 'Draft' || details.status === 'Booked') && (
+                <Button onClick={() => navigate(`/containers/edit/${details.containerId}`)}>
+                  Edit Container
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
