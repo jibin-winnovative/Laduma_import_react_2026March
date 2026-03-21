@@ -395,7 +395,7 @@ export const ViewClearingPayment = ({
       {showContainerModal && data.containerId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowContainerModal(false)} />
-          <div className="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative z-10 bg-white rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <ViewContainerDetails containerId={data.containerId} onClose={() => setShowContainerModal(false)} />
           </div>
         </div>
