@@ -35,6 +35,8 @@ import { SupplierForm } from '../Masters/SupplierForm';
 import { Modal } from '../../components/ui/Modal';
 import { multiply, divide, subtract, toMoney, toNumber, sum } from '../../utils/moneyUtils';
 import Decimal from 'decimal.js';
+import { ExcelImportErrorModal } from './ExcelImportErrorModal';
+import type { MissingItem } from '../../services/purchaseOrdersService';
 
 // Simple validation schema that works with string values from select elements
 const poSchema = z.object({
@@ -139,6 +141,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showExcelErrorModal, setShowExcelErrorModal] = useState(false);
+  const [excelErrorMessage, setExcelErrorMessage] = useState<string>('');
+  const [excelMissingItems, setExcelMissingItems] = useState<MissingItem[]>([]);
+  const [uploadingExcel, setUploadingExcel] = useState(false);
+  const fileInputRef = useState<HTMLInputElement | null>(null)[0];
 
   const roundTo4Decimals = (value: number): number => {
     return Math.round(value * 10000) / 10000;
@@ -859,6 +866,62 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     setItems((prev) => [...prev, ...newItems]);
   };
 
+  const handleExcelImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      if (!file.name.endsWith('.xlsx')) {
+        alert('Please select a valid Excel file (.xlsx)');
+        return;
+      }
+
+      setUploadingExcel(true);
+      try {
+        const response = await purchaseOrdersService.importItemsFromExcel(file);
+
+        if (response.isValid) {
+          setItems([]);
+          const newItems: POItem[] = response.items.map((product) => {
+            const qty = product.editableFinalQty ?? 1;
+            const priceUSD = product.editablePrice ?? product.priceUsd ?? 0;
+            return {
+              id: `item-${product.productId}`,
+              productId: product.productId,
+              itemCode: product.itemCode,
+              barcode: product.barcode || '',
+              itemName: product.itemName,
+              qty,
+              uom: product.uom || '',
+              priceUSD: priceUSD,
+              cbm: product.cbm || 0,
+              amount: toNumber(multiply(qty, priceUSD)),
+              totalCBM: toNumber(multiply(qty, product.cbm || 0)),
+              receivedQty: 0,
+              balanceQty: qty,
+            };
+          });
+          setItems(newItems);
+        } else {
+          setExcelErrorMessage(response.message);
+          setExcelMissingItems(response.missingItems);
+          setShowExcelErrorModal(true);
+        }
+      } catch (error: any) {
+        const errorMsg = error?.response?.data?.message || error?.message || 'Failed to import Excel file';
+        setExcelErrorMessage(errorMsg);
+        setExcelMissingItems([]);
+        setShowExcelErrorModal(true);
+      } finally {
+        setUploadingExcel(false);
+      }
+    };
+    input.click();
+  };
+
   const onError = (errors: any) => {
     console.log('=== FORM VALIDATION ERRORS ===');
     console.log('Raw errors object:', errors);
@@ -1463,10 +1526,30 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
               <h3 className="text-lg font-semibold text-[var(--color-primary)]">Items</h3>
-              <Button type="button" onClick={handleImportProducts} className="bg-green-600 hover:bg-green-700">
-                <FileUp className="w-4 h-4 mr-2" />
-                Import Products
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleExcelImport}
+                  className="bg-sky-600 hover:bg-sky-700"
+                  disabled={uploadingExcel}
+                >
+                  {uploadingExcel ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Excel Import
+                    </>
+                  )}
+                </Button>
+                <Button type="button" onClick={handleImportProducts} className="bg-green-600 hover:bg-green-700">
+                  <FileUp className="w-4 h-4 mr-2" />
+                  Import Products
+                </Button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -2372,6 +2455,13 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         supplierId={selectedSupplierId || 0}
         onAddProducts={handleAddSearchedProducts}
         existingProductIds={existingProductIds}
+      />
+
+      <ExcelImportErrorModal
+        isOpen={showExcelErrorModal}
+        onClose={() => setShowExcelErrorModal(false)}
+        message={excelErrorMessage}
+        missingItems={excelMissingItems}
       />
 
       {showSupplierModal && (

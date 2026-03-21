@@ -96,6 +96,52 @@ export interface ApprovedPOListResponse {
   totalRecords: number;
 }
 
+export interface ExcelImportItem {
+  productId: number;
+  itemCode: string;
+  barcode: string;
+  itemName: string;
+  itemDescription?: string;
+  uom: string;
+  priceUsd: number;
+  price: number;
+  fob: number;
+  cbm: number;
+  multipleOf: number;
+  minimumQty: number;
+  weight: number;
+  avg1Month: number;
+  avg2Month: number;
+  avg3Month: number;
+  avg1Year: number;
+  stock: number;
+  stockCost: number;
+  avgCost: number;
+  lastSoldDate: string | null;
+  indent: number;
+  pendingPo: number;
+  quantity: number;
+  lastPoRate: number;
+  editableFinalQty: number;
+  editablePrice: number;
+}
+
+export interface MissingItem {
+  rowNumber: number;
+  itemCode: string;
+  qty: number;
+  cbm: number;
+  price: number;
+  reason: string;
+}
+
+export interface ExcelImportResponse {
+  isValid: boolean;
+  message: string;
+  items: ExcelImportItem[];
+  missingItems: MissingItem[];
+}
+
 export const purchaseOrdersService = {
   getList: async (params: PurchaseOrderListParams): Promise<PurchaseOrderListResponse> => {
     const urlParams = new URLSearchParams();
@@ -155,6 +201,18 @@ export const purchaseOrdersService = {
 
   getApprovedPOs: async (queryString: string): Promise<ApprovedPOListResponse> => {
     const response = await apiClient.get(`/api/PurchaseOrders/approved?${queryString}`);
+    return response.data;
+  },
+
+  importItemsFromExcel: async (file: File): Promise<ExcelImportResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post('/api/PurchaseOrders/import-items', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };
