@@ -143,6 +143,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showExcelErrorModal, setShowExcelErrorModal] = useState(false);
   const [excelErrorMessage, setExcelErrorMessage] = useState<string>('');
+  const [excelErrors, setExcelErrors] = useState<string[]>([]);
   const [excelMissingItems, setExcelMissingItems] = useState<MissingItem[]>([]);
   const [uploadingExcel, setUploadingExcel] = useState(false);
   const fileInputRef = useState<HTMLInputElement | null>(null)[0];
@@ -907,12 +908,15 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           setItems(newItems);
         } else {
           setExcelErrorMessage(response.message);
+          setExcelErrors([]);
           setExcelMissingItems(response.missingItems);
           setShowExcelErrorModal(true);
         }
       } catch (error: any) {
         const errorMsg = error?.response?.data?.message || error?.message || 'Failed to import Excel file';
+        const errorsList = error?.response?.data?.errors || [];
         setExcelErrorMessage(errorMsg);
+        setExcelErrors(errorsList);
         setExcelMissingItems([]);
         setShowExcelErrorModal(true);
       } finally {
@@ -2461,6 +2465,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         isOpen={showExcelErrorModal}
         onClose={() => setShowExcelErrorModal(false)}
         message={excelErrorMessage}
+        errors={excelErrors}
         missingItems={excelMissingItems}
       />
 

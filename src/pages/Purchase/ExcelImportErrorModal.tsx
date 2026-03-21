@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import type { MissingItem } from '../../services/purchaseOrdersService';
@@ -8,6 +8,7 @@ interface ExcelImportErrorModalProps {
   onClose: () => void;
   message: string;
   missingItems: MissingItem[];
+  errors?: string[];
 }
 
 export function ExcelImportErrorModal({
@@ -15,20 +16,33 @@ export function ExcelImportErrorModal({
   onClose,
   message,
   missingItems,
+  errors = [],
 }: ExcelImportErrorModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="">
-      <div className="relative p-6">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <Modal isOpen={isOpen} onClose={onClose} title="Excel Import Error">
+      <div className="p-6">
+        <div className="flex items-start gap-3 mb-6">
+          <div className="flex-shrink-0">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Import Failed</h2>
+            <p className="text-gray-700 dark:text-gray-300">{message}</p>
+          </div>
+        </div>
 
-        <h2 className="text-xl font-semibold text-red-600 mb-4">Excel Import Failed</h2>
-
-        <p className="text-gray-700 dark:text-gray-300 mb-4">{message}</p>
+        {errors.length > 0 && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">Errors:</h3>
+            <ul className="list-disc list-inside space-y-1">
+              {errors.map((error, index) => (
+                <li key={index} className="text-sm text-red-700 dark:text-red-300">
+                  {error}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {missingItems.length > 0 && (
           <div className="mt-4">
