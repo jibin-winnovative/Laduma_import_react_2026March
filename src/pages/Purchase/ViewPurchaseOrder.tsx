@@ -429,15 +429,12 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total CBM
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Weight (kg)
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {purchaseOrder.items.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-4 py-4 text-center text-sm text-gray-500">
                     No items found
                   </td>
                 </tr>
@@ -470,9 +467,6 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900 text-right">
                       {item.totalCBM ? removeTrailingZeros((Math.round(item.totalCBM * 10000000000) / 10000000000).toFixed(10)) : '0'}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-900 text-right">
-                      {item.grossWeight ? removeTrailingZeros((Math.round(item.grossWeight * 10000) / 10000).toFixed(4)) : '0'}
                     </td>
                   </tr>
                 ))
