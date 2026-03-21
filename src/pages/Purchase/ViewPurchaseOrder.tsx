@@ -112,6 +112,7 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
 
   useEffect(() => {
     fetchPurchaseOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchaseOrderId]);
 
   const fetchPurchaseOrder = async () => {

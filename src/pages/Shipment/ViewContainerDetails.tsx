@@ -20,7 +20,7 @@ export const ViewContainerDetails = () => {
     if (id) {
       loadDetails(parseInt(id));
     }
-  }, [id]);
+  }, []);
 
   const loadDetails = async (containerId: number) => {
     setLoading(true);
@@ -189,7 +189,7 @@ export const ViewContainerDetails = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
           <p className="text-sm text-white/80">Total POs</p>
-          <p className="text-3xl font-bold mt-2">{details.totalPOs}</p>
+          <p className="text-3xl font-bold mt-2">{details.pOs?.length || 0}</p>
         </Card>
 
         <Card className="p-6 bg-gradient-to-br from-green-500 to-green-600 text-white">
