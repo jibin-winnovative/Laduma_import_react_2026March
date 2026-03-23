@@ -83,8 +83,48 @@ export interface DashboardWidget {
   table?: DashboardTable;
 }
 
+export interface ProcurementKpiWidget {
+  key: string;
+  title: string;
+  value: number;
+  displayValue: string;
+  subtitle: string | null;
+}
+
+export interface ProcurementPurchaseOrder {
+  purchaseOrderId: number;
+  poNumber: string;
+  poDate: string;
+  supplierName: string;
+  amount: number;
+  status: string;
+  ageInDays: number;
+}
+
+export interface ProcurementOverduePayment {
+  purchaseOrderPaymentId: number;
+  purchaseOrderId: number;
+  poNumber: string;
+  supplierName: string;
+  description: string;
+  expectedAmount: number;
+  expectedDate: string;
+  status: string;
+  daysOverdue: number;
+}
+
 export interface ProcurementWorkspace {
-  widgets: DashboardWidget[];
+  widgets: ProcurementKpiWidget[];
+  poStatusFunnel: DashboardChartData;
+  topSuppliersByAmount: DashboardChartData;
+  approvedPoAging: DashboardChartData;
+  poPaymentStatusDistribution: DashboardChartData;
+  monthlyPoAmountTrend: DashboardChartData;
+  poPaymentDueTrendByWeek: DashboardChartData;
+  recentSubmittedPurchaseOrders: ProcurementPurchaseOrder[];
+  approvedPurchaseOrdersAwaitingContainerAllocation: ProcurementPurchaseOrder[];
+  highValuePurchaseOrders: ProcurementPurchaseOrder[];
+  overduePurchaseOrderPayments: ProcurementOverduePayment[];
 }
 
 export interface LogisticsWorkspace {
