@@ -95,17 +95,36 @@ export interface FinanceWorkspace {
   widgets: DashboardWidget[];
 }
 
+export interface PaymentModuleCardStat {
+  key: string;
+  title: string;
+  value: number;
+  displayValue: string;
+  subtitle: string | null;
+}
+
 export interface PaymentModuleCard {
-  moduleName: string;
-  pending: number;
-  approved: number;
-  paid: number;
-  rejected: number;
+  module: string;
+  cards: PaymentModuleCardStat[];
 }
 
 export interface PaymentOperationsWorkspace {
   moduleCards: PaymentModuleCard[];
-  widgets: DashboardWidget[];
+  recentClearingPayments: PaymentOperationsItem[];
+  recentOceanFreightPayments: PaymentOperationsItem[];
+  recentLocalPayments: PaymentOperationsItem[];
+  missingPaymentPerContainerExceptions: unknown[];
+}
+
+export interface PaymentOperationsItem {
+  id: number;
+  containerId: number;
+  containerNumber: string;
+  module: string;
+  partyName: string;
+  amount: number;
+  paymentDate: string;
+  status: string;
 }
 
 export interface FunctionalWorkspace {
