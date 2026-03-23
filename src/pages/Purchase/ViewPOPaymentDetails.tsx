@@ -1,15 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, DollarSign, Calendar, FileText, User, AlertCircle, Clock, CheckCircle, Send, ThumbsUp, XCircle } from 'lucide-react';
+import {
+  FileText, AlertCircle, Clock, CheckCircle, Send, ThumbsUp, XCircle,
+  Upload, Download, ExternalLink, X,
+} from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { poPaymentsService, POPaymentDetails } from '../../services/poPaymentsService';
-import { paymentRequestsService } from '../../services/paymentRequestsService';
+import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
 
 interface ViewPOPaymentDetailsProps {
   paymentId: number;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+interface PendingAttachment {
+  id: string;
+  file: File;
+  type: string;
+  status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  progress: number;
+  error?: string;
+  retryCount: number;
 }
 
 export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPaymentDetailsProps) => {
@@ -19,9 +32,11 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [approving, setApproving] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const loadingRef = useRef(false);
 
@@ -37,6 +52,8 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
     try {
       const data = await poPaymentsService.getDetails(paymentId);
       setDetails(data);
+      const attachments = await attachmentService.getByEntity('POPayment', paymentId);
+      setExistingAttachments(attachments);
     } catch (err: any) {
       console.error('Failed to load payment details:', err);
       setError(err.message || 'Failed to load payment details');
@@ -46,12 +63,147 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
     }
   };
 
+  const addPendingAttachment = (file: File) => {
+    setPendingAttachments(prev => [...prev, {
+      id: `att-${Date.now()}-${Math.random()}`,
+      file,
+      type: '',
+      status: 'pending',
+      progress: 0,
+      retryCount: 0,
+    }]);
+  };
+
+  const updateAttachmentType = (id: string, type: string) => {
+    setPendingAttachments(prev => prev.map(a => a.id === id ? { ...a, type } : a));
+  };
+
+  const removePending = (id: string) => {
+    setPendingAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const removeExisting = async (attachmentId: number) => {
+    if (!confirm('Are you sure you want to remove this attachment?')) return;
+    try {
+      await attachmentService.delete(attachmentId);
+      setExistingAttachments(prev => prev.filter(a => a.attachmentId !== attachmentId));
+    } catch {
+      alert('Failed to remove attachment');
+    }
+  };
+
+  const handleDownload = async (attachmentId: number, fileName: string) => {
+    try {
+      setDownloadingId(attachmentId);
+      const url = await attachmentService.getDownloadUrl(attachmentId, 60, false);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      alert('Failed to download file');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleView = async (attachmentId: number) => {
+    try {
+      const url = await attachmentService.getDownloadUrl(attachmentId, 60, true);
+      window.open(url, '_blank');
+    } catch {
+      alert('Failed to view file');
+    }
+  };
+
+  const uploadSingle = async (attachment: PendingAttachment, entityId: number): Promise<boolean> => {
+    const MAX_RETRIES = 3;
+    let retry = attachment.retryCount;
+
+    while (retry <= MAX_RETRIES) {
+      try {
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploading', progress: 10 } : a
+        ));
+
+        const presigned = await attachmentService.requestPresignedUpload({
+          fileName: attachment.file.name,
+          contentType: attachment.file.type,
+          entityType: 'POPayment',
+          entityId,
+        });
+
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 40 } : a
+        ));
+
+        await attachmentService.uploadToS3(presigned.uploadUrl, attachment.file);
+
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 70 } : a
+        ));
+
+        await attachmentService.confirmUpload(presigned.attachmentId);
+
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploaded', progress: 100 } : a
+        ));
+
+        return true;
+      } catch {
+        retry++;
+        if (retry <= MAX_RETRIES) {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, retryCount: retry, progress: 0, error: `Retry ${retry}/${MAX_RETRIES}...` } : a
+          ));
+          await new Promise(r => setTimeout(r, 1000 * retry));
+        } else {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, status: 'failed', error: 'Upload failed after 3 retries', progress: 0 } : a
+          ));
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  const uploadAll = async (entityId: number): Promise<number> => {
+    const toUpload = pendingAttachments.filter(a => a.status === 'pending' || a.status === 'failed');
+    let failed = 0;
+    for (const att of toUpload) {
+      const ok = await uploadSingle(att, entityId);
+      if (!ok) failed++;
+    }
+    return failed;
+  };
+
+  const retryFailed = async (id: string) => {
+    const att = pendingAttachments.find(a => a.id === id);
+    if (!att) return;
+    setPendingAttachments(prev => prev.map(a =>
+      a.id === id ? { ...a, status: 'pending', retryCount: 0, error: undefined } : a
+    ));
+    await uploadSingle({ ...att, status: 'pending', retryCount: 0 }, paymentId);
+  };
+
+  const hasMissingTypes = pendingAttachments.some(a => !a.type);
+  const isUploading = pendingAttachments.some(a => a.status === 'uploading');
+
   const handleRequestPayment = async () => {
     if (!details) return;
-
-    setSubmitting(true);
+    if (hasMissingTypes) {
+      alert('Please select a type for all attachments before submitting');
+      return;
+    }
+    setActionLoading(true);
     setError(null);
     try {
+      if (pendingAttachments.length > 0) {
+        await uploadAll(details.purchaseOrderPaymentId);
+      }
       await poPaymentsService.requestPayment(details.purchaseOrderPaymentId);
       setShowConfirmDialog(false);
       onSuccess();
@@ -60,16 +212,22 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       console.error('Failed to create payment request:', err);
       setError(err.message || 'Failed to create payment request');
     } finally {
-      setSubmitting(false);
+      setActionLoading(false);
     }
   };
 
   const handleApproveRequest = async () => {
     if (!details) return;
-
-    setApproving(true);
+    if (hasMissingTypes) {
+      alert('Please select a type for all attachments before approving');
+      return;
+    }
+    setActionLoading(true);
     setError(null);
     try {
+      if (pendingAttachments.length > 0) {
+        await uploadAll(details.purchaseOrderPaymentId);
+      }
       await poPaymentsService.approveRequest(details.purchaseOrderPaymentId);
       setShowApproveDialog(false);
       onSuccess();
@@ -78,16 +236,22 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       console.error('Failed to approve payment request:', err);
       setError(err.message || 'Failed to approve payment request');
     } finally {
-      setApproving(false);
+      setActionLoading(false);
     }
   };
 
   const handleRejectRequest = async () => {
     if (!details) return;
-
-    setRejecting(true);
+    if (hasMissingTypes) {
+      alert('Please select a type for all attachments before rejecting');
+      return;
+    }
+    setActionLoading(true);
     setError(null);
     try {
+      if (pendingAttachments.length > 0) {
+        await uploadAll(details.purchaseOrderPaymentId);
+      }
       await poPaymentsService.rejectRequest(details.purchaseOrderPaymentId);
       setShowRejectDialog(false);
       onSuccess();
@@ -96,52 +260,27 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       console.error('Failed to reject payment request:', err);
       setError(err.message || 'Failed to reject payment request');
     } finally {
-      setRejecting(false);
+      setActionLoading(false);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+  const formatCurrency = (amount: number) =>
+    amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Pending':
-        return {
-          icon: Clock,
-          color: 'bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
-          label: 'Pending',
-        };
+        return { icon: Clock, color: 'bg-yellow-50 text-yellow-700 border border-yellow-200', label: 'Pending' };
       case 'Requested':
-        return {
-          icon: Send,
-          color: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-          label: 'Requested',
-        };
+        return { icon: Send, color: 'bg-blue-50 text-blue-700 border border-blue-200', label: 'Requested' };
       case 'Approved':
-        return {
-          icon: ThumbsUp,
-          color: 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800',
-          label: 'Approved',
-        };
+        return { icon: ThumbsUp, color: 'bg-green-50 text-green-700 border border-green-200', label: 'Approved' };
       case 'Paid':
-        return {
-          icon: CheckCircle,
-          color: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
-          label: 'Paid',
-        };
+        return { icon: CheckCircle, color: 'bg-emerald-50 text-emerald-700 border border-emerald-200', label: 'Paid' };
       case 'Rejected':
-        return {
-          icon: AlertCircle,
-          color: 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
-          label: 'Rejected',
-        };
+        return { icon: AlertCircle, color: 'bg-red-50 text-red-700 border border-red-200', label: 'Rejected' };
       default:
-        return {
-          icon: FileText,
-          color: 'bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800',
-          label: status,
-        };
+        return { icon: FileText, color: 'bg-gray-50 text-gray-700 border border-gray-200', label: status };
     }
   };
 
@@ -158,9 +297,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       <Modal isOpen={true} onClose={onClose} title="Payment Details">
         <div className="text-center py-8">
           <div className="text-lg text-red-600 mb-4">{error || 'Payment details not found'}</div>
-          <Button onClick={onClose} variant="secondary">
-            Close
-          </Button>
+          <Button onClick={onClose} variant="secondary">Close</Button>
         </div>
       </Modal>
     );
@@ -172,12 +309,13 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const isRejected = details.status === 'Rejected';
 
   const requestAmountLabel = isPending || isRejected ? 'Requesting Amount' : 'Requested Amount';
-
   const balanceAfterPayment = details.totalPOAmount - details.paidAmount - details.expectedAmount;
   const isBalanceNegative = balanceAfterPayment < 0;
 
   const statusConfig = getStatusConfig(details.status);
   const StatusIcon = statusConfig.icon;
+
+  const canUploadAttachments = isPending || isRequested || isRejected;
 
   return (
     <>
@@ -200,15 +338,14 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
-                <User className="w-5 h-5 text-white/80 mt-0.5" />
+                <FileText className="w-5 h-5 text-white/80 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-white/70">Supplier</p>
                   <p className="text-base font-semibold text-white">{details.supplierName}</p>
                 </div>
               </div>
-
               <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-white/80 mt-0.5" />
+                <Clock className="w-5 h-5 text-white/80 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-white/70">Due Date</p>
                   <p className="text-base font-semibold text-white">
@@ -224,17 +361,13 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             <div className="space-y-3">
               <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                 <span className="text-base text-[var(--color-text-secondary)]">Total PO Amount</span>
-                <span className="text-base font-semibold text-[var(--color-text)]">
-                  ${formatCurrency(details.totalPOAmount)}
-                </span>
+                <span className="text-base font-semibold text-[var(--color-text)]">${formatCurrency(details.totalPOAmount)}</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                 <span className="text-base text-[var(--color-text-secondary)]">Paid Amount</span>
-                <span className="text-base font-semibold text-[var(--color-text)]">
-                  ${formatCurrency(details.paidAmount)}
-                </span>
+                <span className="text-base font-semibold text-[var(--color-text)]">${formatCurrency(details.paidAmount)}</span>
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg -mx-2">
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 px-4 py-3 rounded-lg -mx-2">
                 <span className="text-base font-bold text-[var(--color-primary)]">{requestAmountLabel}</span>
                 <span className="text-lg font-bold text-[var(--color-primary)]">
                   ${formatCurrency(details.requestedAmount || details.expectedAmount)}
@@ -270,6 +403,162 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             </Card>
           )}
 
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4">Attachments</h3>
+
+            {canUploadAttachments && (
+              <div className="mb-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-[var(--color-primary)] transition-colors">
+                  <input
+                    id="po-attachment-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      Array.from(e.target.files || []).forEach(file => {
+                        if (file.size > 10 * 1024 * 1024) {
+                          alert(`File ${file.name} exceeds 10MB limit`);
+                          return;
+                        }
+                        addPendingAttachment(file);
+                      });
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                  <label htmlFor="po-attachment-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                    <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 font-medium mb-1">Click to upload or drag and drop</p>
+                    <p className="text-xs text-gray-500">PDF, DOC, XLS, PNG, JPG (Max 10MB per file)</p>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {existingAttachments.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <p className="text-sm font-medium text-gray-700">Uploaded Attachments</p>
+                {existingAttachments.map((att) => (
+                  <div
+                    key={att.attachmentId}
+                    className="flex items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">{att.fileName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        onClick={() => handleDownload(att.attachmentId, att.fileName)}
+                        disabled={downloadingId === att.attachmentId}
+                        variant="secondary"
+                        className="px-3 py-1.5 text-xs flex items-center gap-1"
+                      >
+                        <Download className="w-3 h-3" />
+                        {downloadingId === att.attachmentId ? 'Downloading...' : 'Download'}
+                      </Button>
+                      <Button
+                        onClick={() => handleView(att.attachmentId)}
+                        variant="secondary"
+                        className="px-3 py-1.5 text-xs flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View
+                      </Button>
+                      {canUploadAttachments && (
+                        <Button
+                          onClick={() => removeExisting(att.attachmentId)}
+                          variant="danger"
+                          className="px-2 py-1.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {pendingAttachments.length > 0 && (
+              <div className="space-y-3">
+                {pendingAttachments.map((att) => (
+                  <div key={att.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <div className="flex items-start gap-3">
+                      <FileText className="w-5 h-5 text-[var(--color-primary)] mt-1 flex-shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{att.file.name}</p>
+                            <p className="text-xs text-gray-500">{(att.file.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={att.type}
+                              onChange={(e) => updateAttachmentType(att.id, e.target.value)}
+                              disabled={att.status === 'uploading'}
+                              className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            >
+                              <option value="">Select Type</option>
+                              <option value="Payment Document">Payment Document</option>
+                              <option value="Invoice">Invoice</option>
+                              <option value="Receipt">Receipt</option>
+                              <option value="Bank Slip">Bank Slip</option>
+                              <option value="Other">Other</option>
+                            </select>
+                            {att.status === 'failed' && (
+                              <Button
+                                onClick={() => retryFailed(att.id)}
+                                variant="secondary"
+                                className="px-3 py-1.5 text-xs"
+                              >
+                                Retry
+                              </Button>
+                            )}
+                            <Button
+                              onClick={() => removePending(att.id)}
+                              variant="danger"
+                              className="px-2 py-1.5"
+                              disabled={att.status === 'uploading'}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {att.status === 'pending' && (
+                          <p className="text-xs text-gray-500">Pending upload</p>
+                        )}
+                        {att.status === 'uploading' && (
+                          <div className="space-y-1">
+                            <p className="text-xs text-blue-600">
+                              Uploading{att.retryCount > 0 ? ` (Retry ${att.retryCount})` : ''}...
+                            </p>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="bg-blue-600 h-1.5 rounded-full transition-all"
+                                style={{ width: `${att.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {att.status === 'uploaded' && (
+                          <p className="text-xs text-green-600">Uploaded successfully</p>
+                        )}
+                        {att.status === 'failed' && (
+                          <p className="text-xs text-red-600">{att.error || 'Upload failed'}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {existingAttachments.length === 0 && pendingAttachments.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No attachments</p>
+            )}
+          </Card>
+
           <div className="flex gap-3 pt-4 border-t">
             <Button onClick={onClose} variant="secondary" className="flex-1">
               {isApproved || isRequested ? 'Close' : 'Cancel'}
@@ -277,13 +566,9 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             {(isPending || isRejected) && (
               <Button
                 onClick={() => setShowConfirmDialog(true)}
-                disabled={isBalanceNegative}
+                disabled={isBalanceNegative || isUploading}
                 className="flex-1"
-                title={
-                  isBalanceNegative
-                    ? 'Balance is less than requesting amount'
-                    : 'Request payment'
-                }
+                title={isBalanceNegative ? 'Balance is less than requesting amount' : 'Request payment'}
               >
                 {isRejected ? 'Request Payment Again' : 'Request Payment'}
               </Button>
@@ -292,6 +577,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
               <>
                 <Button
                   onClick={() => setShowRejectDialog(true)}
+                  disabled={isUploading}
                   variant="secondary"
                   className="flex-1 flex items-center justify-center gap-2 border-red-300 text-red-700 hover:bg-red-50"
                 >
@@ -300,6 +586,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                 </Button>
                 <Button
                   onClick={() => setShowApproveDialog(true)}
+                  disabled={isUploading}
                   className="flex-1 flex items-center justify-center gap-2"
                 >
                   <ThumbsUp className="w-4 h-4" />
@@ -312,11 +599,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       </Modal>
 
       {showConfirmDialog && (
-        <Modal
-          isOpen={true}
-          onClose={() => setShowConfirmDialog(false)}
-          title="Confirm Payment Request"
-        >
+        <Modal isOpen={true} onClose={() => setShowConfirmDialog(false)} title="Confirm Payment Request">
           <div className="space-y-4">
             <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -325,7 +608,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                   Are you sure you want to raise a payment request for this PO payment?
                 </p>
                 <p className="text-sm text-blue-700 mt-2">
-                  Amount: <span className="font-semibold">{formatCurrency(details.expectedAmount)}</span>
+                  Amount: <span className="font-semibold">${formatCurrency(details.expectedAmount)}</span>
                 </p>
                 <p className="text-sm text-blue-700">
                   Supplier: <span className="font-semibold">{details.supplierName}</span>
@@ -333,6 +616,11 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                 <p className="text-sm text-blue-700">
                   PO Number: <span className="font-semibold">{details.poNumber}</span>
                 </p>
+                {pendingAttachments.length > 0 && (
+                  <p className="text-sm text-blue-700 mt-2">
+                    {pendingAttachments.length} attachment(s) will be uploaded.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -343,20 +631,11 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             )}
 
             <div className="flex gap-3">
-              <Button
-                onClick={() => setShowConfirmDialog(false)}
-                variant="secondary"
-                className="flex-1"
-                disabled={submitting}
-              >
+              <Button onClick={() => setShowConfirmDialog(false)} variant="secondary" className="flex-1" disabled={actionLoading}>
                 No
               </Button>
-              <Button
-                onClick={handleRequestPayment}
-                className="flex-1"
-                disabled={submitting}
-              >
-                {submitting ? 'Processing...' : 'Yes'}
+              <Button onClick={handleRequestPayment} className="flex-1" disabled={actionLoading}>
+                {actionLoading ? 'Processing...' : 'Yes'}
               </Button>
             </div>
           </div>
@@ -364,27 +643,28 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       )}
 
       {showApproveDialog && (
-        <Modal
-          isOpen={true}
-          onClose={() => setShowApproveDialog(false)}
-          title="Confirm Payment Approval"
-        >
+        <Modal isOpen={true} onClose={() => setShowApproveDialog(false)} title="Confirm Payment Approval">
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-purple-900">
+                <p className="text-sm font-medium text-green-900">
                   Are you sure you want to approve this payment request?
                 </p>
-                <p className="text-sm text-purple-700 mt-2">
+                <p className="text-sm text-green-700 mt-2">
                   Amount: <span className="font-semibold">${formatCurrency(details.requestedAmount || details.expectedAmount)}</span>
                 </p>
-                <p className="text-sm text-purple-700">
+                <p className="text-sm text-green-700">
                   Supplier: <span className="font-semibold">{details.supplierName}</span>
                 </p>
-                <p className="text-sm text-purple-700">
+                <p className="text-sm text-green-700">
                   PO Number: <span className="font-semibold">{details.poNumber}</span>
                 </p>
+                {pendingAttachments.length > 0 && (
+                  <p className="text-sm text-green-700 mt-2">
+                    {pendingAttachments.length} attachment(s) will be uploaded.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -395,20 +675,11 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             )}
 
             <div className="flex gap-3">
-              <Button
-                onClick={() => setShowApproveDialog(false)}
-                variant="secondary"
-                className="flex-1"
-                disabled={approving}
-              >
+              <Button onClick={() => setShowApproveDialog(false)} variant="secondary" className="flex-1" disabled={actionLoading}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleApproveRequest}
-                className="flex-1"
-                disabled={approving}
-              >
-                {approving ? 'Approving...' : 'Approve'}
+              <Button onClick={handleApproveRequest} className="flex-1" disabled={actionLoading}>
+                {actionLoading ? 'Approving...' : 'Approve'}
               </Button>
             </div>
           </div>
@@ -416,11 +687,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       )}
 
       {showRejectDialog && (
-        <Modal
-          isOpen={true}
-          onClose={() => setShowRejectDialog(false)}
-          title="Confirm Payment Rejection"
-        >
+        <Modal isOpen={true} onClose={() => setShowRejectDialog(false)} title="Confirm Payment Rejection">
           <div className="space-y-4">
             <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
@@ -437,6 +704,11 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                 <p className="text-sm text-red-700">
                   PO Number: <span className="font-semibold">{details.poNumber}</span>
                 </p>
+                {pendingAttachments.length > 0 && (
+                  <p className="text-sm text-red-700 mt-2">
+                    {pendingAttachments.length} attachment(s) will be uploaded.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -447,20 +719,11 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             )}
 
             <div className="flex gap-3">
-              <Button
-                onClick={() => setShowRejectDialog(false)}
-                variant="secondary"
-                className="flex-1"
-                disabled={rejecting}
-              >
+              <Button onClick={() => setShowRejectDialog(false)} variant="secondary" className="flex-1" disabled={actionLoading}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleRejectRequest}
-                className="flex-1 bg-red-600 hover:bg-red-700"
-                disabled={rejecting}
-              >
-                {rejecting ? 'Rejecting...' : 'Reject'}
+              <Button onClick={handleRejectRequest} className="flex-1 bg-red-600 hover:bg-red-700" disabled={actionLoading}>
+                {actionLoading ? 'Rejecting...' : 'Reject'}
               </Button>
             </div>
           </div>
