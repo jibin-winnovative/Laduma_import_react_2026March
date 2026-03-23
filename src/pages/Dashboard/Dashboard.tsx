@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ShoppingCart, Ship, DollarSign, Package } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
@@ -65,15 +65,26 @@ export const Dashboard = () => {
     paymentOperations: null,
   });
   const [lazyLoading, setLazyLoading] = useState<Record<string, boolean>>({});
-  const [lazyLoaded, setLazyLoaded] = useState<Record<string, boolean>>({});
+  const lazyLoadedRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  useEffect(() => {
-    loadTabData(activeTab);
-  }, [activeTab, dashboardData]);
+  const populateFromWorkspace = (ws: DashboardData['functionalWorkspace']) => {
+    setLazyData({
+      procurement: ws.procurement || null,
+      logistics: ws.logistics || null,
+      finance: ws.finance || null,
+      paymentOperations: ws.paymentOperations || null,
+    });
+    lazyLoadedRef.current = {
+      procurement: true,
+      logistics: true,
+      finance: true,
+      'payment-operations': true,
+    };
+  };
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -81,6 +92,9 @@ export const Dashboard = () => {
     try {
       const res = await dashboardApi.getAll();
       setDashboardData(res.data);
+      if (res.data?.functionalWorkspace) {
+        populateFromWorkspace(res.data.functionalWorkspace);
+      }
     } catch {
       setError('Failed to load dashboard data');
     } finally {
@@ -89,19 +103,8 @@ export const Dashboard = () => {
   };
 
   const loadTabData = async (tab: string) => {
-    if (lazyLoaded[tab]) return;
-
-    if (dashboardData?.functionalWorkspace) {
-      const ws = dashboardData.functionalWorkspace;
-      setLazyData({
-        procurement: ws.procurement || null,
-        logistics: ws.logistics || null,
-        finance: ws.finance || null,
-        paymentOperations: ws.paymentOperations || null,
-      });
-      setLazyLoaded({ procurement: true, logistics: true, finance: true, 'payment-operations': true });
-      return;
-    }
+    if (lazyLoadedRef.current[tab]) return;
+    lazyLoadedRef.current[tab] = true;
 
     setLazyLoading((prev) => ({ ...prev, [tab]: true }));
     try {
@@ -118,9 +121,8 @@ export const Dashboard = () => {
         const res = await dashboardApi.getPaymentOperations();
         setLazyData((prev) => ({ ...prev, paymentOperations: res.data }));
       }
-      setLazyLoaded((prev) => ({ ...prev, [tab]: true }));
     } catch {
-      setLazyLoaded((prev) => ({ ...prev, [tab]: true }));
+      // keep lazyLoadedRef[tab] = true so we don't retry on every switch
     } finally {
       setLazyLoading((prev) => ({ ...prev, [tab]: false }));
     }
@@ -193,7 +195,7 @@ export const Dashboard = () => {
       )}
 
       <Card padding="none">
-        <TabPanel tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+        <TabPanel tabs={TABS} activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); loadTabData(tab); }}>
           {activeTab === 'procurement' && (
             <div className="px-4 pb-4">
               <ProcurementTab

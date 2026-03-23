@@ -113,12 +113,14 @@ export interface DashboardData {
   functionalWorkspace: FunctionalWorkspace;
 }
 
+const DASHBOARD_TIMEOUT = 60000;
+
 export const dashboardApi = {
-  getAll: () => apiClient.get<DashboardData>('/api/dashboard'),
-  getOverview: () => apiClient.get<ExecutiveOverview>('/api/dashboard/overview'),
-  getNotifications: () => apiClient.get<NotificationCenter>('/api/dashboard/notifications'),
-  getProcurement: () => apiClient.get<ProcurementWorkspace>('/api/dashboard/procurement'),
-  getLogistics: () => apiClient.get<LogisticsWorkspace>('/api/dashboard/logistics'),
-  getFinance: () => apiClient.get<FinanceWorkspace>('/api/dashboard/finance'),
-  getPaymentOperations: () => apiClient.get<PaymentOperationsWorkspace>('/api/dashboard/payment-operations'),
+  getAll: () => apiClient.get<DashboardData>('/api/dashboard', { timeout: DASHBOARD_TIMEOUT }),
+  getOverview: () => apiClient.get<ExecutiveOverview>('/api/dashboard/overview', { timeout: DASHBOARD_TIMEOUT }),
+  getNotifications: () => apiClient.get<NotificationCenter>('/api/dashboard/notifications', { timeout: DASHBOARD_TIMEOUT }),
+  getProcurement: () => apiClient.get<ProcurementWorkspace>('/api/dashboard/procurement', { timeout: DASHBOARD_TIMEOUT }),
+  getLogistics: () => apiClient.get<LogisticsWorkspace>('/api/dashboard/logistics', { timeout: DASHBOARD_TIMEOUT }),
+  getFinance: () => apiClient.get<FinanceWorkspace>('/api/dashboard/finance', { timeout: DASHBOARD_TIMEOUT }),
+  getPaymentOperations: () => apiClient.get<PaymentOperationsWorkspace>('/api/dashboard/payment-operations', { timeout: DASHBOARD_TIMEOUT }),
 };
