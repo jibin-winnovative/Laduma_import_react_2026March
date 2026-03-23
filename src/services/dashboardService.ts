@@ -127,8 +127,48 @@ export interface ProcurementWorkspace {
   overduePurchaseOrderPayments: ProcurementOverduePayment[];
 }
 
+export interface LogisticsKpiWidget {
+  key: string;
+  title: string;
+  value: number;
+  displayValue: string;
+  subtitle: string | null;
+}
+
+export interface LogisticsContainer {
+  containerId: number;
+  containerNumber: string;
+  containerDate: string;
+  etd: string;
+  eta: string;
+  status: string;
+  hasTelexReleased: boolean;
+  totalCBM: number;
+  totalAmount: number;
+  shippingCompanyName: string;
+  oceanFreightCompanyName: string;
+}
+
+export interface LogisticsDelayedContainer {
+  containerId: number;
+  containerNumber: string;
+  currentStatus: string;
+  recommendedAction: string;
+  reason: string;
+  relevantDate: string;
+}
+
 export interface LogisticsWorkspace {
-  widgets: DashboardWidget[];
+  widgets: LogisticsKpiWidget[];
+  containerStatusDistribution: DashboardChartData;
+  etaVsReceivedTrend: DashboardChartData;
+  monthlyTotalCbmMoved: DashboardChartData;
+  shippingCompanyBreakdown: DashboardChartData;
+  oceanFreightCompanyBreakdown: DashboardChartData;
+  recentlyUpdatedContainers: LogisticsContainer[];
+  delayedContainers: LogisticsContainer[];
+  containersRequiringNextWorkflowAction: LogisticsDelayedContainer[];
+  paymentCompletionMilestones: unknown[];
 }
 
 export interface FinanceWorkspace {
