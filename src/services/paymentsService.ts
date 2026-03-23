@@ -87,7 +87,7 @@ export const paymentsService = {
   getPaymentRequests: async (params: {
     pageNumber?: number;
     pageSize?: number;
-    vendorId?: number;
+    vendorName?: string;
     sourceModule?: string;
     status?: string;
     fromDate?: string;

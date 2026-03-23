@@ -18,9 +18,9 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
   const pageSize = 20;
 
   const [filters, setFilters] = useState({
-    vendorId: '',
+    vendorName: '',
     sourceModule: '',
-    status: '',
+    status: 'Approved',
     fromDate: '',
     toDate: '',
   });
@@ -42,7 +42,7 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
         pageSize,
       };
 
-      if (filters.vendorId) params.vendorId = parseInt(filters.vendorId);
+      if (filters.vendorName) params.vendorName = filters.vendorName;
       if (filters.sourceModule) params.sourceModule = filters.sourceModule;
       if (filters.status) params.status = filters.status;
       if (filters.fromDate) params.fromDate = filters.fromDate;
@@ -74,9 +74,9 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
 
   const handleReset = () => {
     setFilters({
-      vendorId: '',
+      vendorName: '',
       sourceModule: '',
-      status: '',
+      status: 'Approved',
       fromDate: '',
       toDate: '',
     });
@@ -209,14 +209,14 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                Vendor ID
+                Vendor Name
               </label>
               <input
-                type="number"
-                value={filters.vendorId}
-                onChange={(e) => setFilters({ ...filters, vendorId: e.target.value })}
+                type="text"
+                value={filters.vendorName}
+                onChange={(e) => setFilters({ ...filters, vendorName: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter vendor ID"
+                placeholder="Search vendor name"
               />
             </div>
 
@@ -230,9 +230,10 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Modules</option>
+                <option value="LocalPayment">LocalPayment</option>
+                <option value="OceanFreightPayment">OceanFreightPayment</option>
                 <option value="Purchase">Purchase</option>
-                <option value="Shipment">Shipment</option>
-                <option value="Transport">Transport</option>
+                <option value="ClearingPayment">ClearingPayment</option>
               </select>
             </div>
 
