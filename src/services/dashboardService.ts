@@ -171,8 +171,36 @@ export interface LogisticsWorkspace {
   paymentCompletionMilestones: unknown[];
 }
 
+export interface FinanceKpiWidget {
+  key: string;
+  title: string;
+  value: number;
+  displayValue: string;
+  subtitle: string | null;
+}
+
+export interface FinancePaymentRequest {
+  paymentRequestId: number;
+  sourceModule: string;
+  sourceId: number;
+  vendorName: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+  createdAt: string;
+  daysOverdue: number | null;
+}
+
 export interface FinanceWorkspace {
-  widgets: DashboardWidget[];
+  widgets: FinanceKpiWidget[];
+  paymentRequestStatusDistribution: DashboardChartData;
+  payableTrend: DashboardChartData;
+  payableBySourceModule: DashboardChartData;
+  vendorExposure: DashboardChartData;
+  pendingApprovalRequests: FinancePaymentRequest[];
+  approvedUnpaidRequests: FinancePaymentRequest[];
+  overdueRequests: FinancePaymentRequest[];
+  recentlyPaidRequests: FinancePaymentRequest[];
 }
 
 export interface PaymentModuleCardStat {
