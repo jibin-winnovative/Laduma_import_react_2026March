@@ -1,150 +1,233 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Users, Building2, Ship, FileText, TrendingUp, Package } from 'lucide-react';
+import { ShoppingCart, Ship, DollarSign, Package } from 'lucide-react';
+import { Card } from '../../components/ui/Card';
+import { KpiCard } from './components/KpiCard';
+import { DashboardChart } from './components/DashboardChart';
+import { NotificationList } from './components/NotificationList';
+import { TabPanel } from './components/TabPanel';
+import { ProcurementTab } from './tabs/ProcurementTab';
+import { LogisticsTab } from './tabs/LogisticsTab';
+import { FinanceTab } from './tabs/FinanceTab';
+import { PaymentOperationsTab } from './tabs/PaymentOperationsTab';
+import {
+  dashboardApi,
+  type DashboardData,
+  type ProcurementWorkspace,
+  type LogisticsWorkspace,
+  type FinanceWorkspace,
+  type PaymentOperationsWorkspace,
+} from '../../services/dashboardService';
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: typeof Users;
-  trend?: string;
-  color: string;
-}
+const TABS = [
+  { id: 'procurement', label: 'Procurement', icon: <ShoppingCart className="w-4 h-4" /> },
+  { id: 'logistics', label: 'Logistics', icon: <Ship className="w-4 h-4" /> },
+  { id: 'finance', label: 'Finance', icon: <DollarSign className="w-4 h-4" /> },
+  { id: 'payment-operations', label: 'Payment Operations', icon: <Package className="w-4 h-4" /> },
+];
 
-const StatCard = ({ title, value, icon: Icon, trend, color }: StatCardProps) => (
-  <Card>
-    <CardContent className="pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-1">{title}</p>
-          <p className="text-3xl font-bold text-[var(--color-text)]">{value}</p>
-          {trend && (
-            <p className="text-sm text-[var(--color-success)] mt-2 flex items-center gap-1">
-              <TrendingUp className="w-4 h-4" />
-              {trend}
-            </p>
-          )}
-        </div>
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
+const SkeletonCard = () => (
+  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 animate-pulse">
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex-1 space-y-2">
+        <div className="h-3 bg-gray-200 rounded w-24" />
+        <div className="h-7 bg-gray-200 rounded w-16" />
+        <div className="h-2 bg-gray-200 rounded w-32" />
       </div>
-    </CardContent>
-  </Card>
+      <div className="w-10 h-10 bg-gray-200 rounded-lg" />
+    </div>
+  </div>
+);
+
+const SkeletonChart = () => (
+  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 animate-pulse">
+    <div className="h-3 bg-gray-200 rounded w-32 mb-4" />
+    <div className="h-32 bg-gray-200 rounded" />
+  </div>
 );
 
 export const Dashboard = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('procurement');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = [
-    {
-      title: 'Total Employees',
-      value: '124',
-      icon: Users,
-      trend: '+12% this month',
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Active Companies',
-      value: '48',
-      icon: Building2,
-      trend: '+5% this month',
-      color: 'bg-[var(--color-primary)]',
-    },
-    {
-      title: 'Shipments',
-      value: '89',
-      icon: Ship,
-      trend: '+18% this month',
-      color: 'bg-[var(--color-accent)]',
-    },
-    {
-      title: 'Documents',
-      value: '432',
-      icon: FileText,
-      trend: '+24% this month',
-      color: 'bg-[var(--color-secondary)]',
-    },
-  ];
+  const [lazyData, setLazyData] = useState<{
+    procurement: ProcurementWorkspace | null;
+    logistics: LogisticsWorkspace | null;
+    finance: FinanceWorkspace | null;
+    paymentOperations: PaymentOperationsWorkspace | null;
+  }>({
+    procurement: null,
+    logistics: null,
+    finance: null,
+    paymentOperations: null,
+  });
+  const [lazyLoading, setLazyLoading] = useState<Record<string, boolean>>({});
+  const [lazyLoaded, setLazyLoaded] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  useEffect(() => {
+    loadTabData(activeTab);
+  }, [activeTab, dashboardData]);
+
+  const loadDashboard = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await dashboardApi.getAll();
+      setDashboardData(res.data);
+    } catch {
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTabData = async (tab: string) => {
+    if (lazyLoaded[tab]) return;
+
+    if (dashboardData?.functionalWorkspace) {
+      const ws = dashboardData.functionalWorkspace;
+      setLazyData({
+        procurement: ws.procurement || null,
+        logistics: ws.logistics || null,
+        finance: ws.finance || null,
+        paymentOperations: ws.paymentOperations || null,
+      });
+      setLazyLoaded({ procurement: true, logistics: true, finance: true, 'payment-operations': true });
+      return;
+    }
+
+    setLazyLoading((prev) => ({ ...prev, [tab]: true }));
+    try {
+      if (tab === 'procurement') {
+        const res = await dashboardApi.getProcurement();
+        setLazyData((prev) => ({ ...prev, procurement: res.data }));
+      } else if (tab === 'logistics') {
+        const res = await dashboardApi.getLogistics();
+        setLazyData((prev) => ({ ...prev, logistics: res.data }));
+      } else if (tab === 'finance') {
+        const res = await dashboardApi.getFinance();
+        setLazyData((prev) => ({ ...prev, finance: res.data }));
+      } else if (tab === 'payment-operations') {
+        const res = await dashboardApi.getPaymentOperations();
+        setLazyData((prev) => ({ ...prev, paymentOperations: res.data }));
+      }
+      setLazyLoaded((prev) => ({ ...prev, [tab]: true }));
+    } catch {
+      setLazyLoaded((prev) => ({ ...prev, [tab]: true }));
+    } finally {
+      setLazyLoading((prev) => ({ ...prev, [tab]: false }));
+    }
+  };
+
+  const overview = dashboardData?.executiveOverview;
+  const notifications = dashboardData?.notificationCenter;
 
   return (
-    <div>
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)]">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">
           Welcome back, {user?.username}!
         </h1>
-        <p className="text-sm md:text-base text-[var(--color-text-secondary)] mt-2">
-          Here's what's happening with your imports today.
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+          Here's your procurement and logistics overview.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+          {error}{' '}
+          <button className="underline font-medium" onClick={loadDashboard}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {loading
+          ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
+          : (overview?.kpis || []).map((kpi) => <KpiCard key={kpi.id} kpi={kpi} />)}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { action: 'New shipment added', time: '2 hours ago', icon: Ship },
-                { action: 'Employee updated', time: '4 hours ago', icon: Users },
-                { action: 'Company registered', time: '1 day ago', icon: Building2 },
-                { action: 'Document uploaded', time: '2 days ago', icon: FileText },
-              ].map((activity, index) => {
-                const Icon = activity.icon;
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 pb-3 border-b border-[var(--color-border)] last:border-0"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-[var(--color-background)] flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-[var(--color-primary)]" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[var(--color-text)]">
-                        {activity.action}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-secondary)]">{activity.time}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      {(loading || overview) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => <SkeletonChart key={i} />)
+          ) : (
+            <>
+              {overview?.cashExposureChart && (
+                <DashboardChart data={overview.cashExposureChart} />
+              )}
+              {overview?.shipmentFlowChart && (
+                <DashboardChart data={overview.shipmentFlowChart} />
+              )}
+              {overview?.operationalBlockersChart && (
+                <DashboardChart data={overview.operationalBlockersChart} />
+              )}
+            </>
+          )}
+        </div>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { label: 'Add Employee', icon: Users, path: '/masters/employees' },
-                { label: 'New Company', icon: Building2, path: '/masters/companies' },
-                { label: 'Register Shipment', icon: Ship, path: '/masters/shipping-companies' },
-                { label: 'Upload Document', icon: FileText, path: '/masters/import-docs' },
-              ].map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.label}
-                    className="p-3 md:p-4 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-background)] transition-colors text-left"
-                  >
-                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary)] mb-2" />
-                    <p className="text-xs md:text-sm font-medium text-[var(--color-text)]">{action.label}</p>
-                  </button>
-                );
-              })}
+      {(loading || notifications) && (
+        <>
+          {loading ? (
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-40 mb-4" />
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-gray-200 rounded" />
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : notifications ? (
+            <NotificationList data={notifications} />
+          ) : null}
+        </>
+      )}
+
+      <Card padding="none">
+        <TabPanel tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+          {activeTab === 'procurement' && (
+            <div className="px-4 pb-4">
+              <ProcurementTab
+                data={lazyData.procurement}
+                loading={loading || !!lazyLoading['procurement']}
+              />
+            </div>
+          )}
+          {activeTab === 'logistics' && (
+            <div className="px-4 pb-4">
+              <LogisticsTab
+                data={lazyData.logistics}
+                loading={loading || !!lazyLoading['logistics']}
+              />
+            </div>
+          )}
+          {activeTab === 'finance' && (
+            <div className="px-4 pb-4">
+              <FinanceTab
+                data={lazyData.finance}
+                loading={loading || !!lazyLoading['finance']}
+              />
+            </div>
+          )}
+          {activeTab === 'payment-operations' && (
+            <div className="px-4 pb-4">
+              <PaymentOperationsTab
+                data={lazyData.paymentOperations}
+                loading={loading || !!lazyLoading['payment-operations']}
+              />
+            </div>
+          )}
+        </TabPanel>
+      </Card>
     </div>
   );
 };
