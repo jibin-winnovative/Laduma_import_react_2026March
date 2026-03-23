@@ -12,7 +12,8 @@ import { FinanceTab } from './tabs/FinanceTab';
 import { PaymentOperationsTab } from './tabs/PaymentOperationsTab';
 import {
   dashboardApi,
-  type DashboardData,
+  type ExecutiveOverview,
+  type NotificationCenter,
   type ProcurementWorkspace,
   type LogisticsWorkspace,
   type FinanceWorkspace,
@@ -46,90 +47,107 @@ const SkeletonChart = () => (
   </div>
 );
 
+const SkeletonNotifications = () => (
+  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 animate-pulse">
+    <div className="h-4 bg-gray-200 rounded w-40 mb-4" />
+    <div className="space-y-2">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="h-14 bg-gray-200 rounded" />
+      ))}
+    </div>
+  </div>
+);
+
+type TabId = 'procurement' | 'logistics' | 'finance' | 'payment-operations';
+
+interface TabData {
+  procurement: ProcurementWorkspace | null;
+  logistics: LogisticsWorkspace | null;
+  finance: FinanceWorkspace | null;
+  'payment-operations': PaymentOperationsWorkspace | null;
+}
+
 export const Dashboard = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('procurement');
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('procurement');
 
-  const [lazyData, setLazyData] = useState<{
-    procurement: ProcurementWorkspace | null;
-    logistics: LogisticsWorkspace | null;
-    finance: FinanceWorkspace | null;
-    paymentOperations: PaymentOperationsWorkspace | null;
-  }>({
+  const [overview, setOverview] = useState<ExecutiveOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState(false);
+
+  const [notifications, setNotifications] = useState<NotificationCenter | null>(null);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+
+  const [tabData, setTabData] = useState<TabData>({
     procurement: null,
     logistics: null,
     finance: null,
-    paymentOperations: null,
+    'payment-operations': null,
   });
-  const [lazyLoading, setLazyLoading] = useState<Record<string, boolean>>({});
-  const lazyLoadedRef = useRef<Record<string, boolean>>({});
+  const [tabLoading, setTabLoading] = useState<Partial<Record<TabId, boolean>>>({});
+  const loadedTabs = useRef<Partial<Record<TabId, boolean>>>({});
 
   useEffect(() => {
-    loadDashboard();
+    loadOverview();
+    loadNotifications();
+    loadTab('procurement');
   }, []);
 
-  const populateFromWorkspace = (ws: DashboardData['functionalWorkspace']) => {
-    setLazyData({
-      procurement: ws.procurement || null,
-      logistics: ws.logistics || null,
-      finance: ws.finance || null,
-      paymentOperations: ws.paymentOperations || null,
-    });
-    lazyLoadedRef.current = {
-      procurement: true,
-      logistics: true,
-      finance: true,
-      'payment-operations': true,
-    };
-  };
-
-  const loadDashboard = async () => {
-    setLoading(true);
-    setError(null);
+  const loadOverview = async () => {
+    setOverviewLoading(true);
+    setOverviewError(false);
     try {
-      const res = await dashboardApi.getAll();
-      setDashboardData(res.data);
-      if (res.data?.functionalWorkspace) {
-        populateFromWorkspace(res.data.functionalWorkspace);
-      }
+      const res = await dashboardApi.getOverview();
+      setOverview(res.data);
     } catch {
-      setError('Failed to load dashboard data');
+      setOverviewError(true);
     } finally {
-      setLoading(false);
+      setOverviewLoading(false);
     }
   };
 
-  const loadTabData = async (tab: string) => {
-    if (lazyLoadedRef.current[tab]) return;
-    lazyLoadedRef.current[tab] = true;
+  const loadNotifications = async () => {
+    setNotificationsLoading(true);
+    try {
+      const res = await dashboardApi.getNotifications();
+      setNotifications(res.data);
+    } catch {
+      // silently fail — notifications are non-critical
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
-    setLazyLoading((prev) => ({ ...prev, [tab]: true }));
+  const loadTab = async (tab: TabId) => {
+    if (loadedTabs.current[tab]) return;
+    loadedTabs.current[tab] = true;
+    setTabLoading((prev) => ({ ...prev, [tab]: true }));
     try {
       if (tab === 'procurement') {
         const res = await dashboardApi.getProcurement();
-        setLazyData((prev) => ({ ...prev, procurement: res.data }));
+        setTabData((prev) => ({ ...prev, procurement: res.data }));
       } else if (tab === 'logistics') {
         const res = await dashboardApi.getLogistics();
-        setLazyData((prev) => ({ ...prev, logistics: res.data }));
+        setTabData((prev) => ({ ...prev, logistics: res.data }));
       } else if (tab === 'finance') {
         const res = await dashboardApi.getFinance();
-        setLazyData((prev) => ({ ...prev, finance: res.data }));
+        setTabData((prev) => ({ ...prev, finance: res.data }));
       } else if (tab === 'payment-operations') {
         const res = await dashboardApi.getPaymentOperations();
-        setLazyData((prev) => ({ ...prev, paymentOperations: res.data }));
+        setTabData((prev) => ({ ...prev, 'payment-operations': res.data }));
       }
     } catch {
-      // keep lazyLoadedRef[tab] = true so we don't retry on every switch
+      // keep loadedTabs[tab] = true so we don't spam on every switch
     } finally {
-      setLazyLoading((prev) => ({ ...prev, [tab]: false }));
+      setTabLoading((prev) => ({ ...prev, [tab]: false }));
     }
   };
 
-  const overview = dashboardData?.executiveOverview;
-  const notifications = dashboardData?.notificationCenter;
+  const handleTabChange = (tab: string) => {
+    const t = tab as TabId;
+    setActiveTab(t);
+    loadTab(t);
+  };
 
   return (
     <div className="space-y-6">
@@ -142,89 +160,76 @@ export const Dashboard = () => {
         </p>
       </div>
 
-      {error && (
+      {overviewError && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-          {error}{' '}
-          <button className="underline font-medium" onClick={loadDashboard}>
+          Failed to load overview data.{' '}
+          <button className="underline font-medium" onClick={loadOverview}>
             Retry
           </button>
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {loading
+        {overviewLoading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
           : (overview?.kpis || []).map((kpi) => <KpiCard key={kpi.id} kpi={kpi} />)}
       </div>
 
-      {(loading || overview) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <SkeletonChart key={i} />)
-          ) : (
-            <>
-              {overview?.cashExposureChart && (
-                <DashboardChart data={overview.cashExposureChart} />
-              )}
-              {overview?.shipmentFlowChart && (
-                <DashboardChart data={overview.shipmentFlowChart} />
-              )}
-              {overview?.operationalBlockersChart && (
-                <DashboardChart data={overview.operationalBlockersChart} />
-              )}
-            </>
-          )}
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {overviewLoading ? (
+          Array.from({ length: 3 }).map((_, i) => <SkeletonChart key={i} />)
+        ) : (
+          <>
+            {overview?.cashExposureChart && (
+              <DashboardChart data={overview.cashExposureChart} />
+            )}
+            {overview?.shipmentFlowChart && (
+              <DashboardChart data={overview.shipmentFlowChart} />
+            )}
+            {overview?.operationalBlockersChart && (
+              <DashboardChart data={overview.operationalBlockersChart} />
+            )}
+          </>
+        )}
+      </div>
 
-      {(loading || notifications) && (
-        <>
-          {loading ? (
-            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-40 mb-4" />
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-14 bg-gray-200 rounded" />
-                ))}
-              </div>
-            </div>
-          ) : notifications ? (
-            <NotificationList data={notifications} />
-          ) : null}
-        </>
-      )}
+      {notificationsLoading ? (
+        <SkeletonNotifications />
+      ) : notifications ? (
+        <NotificationList data={notifications} />
+      ) : null}
 
       <Card padding="none">
-        <TabPanel tabs={TABS} activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); loadTabData(tab); }}>
+        <TabPanel tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange}>
           {activeTab === 'procurement' && (
             <div className="px-4 pb-4">
               <ProcurementTab
-                data={lazyData.procurement}
-                loading={loading || !!lazyLoading['procurement']}
+                data={tabData.procurement}
+                loading={!!tabLoading['procurement']}
               />
             </div>
           )}
           {activeTab === 'logistics' && (
             <div className="px-4 pb-4">
               <LogisticsTab
-                data={lazyData.logistics}
-                loading={loading || !!lazyLoading['logistics']}
+                data={tabData.logistics}
+                loading={!!tabLoading['logistics']}
               />
             </div>
           )}
           {activeTab === 'finance' && (
             <div className="px-4 pb-4">
               <FinanceTab
-                data={lazyData.finance}
-                loading={loading || !!lazyLoading['finance']}
+                data={tabData.finance}
+                loading={!!tabLoading['finance']}
               />
             </div>
           )}
           {activeTab === 'payment-operations' && (
             <div className="px-4 pb-4">
               <PaymentOperationsTab
-                data={lazyData.paymentOperations}
-                loading={loading || !!lazyLoading['payment-operations']}
+                data={tabData['payment-operations']}
+                loading={!!tabLoading['payment-operations']}
               />
             </div>
           )}

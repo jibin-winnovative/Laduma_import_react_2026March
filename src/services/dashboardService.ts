@@ -127,23 +127,9 @@ export interface PaymentOperationsItem {
   status: string;
 }
 
-export interface FunctionalWorkspace {
-  procurement: ProcurementWorkspace;
-  logistics: LogisticsWorkspace;
-  finance: FinanceWorkspace;
-  paymentOperations: PaymentOperationsWorkspace;
-}
-
-export interface DashboardData {
-  executiveOverview: ExecutiveOverview;
-  notificationCenter: NotificationCenter;
-  functionalWorkspace: FunctionalWorkspace;
-}
-
 const DASHBOARD_TIMEOUT = 60000;
 
 export const dashboardApi = {
-  getAll: () => apiClient.get<DashboardData>('/api/dashboard', { timeout: DASHBOARD_TIMEOUT }),
   getOverview: () => apiClient.get<ExecutiveOverview>('/api/dashboard/overview', { timeout: DASHBOARD_TIMEOUT }),
   getNotifications: () => apiClient.get<NotificationCenter>('/api/dashboard/notifications', { timeout: DASHBOARD_TIMEOUT }),
   getProcurement: () => apiClient.get<ProcurementWorkspace>('/api/dashboard/procurement', { timeout: DASHBOARD_TIMEOUT }),
