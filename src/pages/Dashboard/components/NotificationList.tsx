@@ -8,6 +8,13 @@ interface NotificationListProps {
   data: NotificationCenter;
 }
 
+const normalizeSeverity = (s: string): 'critical' | 'warning' | 'info' => {
+  const lower = s.toLowerCase();
+  if (lower === 'critical') return 'critical';
+  if (lower === 'warning') return 'warning';
+  return 'info';
+};
+
 const SEVERITY_CONFIG = {
   critical: {
     label: 'Critical',
@@ -78,9 +85,9 @@ const NotificationGroup = ({ severity, notifications }: NotificationGroupProps) 
 
       {!collapsed && (
         <div className="divide-y divide-gray-100 max-h-56 overflow-y-auto">
-          {notifications.map((n) => (
+          {notifications.map((n, idx) => (
             <div
-              key={n.id}
+              key={`${n.entityType}-${n.entityId}-${idx}`}
               className={`px-4 py-3 cursor-pointer transition-colors ${config.rowBg}`}
               onClick={() => n.actionPath && navigate(n.actionPath)}
             >
@@ -89,13 +96,13 @@ const NotificationGroup = ({ severity, notifications }: NotificationGroupProps) 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-[var(--color-text)] truncate">{n.title}</p>
-                    {n.referenceNumber && (
-                      <span className="text-xs text-gray-400 flex-shrink-0 font-mono">{n.referenceNumber}</span>
+                    {n.referenceNo && (
+                      <span className="text-xs text-gray-400 flex-shrink-0 font-mono">{n.referenceNo}</span>
                     )}
                   </div>
                   <p className="text-xs text-[var(--color-text-secondary)] mt-0.5 line-clamp-2">{n.description}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(n.date).toLocaleDateString()}
+                    {new Date(n.eventDate).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -108,9 +115,12 @@ const NotificationGroup = ({ severity, notifications }: NotificationGroupProps) 
 };
 
 export const NotificationList = ({ data }: NotificationListProps) => {
-  const criticals = data.notifications.filter((n) => n.severity === 'critical');
-  const warnings = data.notifications.filter((n) => n.severity === 'warning');
-  const infos = data.notifications.filter((n) => n.severity === 'info');
+  const groups = data.groups ?? [];
+  const getItems = (sev: string) =>
+    groups.find((g) => g.severity.toLowerCase() === sev)?.items ?? [];
+  const criticals = getItems('critical');
+  const warnings = getItems('warning');
+  const infos = getItems('info');
 
   return (
     <Card padding="none" className="p-4">

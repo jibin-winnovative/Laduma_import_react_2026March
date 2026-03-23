@@ -31,13 +31,21 @@ export interface DashboardChartData {
 }
 
 export interface Notification {
-  id: string | number;
+  severity: string;
+  module: string;
   title: string;
   description: string;
-  date: string;
-  referenceNumber?: string;
-  severity: 'critical' | 'warning' | 'info';
+  entityType: string;
+  entityId: number;
+  referenceNo?: string;
+  eventDate: string;
   actionPath?: string;
+}
+
+export interface NotificationGroup {
+  severity: string;
+  count: number;
+  items: Notification[];
 }
 
 export interface NotificationCenter {
@@ -45,7 +53,7 @@ export interface NotificationCenter {
   criticalCount: number;
   warningCount: number;
   infoCount: number;
-  notifications: Notification[];
+  groups: NotificationGroup[];
 }
 
 export interface ExecutiveOverview {
