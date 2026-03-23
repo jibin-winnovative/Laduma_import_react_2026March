@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, DollarSign, Calendar, FileText, User, AlertCircle, Clock, CheckCircle, Send, ThumbsUp, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -23,11 +23,15 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
+  const loadingRef = useRef(false);
+
   useEffect(() => {
     loadDetails();
   }, [paymentId]);
 
   const loadDetails = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -38,6 +42,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       setError(err.message || 'Failed to load payment details');
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
