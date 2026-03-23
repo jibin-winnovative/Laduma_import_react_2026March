@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
+import { MultiSelect } from '../../components/ui/MultiSelect';
 import {
   containersService,
   ContainerDashboard,
@@ -16,12 +17,14 @@ import { companiesService } from '../../services/companiesService';
 import { Company } from '../../types/api';
 
 const STATUS_OPTIONS = [
-  { value: '', label: 'All' },
   { value: 'Draft', label: 'Draft' },
   { value: 'Booked', label: 'Booked' },
   { value: 'In Transit', label: 'In Transit' },
   { value: 'Received', label: 'Received' },
+  { value: 'Canceled', label: 'Canceled' },
 ];
+
+const DEFAULT_STATUSES = ['Draft', 'Booked', 'In Transit'];
 
 export const ContainerManagementPage = () => {
   const navigate = useNavigate();
@@ -49,10 +52,13 @@ export const ContainerManagementPage = () => {
     remark: '',
   });
 
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(DEFAULT_STATUSES);
+
   const [filters, setFilters] = useState<ContainerSearchRequest>({
     companyId: undefined,
     searchText: '',
     status: '',
+    statuses: DEFAULT_STATUSES,
     telexReleased: undefined,
     fromDate: null,
     toDate: null,
@@ -85,7 +91,7 @@ export const ContainerManagementPage = () => {
       const [dashboardData, companiesData, searchResponse] = await Promise.all([
         containersService.getDashboard(),
         companiesService.getActive(),
-        containersService.search(filters),
+        containersService.search({ ...filters, statuses: selectedStatuses }),
       ]);
       setDashboard(dashboardData || {
         draftCount: 0,
@@ -137,22 +143,44 @@ export const ContainerManagementPage = () => {
   };
 
   const handleSearch = () => {
-    setFilters({ ...filters, pageNumber: 1 });
-    searchContainers();
+    const updated = { ...filters, pageNumber: 1, statuses: selectedStatuses };
+    setFilters(updated);
+    setSearching(true);
+    containersService.search(updated).then((response) => {
+      setContainers(response?.items || []);
+      setPagination({
+        currentPage: response?.currentPage || 1,
+        pageSize: response?.pageSize || 20,
+        totalPages: response?.totalPages || 1,
+        totalRecords: response?.totalRecords || 0,
+      });
+    }).catch(() => setContainers([])).finally(() => setSearching(false));
   };
 
   const handleReset = () => {
-    setFilters({
+    setSelectedStatuses(DEFAULT_STATUSES);
+    const reset: ContainerSearchRequest = {
       companyId: undefined,
       searchText: '',
       status: '',
+      statuses: DEFAULT_STATUSES,
       telexReleased: undefined,
       fromDate: null,
       toDate: null,
       pageNumber: 1,
       pageSize: 20,
-    });
-    setTimeout(() => searchContainers(), 0);
+    };
+    setFilters(reset);
+    setSearching(true);
+    containersService.search(reset).then((response) => {
+      setContainers(response?.items || []);
+      setPagination({
+        currentPage: response?.currentPage || 1,
+        pageSize: response?.pageSize || 20,
+        totalPages: response?.totalPages || 1,
+        totalRecords: response?.totalRecords || 0,
+      });
+    }).catch(() => setContainers([])).finally(() => setSearching(false));
   };
 
   const openStatusModal = (
@@ -353,20 +381,13 @@ export const ContainerManagementPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Status
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <MultiSelect
+              label="Status"
+              options={STATUS_OPTIONS}
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+              placeholder="Select statuses..."
+            />
           </div>
 
           <div>

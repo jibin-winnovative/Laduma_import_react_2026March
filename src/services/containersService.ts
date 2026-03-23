@@ -12,6 +12,7 @@ export interface ContainerSearchRequest {
   companyId?: number;
   searchText?: string;
   status?: string;
+  statuses?: string[];
   telexReleased?: boolean;
   fromDate?: string | null;
   toDate?: string | null;
