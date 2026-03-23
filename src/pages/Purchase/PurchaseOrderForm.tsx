@@ -186,16 +186,10 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   });
 
   const selectedSupplierId = watch('supplierId');
-  const selectedCurrencyId = watch('currencyId');
   const poNumber = watch('poNumber');
   const companyId = watch('companyId');
 
-  const selectedCurrencyCode = useMemo(() => {
-    if (!selectedCurrencyId) return '';
-    const currencyIdNum = Number(selectedCurrencyId);
-    const currency = currencies.find((c) => c.currencyId === currencyIdNum);
-    return currency?.currencyCode || '';
-  }, [selectedCurrencyId, currencies]);
+  const [displayCurrencyCode, setDisplayCurrencyCode] = useState('');
 
   const invoiceTotal = useMemo(() => {
     const sub = sum(items.map(item => item.amount));
@@ -230,11 +224,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     const initializeForm = async () => {
       try {
         console.log('Initializing form - mode:', mode, 'purchaseOrderId:', purchaseOrderId);
-        await fetchDropdownData();
+        const loadedCurrencies = await fetchDropdownData();
         console.log('Dropdown data fetched');
         if (isMounted && mode === 'edit' && purchaseOrderId) {
           console.log('Loading purchase order data...');
-          await fetchPurchaseOrderData();
+          await fetchPurchaseOrderData(loadedCurrencies);
           console.log('Purchase order data loaded');
         } else {
           // If not in edit mode, clear loading state after dropdown data is loaded
@@ -300,7 +294,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     return () => clearTimeout(timeoutId);
   }, [poNumber, companyId, mode, purchaseOrderId, setError, clearErrors]);
 
-  const fetchDropdownData = async () => {
+  const fetchDropdownData = async (): Promise<Currency[]> => {
     try {
       const [companiesRes, suppliersRes, exportPortsRes, importPortsRes, currenciesRes, shipmentTypesRes, addonChargesRes] = await Promise.all([
         companiesService.getActive(),
@@ -318,12 +312,14 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       setCurrencies(currenciesRes || []);
       setShipmentTypes(shipmentTypesRes || []);
       setAddonChargeOptions(addonChargesRes || []);
+      return currenciesRes || [];
     } catch (error) {
       console.error('Failed to fetch dropdown data:', error);
+      return [];
     }
   };
 
-  const fetchPurchaseOrderData = async () => {
+  const fetchPurchaseOrderData = async (loadedCurrencies: Currency[] = []) => {
     if (!purchaseOrderId) {
       console.error('fetchPurchaseOrderData called without purchaseOrderId');
       return;
@@ -344,6 +340,8 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       setValue('poNumber', data.poNumber);
       setValue('poDate', data.poDate.split('T')[0]);
       setValue('currencyId', String(data.currencyId));
+      const matchedCurrency = loadedCurrencies.find((c) => c.currencyId === Number(data.currencyId));
+      if (matchedCurrency) setDisplayCurrencyCode(matchedCurrency.currencyCode);
       setValue('supplierId', String(data.supplierId));
       setValue('exportPortId', String(data.exportPortId || ''));
       setValue('importPortId', String(data.importPortId || ''));
@@ -977,7 +975,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     const roundedInvoiceTotal = Math.round(invoiceTotal * 100) / 100;
 
     if (Math.abs(roundedPaymentTotal - roundedInvoiceTotal) > 0.01) {
-      alert(`Total payment amount (${selectedCurrencyCode} ${roundedPaymentTotal.toFixed(2)}) must equal Total Invoice Amount (${selectedCurrencyCode} ${roundedInvoiceTotal.toFixed(2)})`);
+      alert(`Total payment amount (${displayCurrencyCode} ${roundedPaymentTotal.toFixed(2)}) must equal Total Invoice Amount (${displayCurrencyCode} ${roundedInvoiceTotal.toFixed(2)})`);
       return;
     }
 
@@ -1839,7 +1837,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
               <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-700">Total Charges:</span>
-                  <span className="font-semibold text-gray-900">{selectedCurrencyCode} {removeTrailingZeros(totalCharges)}</span>
+                  <span className="font-semibold text-gray-900">{displayCurrencyCode} {removeTrailingZeros(totalCharges)}</span>
                 </div>
               </div>
             )}
@@ -1852,15 +1850,15 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Invoice:</span>
-                  <span className="font-medium">{selectedCurrencyCode} {removeTrailingZeros(subtotal)}</span>
+                  <span className="font-medium">{displayCurrencyCode} {removeTrailingZeros(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Add-on Charges:</span>
-                  <span className="font-medium">{selectedCurrencyCode} {removeTrailingZeros(totalCharges)}</span>
+                  <span className="font-medium">{displayCurrencyCode} {removeTrailingZeros(totalCharges)}</span>
                 </div>
                 <div className="flex justify-between text-base font-semibold pt-2 border-t border-blue-300">
                   <span>Total Invoice Amount:</span>
-                  <span className="text-blue-700">{selectedCurrencyCode} {removeTrailingZeros(invoiceTotal)}</span>
+                  <span className="text-blue-700">{displayCurrencyCode} {removeTrailingZeros(invoiceTotal)}</span>
                 </div>
               </div>
             </div>
@@ -2044,13 +2042,13 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           {totalPaymentPercentage.toFixed(2)}%
                         </span>
                         <span className={`font-semibold ${!isValid ? 'text-red-600' : 'text-gray-900'}`}>
-                          {selectedCurrencyCode} {removeTrailingZeros(roundTo4Decimals(totalPaymentAmount))}
+                          {displayCurrencyCode} {removeTrailingZeros(roundTo4Decimals(totalPaymentAmount))}
                         </span>
                       </div>
                     </div>
                     {!isValid && (
                       <p className="text-sm text-red-600 mt-2">
-                        Total payment amount must equal Total Invoice Amount ({selectedCurrencyCode} {roundedInvoiceTotal.toFixed(2)})
+                        Total payment amount must equal Total Invoice Amount ({displayCurrencyCode} {roundedInvoiceTotal.toFixed(2)})
                       </p>
                     )}
                   </div>
