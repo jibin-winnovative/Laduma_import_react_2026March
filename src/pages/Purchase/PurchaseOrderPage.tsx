@@ -58,6 +58,7 @@ export const PurchaseOrderPage = () => {
 
       {viewMode === 'add' && (
         <PurchaseOrderForm
+          key="po-add"
           mode="add"
           onClose={handleClose}
           onSuccess={handleSuccess}
@@ -66,6 +67,7 @@ export const PurchaseOrderPage = () => {
 
       {viewMode === 'edit' && selectedPO && (
         <PurchaseOrderForm
+          key={`po-edit-${selectedPO.purchaseOrderId}`}
           mode="edit"
           purchaseOrderId={selectedPO.purchaseOrderId}
           onClose={handleClose}

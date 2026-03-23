@@ -295,28 +295,40 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   }, [poNumber, companyId, mode, purchaseOrderId, setError, clearErrors]);
 
   const fetchDropdownData = async (): Promise<Currency[]> => {
-    try {
-      const [companiesRes, suppliersRes, exportPortsRes, importPortsRes, currenciesRes, shipmentTypesRes, addonChargesRes] = await Promise.all([
-        companiesService.getActive(),
-        suppliersService.getDropdown(),
-        portsService.getByDirection('Export'),
-        portsService.getByDirection('Import'),
-        currencyService.getActive(),
-        shipmentTypesService.getActive(),
-        addonChargesService.getActive(),
-      ]);
-      setCompanies(companiesRes || []);
-      setSuppliers(suppliersRes || []);
-      setExportPorts(exportPortsRes || []);
-      setImportPorts(importPortsRes || []);
-      setCurrencies(currenciesRes || []);
-      setShipmentTypes(shipmentTypesRes || []);
-      setAddonChargeOptions(addonChargesRes || []);
-      return currenciesRes || [];
-    } catch (error) {
-      console.error('Failed to fetch dropdown data:', error);
-      return [];
-    }
+    const results = await Promise.allSettled([
+      companiesService.getActive(),
+      suppliersService.getDropdown(),
+      portsService.getByDirection('Export'),
+      portsService.getByDirection('Import'),
+      currencyService.getActive(),
+      shipmentTypesService.getActive(),
+      addonChargesService.getActive(),
+    ]);
+
+    const [companiesRes, suppliersRes, exportPortsRes, importPortsRes, currenciesRes, shipmentTypesRes, addonChargesRes] = results;
+
+    if (companiesRes.status === 'fulfilled') setCompanies(companiesRes.value || []);
+    else console.error('Failed to fetch companies:', companiesRes.reason);
+
+    if (suppliersRes.status === 'fulfilled') setSuppliers(suppliersRes.value || []);
+    else console.error('Failed to fetch suppliers:', suppliersRes.reason);
+
+    if (exportPortsRes.status === 'fulfilled') setExportPorts(exportPortsRes.value || []);
+    else console.error('Failed to fetch export ports:', exportPortsRes.reason);
+
+    if (importPortsRes.status === 'fulfilled') setImportPorts(importPortsRes.value || []);
+    else console.error('Failed to fetch import ports:', importPortsRes.reason);
+
+    if (currenciesRes.status === 'fulfilled') setCurrencies(currenciesRes.value || []);
+    else console.error('Failed to fetch currencies:', currenciesRes.reason);
+
+    if (shipmentTypesRes.status === 'fulfilled') setShipmentTypes(shipmentTypesRes.value || []);
+    else console.error('Failed to fetch shipment types:', shipmentTypesRes.reason);
+
+    if (addonChargesRes.status === 'fulfilled') setAddonChargeOptions(addonChargesRes.value || []);
+    else console.error('Failed to fetch addon charges:', addonChargesRes.reason);
+
+    return currenciesRes.status === 'fulfilled' ? (currenciesRes.value || []) : [];
   };
 
   const fetchPurchaseOrderData = async (loadedCurrencies: Currency[] = []) => {
