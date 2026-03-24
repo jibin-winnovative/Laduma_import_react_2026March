@@ -10,6 +10,7 @@ import {
   PaymentStatus,
 } from '../../services/oceanFreightPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { currencyService } from '../../services/currencyService';
 import { ContainerSearchModal } from './ContainerSearchModal';
 
 interface OceanFreightPaymentFormProps {
@@ -51,6 +52,8 @@ export const OceanFreightPaymentForm = ({
   const [billDate, setBillDate] = useState('');
   const [status, setStatus] = useState<PaymentStatus>('Pending');
 
+  const [zarRateWarning, setZarRateWarning] = useState<string | null>(null);
+
   const [loadingInit, setLoadingInit] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +75,7 @@ export const OceanFreightPaymentForm = ({
       loadExisting();
     } else {
       loadDropdowns();
+      loadZarRate();
     }
   }, [mode, oceanFreightPaymentId]);
 
@@ -80,6 +84,27 @@ export const OceanFreightPaymentForm = ({
       loadOceanFreightCompany();
     }
   }, [containerId, mode]);
+
+  const loadZarRate = async () => {
+    try {
+      const currencies = await currencyService.getActive();
+      const zarCurrency = currencies.find(
+        (c) => c.currencyCode.toUpperCase() === 'ZAR'
+      );
+      if (zarCurrency && zarCurrency.conversionRate > 0) {
+        setExchangeRate(zarCurrency.conversionRate);
+        setZarRateWarning(null);
+      } else {
+        setExchangeRate('');
+        setZarRateWarning(
+          'ZAR exchange rate not found. Please create a ZAR currency in Currency Master before proceeding.'
+        );
+      }
+    } catch (err) {
+      console.error('Failed to load ZAR exchange rate:', err);
+      setZarRateWarning('Failed to load ZAR exchange rate. Please check Currency Master.');
+    }
+  };
 
   const loadDropdowns = async () => {
     try {
@@ -685,17 +710,23 @@ export const OceanFreightPaymentForm = ({
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Exchange Rate <span className="text-red-500">*</span>
+              Exchange Rate (ZAR) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               step="0.0001"
               value={exchangeRate}
-              onChange={(e) => setExchangeRate(e.target.value ? Number(e.target.value) : '')}
-              disabled={!canEdit}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
-              placeholder="0.00"
+              readOnly
+              disabled
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+              placeholder="Loading from Currency Master..."
             />
+            {zarRateWarning && (
+              <div className="flex items-start gap-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-700">{zarRateWarning}</p>
+              </div>
+            )}
           </div>
 
           <div>
