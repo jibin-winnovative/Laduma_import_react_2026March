@@ -476,7 +476,7 @@ export const ContainerManagementPage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {searching ? (
+              {loading || searching ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
                     Loading...
