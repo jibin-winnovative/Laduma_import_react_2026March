@@ -76,6 +76,13 @@ export const POItemAllocationModal = ({
       const newSet = new Set(prev);
       if (isSelected) {
         newSet.add(itemId);
+        setItems((prevItems) =>
+          prevItems.map((item) =>
+            item.purchaseOrderItemId === itemId && item.loadQty === 0
+              ? { ...item, loadQty: item.remainingQty }
+              : item
+          )
+        );
       } else {
         newSet.delete(itemId);
         setItems((prevItems) =>
