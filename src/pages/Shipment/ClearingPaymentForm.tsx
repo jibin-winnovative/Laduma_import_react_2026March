@@ -85,27 +85,31 @@ export const ClearingPaymentForm = ({
   }, [mode, clearingPaymentId]);
 
   const loadDropdowns = async () => {
-    try {
-      const [containerRes, agentsRes] = await Promise.all([
-        containersService.search({ pageNumber: 1, pageSize: 500 }),
-        clearingAgentsService.getDropdown()
-      ]);
+    const [containerRes, agentsRes] = await Promise.allSettled([
+      containersService.search({ pageNumber: 1, pageSize: 500 }),
+      clearingAgentsService.getDropdown(),
+    ]);
 
+    if (containerRes.status === 'fulfilled') {
       setContainers(
-        (containerRes.items || []).map((c) => ({
+        (containerRes.value.items || []).map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
         }))
       );
+    } else {
+      console.error('Failed to load containers:', containerRes.reason);
+    }
 
+    if (agentsRes.status === 'fulfilled') {
       setAgents(
-        agentsRes.map((a) => ({
+        agentsRes.value.map((a) => ({
           clearingAgentId: a.clearingAgentId,
           companyName: a.agentName,
         }))
       );
-    } catch (err) {
-      console.error('Failed to load dropdowns:', err);
+    } else {
+      console.error('Failed to load clearing agents:', agentsRes.reason);
     }
   };
 

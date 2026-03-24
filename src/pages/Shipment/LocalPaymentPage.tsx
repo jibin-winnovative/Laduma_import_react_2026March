@@ -60,6 +60,7 @@ export const LocalPaymentPage = () => {
       )}
       {mode === 'add' && (
         <LocalPaymentForm
+          key="lp-add"
           mode="add"
           onClose={handleClose}
           onSuccess={handleSuccess}
@@ -67,6 +68,7 @@ export const LocalPaymentPage = () => {
       )}
       {mode === 'edit' && selectedId && (
         <LocalPaymentForm
+          key={`lp-edit-${selectedId}`}
           mode="edit"
           localPaymentId={selectedId}
           onClose={handleClose}

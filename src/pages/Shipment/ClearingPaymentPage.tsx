@@ -69,6 +69,7 @@ export const ClearingPaymentPage = () => {
 
       {viewMode === 'add' && (
         <ClearingPaymentForm
+          key="cp-add"
           mode="add"
           onClose={handleClose}
           onSuccess={handleSuccess}
@@ -77,6 +78,7 @@ export const ClearingPaymentPage = () => {
 
       {viewMode === 'edit' && selectedId !== undefined && (
         <ClearingPaymentForm
+          key={`cp-edit-${selectedId}`}
           mode="edit"
           clearingPaymentId={selectedId}
           onClose={handleClose}

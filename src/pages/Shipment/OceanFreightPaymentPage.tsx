@@ -61,9 +61,20 @@ export const OceanFreightPaymentPage = () => {
         />
       )}
 
-      {(viewMode === 'add' || viewMode === 'edit') && (
+      {viewMode === 'add' && (
         <OceanFreightPaymentForm
-          mode={viewMode}
+          key="ofp-add"
+          mode="add"
+          oceanFreightPaymentId={selectedId}
+          onClose={handleClose}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {viewMode === 'edit' && selectedId !== undefined && (
+        <OceanFreightPaymentForm
+          key={`ofp-edit-${selectedId}`}
+          mode="edit"
           oceanFreightPaymentId={selectedId}
           onClose={handleClose}
           onSuccess={handleSuccess}
