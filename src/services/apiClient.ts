@@ -10,8 +10,11 @@ console.log('   Current Hostname:', window.location.hostname);
 console.log('   Full URL:', window.location.href);
 console.log('📋 Add this origin to your .NET API CORS settings:', window.location.origin);
 
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
+const TOKEN_STORAGE_KEY = 'app_access_token';
+const REFRESH_TOKEN_STORAGE_KEY = 'app_refresh_token';
+
+let accessToken: string | null = localStorage.getItem(TOKEN_STORAGE_KEY);
+let refreshToken: string | null = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
 let tokenRefreshTimer: NodeJS.Timeout | null = null;
 
 let onSessionExpiredCallback: (() => void) | null = null;
@@ -98,9 +101,15 @@ const handleSessionExpired = () => {
   }
 };
 
+if (accessToken) {
+  scheduleTokenRefresh();
+}
+
 export const setTokens = (access: string, refresh: string) => {
   accessToken = access;
   refreshToken = refresh;
+  localStorage.setItem(TOKEN_STORAGE_KEY, access);
+  localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refresh);
   scheduleTokenRefresh();
 };
 
@@ -110,6 +119,8 @@ export const getRefreshToken = () => refreshToken;
 export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
   if (tokenRefreshTimer) {
     clearTimeout(tokenRefreshTimer);
     tokenRefreshTimer = null;
