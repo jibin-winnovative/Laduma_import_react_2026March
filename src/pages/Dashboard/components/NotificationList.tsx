@@ -4,6 +4,35 @@ import { AlertCircle, AlertTriangle, Info, ChevronDown, ChevronRight, Bell } fro
 import { Card } from '../../../components/ui/Card';
 import type { NotificationCenter, Notification } from '../../../services/dashboardService';
 
+const getNotificationRoute = (n: Notification): string | null => {
+  const module = (n.module ?? '').toLowerCase();
+  const entityType = (n.entityType ?? '').toLowerCase();
+  const id = n.entityId;
+
+  if (module === 'purchase' || entityType === 'purchaseorder') {
+    return `/purchase/purchase-orders/${id}`;
+  }
+  if (module === 'purchase' || entityType === 'purchaseorderpayment' || entityType === 'popayment') {
+    return `/purchase/po-payments?paymentId=${id}`;
+  }
+  if (module === 'oceanfreight' || entityType === 'oceanfreightpayment') {
+    return `/ocean-freight-payments?viewId=${id}`;
+  }
+  if (module === 'localPayment' || entityType === 'localpayment') {
+    return `/local-payments?viewId=${id}`;
+  }
+  if (module === 'clearing' || entityType === 'clearingpayment') {
+    return `/clearing-payments?viewId=${id}`;
+  }
+  if (module === 'container' || entityType === 'container') {
+    return `/containers/view/${id}`;
+  }
+  if (module === 'payments' || entityType === 'paymentrequest') {
+    return `/payments/accounts-payable`;
+  }
+  return n.actionPath ?? null;
+};
+
 interface NotificationListProps {
   data: NotificationCenter;
 }
@@ -89,7 +118,10 @@ const NotificationGroup = ({ severity, notifications }: NotificationGroupProps) 
             <div
               key={`${n.entityType}-${n.entityId}-${idx}`}
               className={`px-4 py-3 cursor-pointer transition-colors ${config.rowBg}`}
-              onClick={() => n.actionPath && navigate(n.actionPath)}
+              onClick={() => {
+                const route = getNotificationRoute(n);
+                if (route) navigate(route);
+              }}
             >
               <div className="flex items-start gap-3">
                 <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${config.dot}`} />
