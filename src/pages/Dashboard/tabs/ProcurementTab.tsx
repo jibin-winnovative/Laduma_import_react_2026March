@@ -142,7 +142,7 @@ const OverduePaymentsTable = ({ rows }: { rows: ProcurementOverduePayment[] }) =
                   <tr
                     key={row.purchaseOrderPaymentId}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/purchase-orders/${row.purchaseOrderId}`)}
+                    onClick={() => navigate(`/purchase/purchase-orders/${row.purchaseOrderId}`)}
                   >
                     <td className="px-3 py-2 text-sm text-blue-600 font-medium whitespace-nowrap">{row.poNumber}</td>
                     <td className="px-3 py-2 text-sm text-[var(--color-text)] max-w-[150px] truncate">{row.supplierName}</td>
@@ -238,21 +238,21 @@ export const ProcurementTab = ({ data, loading }: ProcurementTabProps) => {
           <POTable
             title="Recent Submitted Purchase Orders"
             rows={data.recentSubmittedPurchaseOrders}
-            linkPath="/purchase-orders/:id"
+            linkPath="/purchase/purchase-orders/:id"
           />
         )}
         {data.approvedPurchaseOrdersAwaitingContainerAllocation && (
           <POTable
             title="Approved POs Awaiting Container Allocation"
             rows={data.approvedPurchaseOrdersAwaitingContainerAllocation}
-            linkPath="/purchase-orders/:id"
+            linkPath="/purchase/purchase-orders/:id"
           />
         )}
         {data.highValuePurchaseOrders && (
           <POTable
             title="High Value Purchase Orders"
             rows={data.highValuePurchaseOrders}
-            linkPath="/purchase-orders/:id"
+            linkPath="/purchase/purchase-orders/:id"
           />
         )}
         {data.overduePurchaseOrderPayments && (

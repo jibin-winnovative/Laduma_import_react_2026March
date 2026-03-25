@@ -89,6 +89,7 @@ function App() {
                         <Route path="/masters/clearing-payment-charges" element={<ClearingPaymentChargesPage />} />
 
                         <Route path="/purchase/purchase-orders" element={<PurchaseOrderPage />} />
+                        <Route path="/purchase/purchase-orders/:id" element={<PurchaseOrderPage />} />
                         <Route path="/purchase/po-payments" element={<POPaymentsPage />} />
 
                         <Route path="/payments/accounts-payable" element={<AccountsPayablePage />} />

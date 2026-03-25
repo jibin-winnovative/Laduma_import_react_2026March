@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { PurchaseOrderList } from './PurchaseOrderList';
 import { PurchaseOrderForm } from './PurchaseOrderForm';
 import { ViewPurchaseOrder } from './ViewPurchaseOrder';
@@ -18,8 +19,19 @@ interface PurchaseOrder {
 }
 
 export const PurchaseOrderPage = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (id ? 'view' : 'list'));
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | undefined>();
+
+  useEffect(() => {
+    if (id) {
+      setViewMode('view');
+    } else {
+      setViewMode('list');
+      setSelectedPO(undefined);
+    }
+  }, [id]);
 
   const handleAdd = () => {
     setSelectedPO(undefined);
@@ -33,18 +45,18 @@ export const PurchaseOrderPage = () => {
 
   const handleView = (po: PurchaseOrder) => {
     setSelectedPO(po);
-    setViewMode('view');
+    navigate(`/purchase/purchase-orders/${po.purchaseOrderId}`);
   };
 
   const handleClose = () => {
-    setViewMode('list');
-    setSelectedPO(undefined);
+    navigate('/purchase/purchase-orders');
   };
 
   const handleSuccess = () => {
-    setViewMode('list');
-    setSelectedPO(undefined);
+    navigate('/purchase/purchase-orders');
   };
+
+  const purchaseOrderId = id ? parseInt(id, 10) : selectedPO?.purchaseOrderId;
 
   return (
     <div className="p-6">
@@ -75,9 +87,9 @@ export const PurchaseOrderPage = () => {
         />
       )}
 
-      {viewMode === 'view' && selectedPO && (
+      {viewMode === 'view' && purchaseOrderId && (
         <ViewPurchaseOrder
-          purchaseOrderId={selectedPO.purchaseOrderId}
+          purchaseOrderId={purchaseOrderId}
           onClose={handleClose}
         />
       )}
