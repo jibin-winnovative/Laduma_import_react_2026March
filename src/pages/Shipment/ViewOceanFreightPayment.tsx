@@ -208,7 +208,7 @@ export const ViewOceanFreightPayment = ({
               </Button>
             </>
           )}
-          {(data.status === 'Pending' || data.status === 'Requested') && (
+          {data.status === 'Pending' && (
             <Button
               onClick={handleReject}
               disabled={actionLoading}
