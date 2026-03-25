@@ -72,7 +72,8 @@ export const resizeImageTo120x120 = async (file: File): Promise<ResizedImage> =>
               return;
             }
 
-            const resizedFile = new File([blob], file.name, {
+            const jpegName = file.name.replace(/\.[^.]+$/, '.jpg');
+            const resizedFile = new File([blob], jpegName, {
               type: 'image/jpeg',
               lastModified: Date.now(),
             });

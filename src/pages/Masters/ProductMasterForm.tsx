@@ -384,7 +384,6 @@ export const ProductMasterForm = ({ mode, productId, onClose, onSuccess }: Produ
       if (mode === 'add') {
         const created = await productMastersService.create(data);
         prodId = created.productId;
-        alert('Product created successfully!');
       } else if (mode === 'edit' && productId) {
         await productMastersService.update(productId, data);
         prodId = productId;
@@ -396,8 +395,6 @@ export const ProductMasterForm = ({ mode, productId, onClose, onSuccess }: Produ
             console.error('Failed to delete old image:', error);
           }
         }
-
-        alert('Product updated successfully!');
       } else {
         return;
       }
@@ -405,6 +402,8 @@ export const ProductMasterForm = ({ mode, productId, onClose, onSuccess }: Produ
       if (newImage) {
         await uploadImage(prodId);
       }
+
+      alert(mode === 'add' ? 'Product created successfully!' : 'Product updated successfully!');
 
       if (onSuccess) {
         onSuccess();
