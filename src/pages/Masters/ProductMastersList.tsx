@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard as Edit2, Trash2, Eye, Package, Download, Search, Plus } from 'lucide-react';
+import { CreditCard as Edit2, Trash2, Eye, Package, Download, Search, Plus, Loader2 } from 'lucide-react';
 import productMastersService, { ProductMaster } from '../../services/productMastersService';
 import { departmentsService } from '../../services/departmentsService';
 import { categoriesService } from '../../services/categoriesService';
@@ -29,6 +29,7 @@ export const ProductMastersList = ({ onView, onEdit, onDelete, onAdd }: ProductM
   const [selectedSubType, setSelectedSubType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [searchTrigger, setSearchTrigger] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
   const pageSize = 10;
 
   const [summary, setSummary] = useState({
@@ -205,6 +206,8 @@ export const ProductMastersList = ({ onView, onEdit, onDelete, onAdd }: ProductM
   };
 
   const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
     try {
       let isActiveValue: boolean | undefined = undefined;
       if (selectedStatus === 'Active') {
@@ -233,6 +236,8 @@ export const ProductMastersList = ({ onView, onEdit, onDelete, onAdd }: ProductM
     } catch (error) {
       console.error('Failed to export:', error);
       alert('Failed to export data. Please try again.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -255,10 +260,15 @@ export const ProductMastersList = ({ onView, onEdit, onDelete, onAdd }: ProductM
           <Button
             variant="outline"
             onClick={handleExport}
+            disabled={isExporting}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2"
           >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">{isExporting ? 'Exporting...' : 'Export'}</span>
           </Button>
           <Button
             onClick={onAdd}

@@ -176,6 +176,7 @@ const productMastersService = {
     const query = queryParams.toString();
     const response = await apiClient.get(`${BASE_PATH}/export${query ? `?${query}` : ''}`, {
       responseType: 'blob',
+      timeout: 60000,
     });
     return response.data as Blob;
   },
