@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, LoginRequest } from '../types/api';
 import { authService, getCachedUser, clearCachedUser } from '../services/authService';
-import { clearTokens, setSessionExpiredCallback, getAccessToken } from '../services/apiClient';
+import { clearTokens, setSessionExpiredCallback, isRefreshTokenExpired } from '../services/apiClient';
 
 interface AuthContextType {
   user: User | null;
@@ -18,54 +18,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => getCachedUser());
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUser = async () => {
-    try {
-      const userData = await authService.getCurrentUser();
-      setUser(userData);
-    } catch (error) {
-      console.error('Failed to fetch user:', error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSessionExpired = useCallback(() => {
     console.log('🔒 Session expired, clearing user data');
     setUser(null);
     clearCachedUser();
+    clearTokens();
   }, []);
+
+  const fetchUser = useCallback(async () => {
+    if (isRefreshTokenExpired()) {
+      console.log('🔒 Refresh token expired on startup — logging out');
+      handleSessionExpired();
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
+    } catch (error: any) {
+      console.error('Failed to fetch user:', error);
+      const statusCode = error?.statusCode || error?.response?.status;
+      if (statusCode === 401) {
+        handleSessionExpired();
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleSessionExpired]);
 
   useEffect(() => {
     setSessionExpiredCallback(handleSessionExpired);
     fetchUser();
-
-    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-    let activityTimeout: NodeJS.Timeout;
-
-    const resetActivityTimer = () => {
-      clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(() => {
-        const token = getAccessToken();
-        if (token) {
-          console.log('👤 User active, keeping session alive');
-        }
-      }, 300000);
-    };
-
-    activityEvents.forEach(event => {
-      window.addEventListener(event, resetActivityTimer);
-    });
-
-    resetActivityTimer();
-
-    return () => {
-      activityEvents.forEach(event => {
-        window.removeEventListener(event, resetActivityTimer);
-      });
-      clearTimeout(activityTimeout);
-    };
-  }, [handleSessionExpired]);
+  }, [handleSessionExpired, fetchUser]);
 
   const login = async (credentials: LoginRequest) => {
     setIsLoading(true);

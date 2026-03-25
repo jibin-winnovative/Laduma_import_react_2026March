@@ -23,6 +23,28 @@ export const setSessionExpiredCallback = (callback: () => void) => {
   onSessionExpiredCallback = callback;
 };
 
+export const isTokenExpired = (): boolean => {
+  if (!accessToken) return true;
+  try {
+    const decoded = decodeJWT(accessToken);
+    if (!decoded.exp) return false;
+    return Date.now() >= decoded.exp * 1000 - 5000;
+  } catch {
+    return true;
+  }
+};
+
+export const isRefreshTokenExpired = (): boolean => {
+  if (!refreshToken) return true;
+  try {
+    const decoded = decodeJWT(refreshToken);
+    if (!decoded.exp) return false;
+    return Date.now() >= decoded.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
 const decodeJWT = (token: string): { exp?: number } => {
   try {
     const base64Url = token.split('.')[1];
@@ -43,6 +65,7 @@ const decodeJWT = (token: string): { exp?: number } => {
 const scheduleTokenRefresh = () => {
   if (tokenRefreshTimer) {
     clearTimeout(tokenRefreshTimer);
+    tokenRefreshTimer = null;
   }
 
   if (!accessToken) {
@@ -60,15 +83,35 @@ const scheduleTokenRefresh = () => {
   const refreshTime = timeUntilExpiry - 60000;
 
   if (refreshTime > 0) {
-    console.log(`🔄 Token refresh scheduled in ${Math.round(refreshTime / 1000)}s`);
+    const cappedRefreshTime = Math.min(refreshTime, 30 * 60 * 1000);
+    console.log(`🔄 Token refresh scheduled in ${Math.round(cappedRefreshTime / 1000)}s`);
     tokenRefreshTimer = setTimeout(() => {
       refreshTokenProactively();
-    }, refreshTime);
+    }, cappedRefreshTime);
   } else {
     console.log('⚠️ Token expired or about to expire, refreshing now');
     refreshTokenProactively();
   }
 };
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible' && accessToken) {
+    const decoded = decodeJWT(accessToken);
+    if (decoded.exp) {
+      const timeUntilExpiry = decoded.exp * 1000 - Date.now();
+      if (timeUntilExpiry <= 65000) {
+        console.log('👁️ Tab visible, token near expiry — refreshing proactively');
+        refreshTokenProactively();
+      } else {
+        scheduleTokenRefresh();
+      }
+    }
+  }
+};
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+}
 
 const refreshTokenProactively = async () => {
   if (!refreshToken) {
