@@ -78,7 +78,7 @@ const ContainerTable = ({
                   <tr
                     key={row.containerId}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/containers/${row.containerId}`)}
+                    onClick={() => navigate(`/containers/view/${row.containerId}`)}
                   >
                     <td className="px-3 py-2 text-sm text-blue-600 font-medium whitespace-nowrap">{row.containerNumber}</td>
                     <td className="px-3 py-2 text-sm text-[var(--color-text-secondary)] whitespace-nowrap">{formatDate(row.eta)}</td>
@@ -141,7 +141,7 @@ const WorkflowActionTable = ({ rows }: { rows: LogisticsDelayedContainer[] }) =>
                   <tr
                     key={row.containerId}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/containers/${row.containerId}`)}
+                    onClick={() => navigate(`/containers/view/${row.containerId}`)}
                   >
                     <td className="px-3 py-2 text-sm text-blue-600 font-medium whitespace-nowrap">{row.containerNumber}</td>
                     <td className="px-3 py-2">
