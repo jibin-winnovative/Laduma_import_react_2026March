@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ClearingPaymentList } from './ClearingPaymentList';
 import { ClearingPaymentForm } from './ClearingPaymentForm';
 import { ViewClearingPayment } from './ViewClearingPayment';
@@ -7,8 +8,24 @@ import { clearingPaymentsService } from '../../services/clearingPaymentsService'
 type ViewMode = 'list' | 'add' | 'edit' | 'view';
 
 export const ClearingPaymentPage = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [selectedId, setSelectedId] = useState<number | undefined>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const id = searchParams.get('viewId');
+    return id ? 'view' : 'list';
+  });
+  const [selectedId, setSelectedId] = useState<number | undefined>(() => {
+    const id = searchParams.get('viewId');
+    return id ? parseInt(id, 10) : undefined;
+  });
+
+  useEffect(() => {
+    const id = searchParams.get('viewId');
+    if (id) {
+      setSelectedId(parseInt(id, 10));
+      setViewMode('view');
+    }
+  }, [searchParams]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -49,11 +66,13 @@ export const ClearingPaymentPage = () => {
   const handleClose = () => {
     setViewMode('list');
     setSelectedId(undefined);
+    if (searchParams.get('viewId')) navigate('/clearing-payments', { replace: true });
   };
 
   const handleSuccess = () => {
     setViewMode('list');
     setSelectedId(undefined);
+    if (searchParams.get('viewId')) navigate('/clearing-payments', { replace: true });
   };
 
   return (

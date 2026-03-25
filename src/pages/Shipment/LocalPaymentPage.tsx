@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { LocalPaymentList } from './LocalPaymentList';
 import { LocalPaymentForm } from './LocalPaymentForm';
 import { ViewLocalPayment } from './ViewLocalPayment';
@@ -7,8 +8,24 @@ import { localPaymentsService } from '../../services/localPaymentsService';
 type ViewMode = 'list' | 'add' | 'edit' | 'view';
 
 export const LocalPaymentPage = () => {
-  const [mode, setMode] = useState<ViewMode>('list');
-  const [selectedId, setSelectedId] = useState<number | undefined>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<ViewMode>(() => {
+    const id = searchParams.get('viewId');
+    return id ? 'view' : 'list';
+  });
+  const [selectedId, setSelectedId] = useState<number | undefined>(() => {
+    const id = searchParams.get('viewId');
+    return id ? parseInt(id, 10) : undefined;
+  });
+
+  useEffect(() => {
+    const id = searchParams.get('viewId');
+    if (id) {
+      setSelectedId(parseInt(id, 10));
+      setMode('view');
+    }
+  }, [searchParams]);
 
   const handleAdd = () => {
     setSelectedId(undefined);
@@ -41,11 +58,13 @@ export const LocalPaymentPage = () => {
   const handleClose = () => {
     setMode('list');
     setSelectedId(undefined);
+    if (searchParams.get('viewId')) navigate('/local-payments', { replace: true });
   };
 
   const handleSuccess = () => {
     setMode('list');
     setSelectedId(undefined);
+    if (searchParams.get('viewId')) navigate('/local-payments', { replace: true });
   };
 
   return (

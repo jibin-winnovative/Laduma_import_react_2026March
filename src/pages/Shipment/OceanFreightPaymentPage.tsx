@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { OceanFreightPaymentList } from './OceanFreightPaymentList';
 import { OceanFreightPaymentForm } from './OceanFreightPaymentForm';
 import { ViewOceanFreightPayment } from './ViewOceanFreightPayment';
@@ -8,9 +9,25 @@ import { oceanFreightPaymentsService } from '../../services/oceanFreightPayments
 type ViewMode = 'list' | 'add' | 'edit' | 'view';
 
 export const OceanFreightPaymentPage = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const id = searchParams.get('viewId');
+    return id ? 'view' : 'list';
+  });
+  const [selectedId, setSelectedId] = useState<number | undefined>(() => {
+    const id = searchParams.get('viewId');
+    return id ? parseInt(id, 10) : undefined;
+  });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const id = searchParams.get('viewId');
+    if (id) {
+      setSelectedId(parseInt(id, 10));
+      setViewMode('view');
+    }
+  }, [searchParams]);
 
   const handleAdd = () => {
     setSelectedId(undefined);
@@ -41,12 +58,14 @@ export const OceanFreightPaymentPage = () => {
   const handleClose = () => {
     setViewMode('list');
     setSelectedId(undefined);
+    if (searchParams.get('viewId')) navigate('/ocean-freight-payments', { replace: true });
   };
 
   const handleSuccess = () => {
     setViewMode('list');
     setSelectedId(undefined);
     setRefreshTrigger((prev) => prev + 1);
+    if (searchParams.get('viewId')) navigate('/ocean-freight-payments', { replace: true });
   };
 
   return (

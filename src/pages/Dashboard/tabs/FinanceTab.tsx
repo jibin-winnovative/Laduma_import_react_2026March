@@ -42,11 +42,19 @@ const formatDate = (dateString: string) => {
 const formatCurrency = (amount: number) =>
   `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const SOURCE_MODULE_ROUTES: Record<string, string> = {
-  Purchase: '/purchase-orders',
-  OceanFreightPayment: '/ocean-freight',
-  LocalPayment: '/local-payments',
-  ClearingPayment: '/clearing-payments',
+const getModuleRoute = (row: FinancePaymentRequest): string | null => {
+  switch (row.sourceModule) {
+    case 'Purchase':
+      return `/purchase/po-payments?paymentId=${row.sourceId}`;
+    case 'OceanFreightPayment':
+      return `/ocean-freight-payments?viewId=${row.sourceId}`;
+    case 'LocalPayment':
+      return `/local-payments?viewId=${row.sourceId}`;
+    case 'ClearingPayment':
+      return `/clearing-payments?viewId=${row.sourceId}`;
+    default:
+      return null;
+  }
 };
 
 interface RequestTableProps {
@@ -59,10 +67,8 @@ const RequestTable = ({ title, rows, showOverdue }: RequestTableProps) => {
   const navigate = useNavigate();
 
   const handleRowClick = (row: FinancePaymentRequest) => {
-    const base = SOURCE_MODULE_ROUTES[row.sourceModule];
-    if (base && row.paymentRequestId) {
-      navigate(`/accounts-payable/${row.paymentRequestId}`);
-    }
+    const route = getModuleRoute(row);
+    if (route) navigate(route);
   };
 
   return (
