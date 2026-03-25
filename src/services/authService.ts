@@ -1,6 +1,37 @@
 import { api, setTokens, clearTokens, getRefreshToken } from './apiClient';
 import { LoginRequest, LoginResponse, User } from '../types/api';
 
+const USER_CACHE_KEY = 'app_user_cache';
+
+const mapApiDataToUser = (data: any, fallbackEmail?: string): User => ({
+  id: data.employeeId?.toString() || data.id?.toString() || '',
+  email: data.email || fallbackEmail || '',
+  username: data.name || data.username || data.email || fallbackEmail || '',
+  firstName: data.firstName || data.name?.split(' ')[0] || '',
+  lastName: data.lastName || data.name?.split(' ').slice(1).join(' ') || '',
+  role: data.role || 'User',
+  roles: data.roles || [data.role || 'User'],
+  isActive: data.isActive !== undefined ? data.isActive : true,
+  createdAt: data.createdAt || new Date().toISOString(),
+});
+
+export const getCachedUser = (): User | null => {
+  try {
+    const cached = localStorage.getItem(USER_CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+};
+
+const cacheUser = (user: User) => {
+  localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+};
+
+export const clearCachedUser = () => {
+  localStorage.removeItem(USER_CACHE_KEY);
+};
+
 export const authService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
@@ -8,10 +39,8 @@ export const authService = {
       const rawResponse: any = await api.post('/api/Auth/login', credentials);
       console.log('✅ Raw API response:', rawResponse);
 
-      // Handle your API's response structure: { success, message, data: {...}, errors }
       let loginData = rawResponse;
 
-      // If response has a 'data' property, extract it
       if (rawResponse.data && typeof rawResponse.data === 'object') {
         console.log('📦 Unwrapping data property...');
         loginData = rawResponse.data;
@@ -19,30 +48,18 @@ export const authService = {
 
       console.log('📦 Login data:', loginData);
 
-      // Validate tokens exist
       if (!loginData.accessToken || !loginData.refreshToken) {
         console.error('❌ Missing tokens in response:', loginData);
         throw new Error('Invalid login response: missing tokens');
       }
 
-      // Store tokens
       setTokens(loginData.accessToken, loginData.refreshToken);
       console.log('🎫 Tokens stored successfully');
 
-      // Map the API's user structure to our User interface
-      const user: User = {
-        id: loginData.employeeId?.toString() || '',
-        email: loginData.email || credentials.email,
-        username: loginData.name || loginData.email,
-        firstName: loginData.name?.split(' ')[0] || '',
-        lastName: loginData.name?.split(' ').slice(1).join(' ') || '',
-        role: loginData.role || 'User',
-        roles: [loginData.role || 'User'],
-        isActive: true,
-        createdAt: new Date().toISOString(),
-      };
+      const user = mapApiDataToUser(loginData, credentials.email);
 
       console.log('👤 Mapped user:', user);
+      cacheUser(user);
 
       return {
         accessToken: loginData.accessToken,
@@ -52,7 +69,6 @@ export const authService = {
     } catch (error: any) {
       console.error('❌ Login error:', error);
 
-      // Extract the proper error message from the API response
       if (error.message) {
         throw new Error(error.message);
       } else if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
@@ -70,11 +86,21 @@ export const authService = {
       console.error('Logout error:', error);
     } finally {
       clearTokens();
+      clearCachedUser();
     }
   },
 
   getCurrentUser: async (): Promise<User> => {
-    return api.get<User>('/api/Auth/me');
+    const rawResponse: any = await api.get('/api/Auth/me');
+
+    let data = rawResponse;
+    if (rawResponse?.data && typeof rawResponse.data === 'object') {
+      data = rawResponse.data;
+    }
+
+    const user = mapApiDataToUser(data);
+    cacheUser(user);
+    return user;
   },
 
   refreshToken: async (): Promise<LoginResponse> => {

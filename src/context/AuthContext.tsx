@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, LoginRequest } from '../types/api';
-import { authService } from '../services/authService';
+import { authService, getCachedUser, clearCachedUser } from '../services/authService';
 import { clearTokens, setSessionExpiredCallback, getAccessToken } from '../services/apiClient';
 
 interface AuthContextType {
@@ -15,7 +15,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => getCachedUser());
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = async () => {
@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleSessionExpired = useCallback(() => {
     console.log('🔒 Session expired, clearing user data');
     setUser(null);
+    clearCachedUser();
   }, []);
 
   useEffect(() => {
@@ -99,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setUser(null);
       clearTokens();
+      clearCachedUser();
       setIsLoading(false);
     }
   };
