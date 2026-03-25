@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { POPaymentsList } from './POPaymentsList';
 import { ViewPOPaymentDetails } from './ViewPOPaymentDetails';
 
 export const POPaymentsPage = () => {
-  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(() => {
+    const id = searchParams.get('paymentId');
+    return id ? parseInt(id, 10) : null;
+  });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const id = searchParams.get('paymentId');
+    setSelectedPaymentId(id ? parseInt(id, 10) : null);
+  }, [searchParams]);
 
   const handleSelectPayment = (paymentId: number) => {
     setSelectedPaymentId(paymentId);
@@ -12,6 +23,7 @@ export const POPaymentsPage = () => {
 
   const handleCloseDetails = () => {
     setSelectedPaymentId(null);
+    navigate('/purchase/po-payments', { replace: true });
   };
 
   const handleSuccess = () => {

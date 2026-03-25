@@ -142,7 +142,7 @@ const OverduePaymentsTable = ({ rows }: { rows: ProcurementOverduePayment[] }) =
                   <tr
                     key={row.purchaseOrderPaymentId}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/purchase/purchase-orders/${row.purchaseOrderId}`)}
+                    onClick={() => navigate(`/purchase/po-payments?paymentId=${row.purchaseOrderPaymentId}`)}
                   >
                     <td className="px-3 py-2 text-sm text-blue-600 font-medium whitespace-nowrap">{row.poNumber}</td>
                     <td className="px-3 py-2 text-sm text-[var(--color-text)] max-w-[150px] truncate">{row.supplierName}</td>
