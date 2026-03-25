@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Search, Filter, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Users, Plus, Search, Filter, Eye, CreditCard as Edit2, Trash2 } from 'lucide-react';
 import { employeesService } from '../../services/employeesService';
 import { rolesService } from '../../services/rolesService';
 import { Employee } from '../../types/api';
@@ -11,11 +11,15 @@ import { ViewEmployee } from './ViewEmployee';
 export const EmployeesPage = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState({
+  const [summary, setSummary] = useState<{
+    totalEmployees: number;
+    activeEmployees: number;
+    totalRoles: number;
+    lastUpdated?: string;
+  }>({
     totalEmployees: 0,
     activeEmployees: 0,
     totalRoles: 0,
-    lastUpdated: undefined as string | undefined,
   });
   const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
 
@@ -47,12 +51,7 @@ export const EmployeesPage = () => {
       setSummary(data);
     } catch (error) {
       console.error('Failed to fetch summary:', error);
-      setSummary({
-        totalEmployees: 0,
-        activeEmployees: 0,
-        totalRoles: 0,
-        lastUpdated: undefined,
-      });
+      setSummary({ totalEmployees: 0, activeEmployees: 0, totalRoles: 0 });
     }
   };
 
@@ -201,7 +200,7 @@ export const EmployeesPage = () => {
             <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Last Updated</p>
             <p className="text-sm sm:text-base font-semibold text-[var(--color-text)] mt-1">
               {summary.lastUpdated && summary.lastUpdated !== '0001-01-01T00:00:00'
-                ? new Date(summary.lastUpdated).toLocaleDateString()
+                ? new Date(summary.lastUpdated).toLocaleString()
                 : 'N/A'}
             </p>
           </div>

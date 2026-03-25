@@ -23,9 +23,7 @@ interface EmployeesSummary {
   totalEmployees: number;
   activeEmployees: number;
   totalRoles: number;
-  lastUpdatedDate?: string;
-  lastUpdatedBy?: string;
-  formattedLastUpdated?: string;
+  lastUpdated?: string;
 }
 
 export const employeesService = {
@@ -86,9 +84,7 @@ export const employeesService = {
       totalEmployees: data.totalEmployees || 0,
       activeEmployees: data.activeEmployees || 0,
       totalRoles: data.totalRoles || 0,
-      lastUpdatedDate: data.lastUpdatedDate,
-      lastUpdatedBy: data.lastUpdatedBy,
-      formattedLastUpdated: data.formattedLastUpdated,
+      lastUpdated: data.lastUpdated,
     };
   },
 
