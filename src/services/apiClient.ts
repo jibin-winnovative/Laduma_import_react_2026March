@@ -134,7 +134,7 @@ const apiClient: AxiosInstance = axios.create({
     'ngrok-skip-browser-warning': 'true',
   },
   withCredentials: false,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 apiClient.interceptors.request.use(
