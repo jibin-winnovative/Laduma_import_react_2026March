@@ -38,6 +38,13 @@ const supplierSchema = z.object({
     .max(1000, 'Remarks must be 1000 characters or less')
     .optional()
     .or(z.literal('')),
+  beneficiaryName: z.string().max(200).optional().or(z.literal('')),
+  beneficiaryAddress: z.string().max(500).optional().or(z.literal('')),
+  beneficiaryBankName: z.string().max(200).optional().or(z.literal('')),
+  beneficiaryBankAddress: z.string().max(500).optional().or(z.literal('')),
+  beneficiaryAccountNo: z.string().max(50).optional().or(z.literal('')),
+  swiftCode: z.string().max(20).optional().or(z.literal('')),
+  bankBranchCode: z.string().max(20).optional().or(z.literal('')),
   isActive: z.boolean(),
 });
 
@@ -81,6 +88,13 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
       zipCode: '',
       performanceRating: 5,
       remarks: '',
+      beneficiaryName: '',
+      beneficiaryAddress: '',
+      beneficiaryBankName: '',
+      beneficiaryBankAddress: '',
+      beneficiaryAccountNo: '',
+      swiftCode: '',
+      bankBranchCode: '',
     },
   });
 
@@ -140,6 +154,13 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
       setValue('socialMediaGroupId', supplier.socialMediaGroupId as number);
       setValue('performanceRating', supplier.performanceRating);
       setValue('remarks', supplier.remarks || '');
+      setValue('beneficiaryName', supplier.beneficiaryName || '');
+      setValue('beneficiaryAddress', supplier.beneficiaryAddress || '');
+      setValue('beneficiaryBankName', supplier.beneficiaryBankName || '');
+      setValue('beneficiaryBankAddress', supplier.beneficiaryBankAddress || '');
+      setValue('beneficiaryAccountNo', supplier.beneficiaryAccountNo || '');
+      setValue('swiftCode', supplier.swiftCode || '');
+      setValue('bankBranchCode', supplier.bankBranchCode || '');
       setValue('isActive', supplier.isActive);
 
       if (supplier.portList && supplier.portList.length > 0) {
@@ -269,6 +290,13 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
         portIds: selectedPortIds,
         performanceRating: data.performanceRating,
         remarks: data.remarks || null,
+        beneficiaryName: data.beneficiaryName || null,
+        beneficiaryAddress: data.beneficiaryAddress || null,
+        beneficiaryBankName: data.beneficiaryBankName || null,
+        beneficiaryBankAddress: data.beneficiaryBankAddress || null,
+        beneficiaryAccountNo: data.beneficiaryAccountNo || null,
+        swiftCode: data.swiftCode || null,
+        bankBranchCode: data.bankBranchCode || null,
         isActive: data.isActive,
         paymentTerms: paymentTerms,
       };
@@ -485,6 +513,123 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                       {errors.remarks && (
                         <p className="text-red-500 text-sm mt-1">{errors.remarks.message}</p>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+                    Beneficiary Details
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Beneficiary Name
+                      </label>
+                      <input
+                        type="text"
+                        {...register('beneficiaryName')}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                        placeholder="Enter beneficiary name"
+                      />
+                      {errors.beneficiaryName && (
+                        <p className="text-red-500 text-sm mt-1">{errors.beneficiaryName.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Beneficiary Address
+                      </label>
+                      <textarea
+                        {...register('beneficiaryAddress')}
+                        rows={2}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                        placeholder="Enter beneficiary address"
+                      />
+                      {errors.beneficiaryAddress && (
+                        <p className="text-red-500 text-sm mt-1">{errors.beneficiaryAddress.message}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bank Name
+                        </label>
+                        <input
+                          type="text"
+                          {...register('beneficiaryBankName')}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                          placeholder="Enter bank name"
+                        />
+                        {errors.beneficiaryBankName && (
+                          <p className="text-red-500 text-sm mt-1">{errors.beneficiaryBankName.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Account No.
+                        </label>
+                        <input
+                          type="text"
+                          {...register('beneficiaryAccountNo')}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                          placeholder="Enter account number"
+                        />
+                        {errors.beneficiaryAccountNo && (
+                          <p className="text-red-500 text-sm mt-1">{errors.beneficiaryAccountNo.message}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bank Address
+                      </label>
+                      <textarea
+                        {...register('beneficiaryBankAddress')}
+                        rows={2}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                        placeholder="Enter bank address"
+                      />
+                      {errors.beneficiaryBankAddress && (
+                        <p className="text-red-500 text-sm mt-1">{errors.beneficiaryBankAddress.message}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          SWIFT Code
+                        </label>
+                        <input
+                          type="text"
+                          {...register('swiftCode')}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                          placeholder="Enter SWIFT code"
+                        />
+                        {errors.swiftCode && (
+                          <p className="text-red-500 text-sm mt-1">{errors.swiftCode.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bank Branch Code
+                        </label>
+                        <input
+                          type="text"
+                          {...register('bankBranchCode')}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                          placeholder="Enter branch code"
+                        />
+                        {errors.bankBranchCode && (
+                          <p className="text-red-500 text-sm mt-1">{errors.bankBranchCode.message}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

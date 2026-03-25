@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Edit2, MapPin, Star, Package, MessageSquare } from 'lucide-react';
+import { X, CreditCard as Edit2, MapPin, Star, Package, MessageSquare, Landmark, CreditCard } from 'lucide-react';
 import { suppliersService, Supplier } from '../../services/suppliersService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -269,6 +269,99 @@ export const ViewSupplier = ({
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {(supplier.beneficiaryName || supplier.beneficiaryAddress || supplier.beneficiaryBankName ||
+              supplier.beneficiaryBankAddress || supplier.beneficiaryAccountNo || supplier.swiftCode || supplier.bankBranchCode) && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+                  Beneficiary Details
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {supplier.beneficiaryName && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1 flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Beneficiary Name
+                      </label>
+                      <div className="text-base text-[var(--color-text)] font-medium">
+                        {supplier.beneficiaryName}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplier.beneficiaryAccountNo && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1 flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Account No.
+                      </label>
+                      <div className="text-base text-[var(--color-text)] font-medium font-mono">
+                        {supplier.beneficiaryAccountNo}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplier.beneficiaryAddress && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm md:col-span-2">
+                      <label className="text-sm font-medium text-gray-600 block mb-1 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Beneficiary Address
+                      </label>
+                      <div className="text-base text-[var(--color-text)]">
+                        {supplier.beneficiaryAddress}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplier.beneficiaryBankName && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1 flex items-center gap-2">
+                        <Landmark className="w-4 h-4" />
+                        Bank Name
+                      </label>
+                      <div className="text-base text-[var(--color-text)] font-medium">
+                        {supplier.beneficiaryBankName}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplier.swiftCode && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1">
+                        SWIFT Code
+                      </label>
+                      <div className="text-base text-[var(--color-text)] font-medium font-mono">
+                        {supplier.swiftCode}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplier.beneficiaryBankAddress && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm md:col-span-2">
+                      <label className="text-sm font-medium text-gray-600 block mb-1 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Bank Address
+                      </label>
+                      <div className="text-base text-[var(--color-text)]">
+                        {supplier.beneficiaryBankAddress}
+                      </div>
+                    </div>
+                  )}
+
+                  {supplier.bankBranchCode && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1">
+                        Bank Branch Code
+                      </label>
+                      <div className="text-base text-[var(--color-text)] font-medium font-mono">
+                        {supplier.bankBranchCode}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

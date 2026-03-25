@@ -15,10 +15,18 @@ export interface Supplier {
   zipCode?: string;
   portIds?: number[];
   ports?: string;
+  portList?: Array<{ portId: number; portName: string }>;
   socialMediaGroupId?: number;
   socialMediaGroupName?: string;
   performanceRating: number;
   remarks?: string;
+  beneficiaryName?: string;
+  beneficiaryAddress?: string;
+  beneficiaryBankName?: string;
+  beneficiaryBankAddress?: string;
+  beneficiaryAccountNo?: string;
+  swiftCode?: string;
+  bankBranchCode?: string;
   isActive: boolean;
   paymentTerms: PaymentTerm[];
   createdAt?: string;
