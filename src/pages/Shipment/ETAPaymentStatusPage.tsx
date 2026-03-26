@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Eye, CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react';
+import { Search, Eye, CheckCircle, AlertCircle, Clock, XCircle, Ship, Calendar, DollarSign, Package, TrendingUp, X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
@@ -415,184 +415,257 @@ export const ETAPaymentStatusPage = () => {
       </Card>
 
       {detailModal.open && (
-        <Modal
-          isOpen={true}
-          onClose={closeDetail}
-          title={
-            detailModal.data
-              ? `PO Payment Status — ${detailModal.data.containerNumber}`
-              : 'PO Payment Status'
-          }
-        >
-          {detailModal.loading ? (
-            <div className="py-12 text-center text-sm text-gray-500">Loading...</div>
-          ) : !detailModal.data ? (
-            <div className="py-12 text-center text-sm text-gray-500">
-              Failed to load details.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b border-gray-200">
-                <div>
-                  <p className="text-xs text-gray-500">Shipping Company</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    {detailModal.data.shippingCompanyName}
-                  </p>
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={closeDetail}
+          />
+          <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-xl shadow-2xl overflow-hidden bg-white">
+            {detailModal.loading ? (
+              <div className="flex items-center justify-center h-64 bg-white">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-gray-500">Loading payment details...</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">ETA</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    {formatDate(detailModal.data.eta)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Due Date (ETA - 15d)</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    {formatDate(detailModal.data.dueDate)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Overall Status</p>
-                  <div className="mt-0.5">
-                    <PaymentStatusBadge status={detailModal.data.paymentStatus} />
+              </div>
+            ) : !detailModal.data ? (
+              <div className="flex items-center justify-center h-64 bg-white">
+                <p className="text-sm text-gray-500">Failed to load details.</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-5 flex-shrink-0">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Ship className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-0.5">
+                          Container
+                        </p>
+                        <h2 className="text-xl font-bold text-white tracking-wide">
+                          {detailModal.data.containerNumber}
+                        </h2>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                          {detailModal.data.shippingCompanyName}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <PaymentStatusBadge status={detailModal.data.paymentStatus} />
+                      <button
+                        onClick={closeDetail}
+                        className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                      >
+                        <X className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+                    <div className="bg-white/10 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-300" />
+                        <p className="text-xs text-slate-300 font-medium">ETA</p>
+                      </div>
+                      <p className="text-sm font-semibold text-white">{formatDate(detailModal.data.eta)}</p>
+                    </div>
+                    <div className="bg-white/10 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-300" />
+                        <p className="text-xs text-slate-300 font-medium">Payment Due</p>
+                      </div>
+                      <p className="text-sm font-semibold text-white">{formatDate(detailModal.data.dueDate)}</p>
+                    </div>
+                    <div className="bg-white/10 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <DollarSign className="w-3.5 h-3.5 text-slate-300" />
+                        <p className="text-xs text-slate-300 font-medium">Total Amount</p>
+                      </div>
+                      <p className="text-sm font-semibold text-white">${formatCurrency(detailModal.data.poAmount)}</p>
+                    </div>
+                    <div className="bg-white/10 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Package className="w-3.5 h-3.5 text-slate-300" />
+                        <p className="text-xs text-slate-300 font-medium">Total CBM</p>
+                      </div>
+                      <p className="text-sm font-semibold text-white">{formatCBM(detailModal.data.totalCBM)}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 bg-white/10 rounded-lg px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-3.5 h-3.5 text-slate-300" />
+                        <p className="text-xs text-slate-300 font-medium">
+                          PO Completion — {detailModal.data.fullyPaidPOs} of {detailModal.data.totalPOs} fully paid
+                        </p>
+                      </div>
+                      <p className="text-xs font-bold text-white">
+                        {detailModal.data.totalPOs > 0
+                          ? Math.round((detailModal.data.fullyPaidPOs / detailModal.data.totalPOs) * 100)
+                          : 0}%
+                      </p>
+                    </div>
+                    <div className="w-full bg-white/20 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${detailModal.data.totalPOs > 0 ? (detailModal.data.fullyPaidPOs / detailModal.data.totalPOs) * 100 : 0}%`,
+                          backgroundColor:
+                            detailModal.data.fullyPaidPOs === detailModal.data.totalPOs
+                              ? '#34d399'
+                              : detailModal.data.fullyPaidPOs > 0
+                              ? '#fbbf24'
+                              : '#f87171',
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Total POs</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    {detailModal.data.totalPOs}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Fully Paid POs</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    {detailModal.data.fullyPaidPOs}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Total PO Amount</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    ${formatCurrency(detailModal.data.poAmount)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Total CBM</p>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">
-                    {formatCBM(detailModal.data.totalCBM)}
-                  </p>
-                </div>
-              </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        PO Number
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        PO Date
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Supplier Name
-                      </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        PO Amount
-                      </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total CBM
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Payment Status
-                      </th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Terms (Paid/Total)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {detailModal.data.purchaseOrders.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                          No purchase orders found
-                        </td>
-                      </tr>
-                    ) : (
-                      detailModal.data.purchaseOrders.map((po) => (
-                        <tr key={po.purchaseOrderId} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
-                            {po.poNumber}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-700">
-                            {formatDate(po.poDate)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-700 max-w-[200px] truncate">
-                            {po.supplierName}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-900 text-right">
-                            ${formatCurrency(po.poAmount)}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-900 text-right">
-                            {formatCBM(po.totalCBM)}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <PaymentStatusBadge status={po.paymentStatus} />
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <span
-                              className={`text-sm font-semibold ${
+                <div className="flex-1 overflow-y-auto bg-gray-50">
+                  <div className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                        Purchase Order Details
+                      </h3>
+                      <span className="text-xs text-gray-400 bg-white border border-gray-200 px-2 py-1 rounded-full">
+                        {detailModal.data.purchaseOrders.length} records
+                      </span>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+                      <table className="min-w-full divide-y divide-gray-100 text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              PO Number
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              PO Date
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Supplier
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Amount
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              CBM
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Terms Progress
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {detailModal.data.purchaseOrders.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">
+                                No purchase orders found for this container.
+                              </td>
+                            </tr>
+                          ) : (
+                            detailModal.data.purchaseOrders.map((po, idx) => {
+                              const pct = po.totalPaymentTerms > 0
+                                ? (po.paidPaymentTerms / po.totalPaymentTerms) * 100
+                                : 0;
+                              const barColor =
                                 po.paidPaymentTerms === po.totalPaymentTerms
-                                  ? 'text-green-700'
+                                  ? '#10b981'
                                   : po.paidPaymentTerms > 0
-                                  ? 'text-amber-700'
-                                  : 'text-red-700'
-                              }`}
-                            >
-                              {po.paidPaymentTerms}/{po.totalPaymentTerms}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  {detailModal.data.purchaseOrders.length > 0 && (
-                    <tfoot className="bg-gray-50">
-                      <tr>
-                        <td colSpan={3} className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">
-                          Totals
-                        </td>
-                        <td className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
-                          $
-                          {formatCurrency(
-                            detailModal.data.purchaseOrders.reduce(
-                              (s, p) => s + (p.poAmount || 0),
-                              0
-                            )
+                                  ? '#f59e0b'
+                                  : '#ef4444';
+                              return (
+                                <tr
+                                  key={po.purchaseOrderId}
+                                  className={`transition-colors hover:bg-blue-50/40 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                                >
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <span className="font-semibold text-gray-900 text-sm">{po.poNumber}</span>
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap text-gray-600 text-sm">
+                                    {formatDate(po.poDate)}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-gray-700 text-sm max-w-[180px]">
+                                    <span className="block truncate" title={po.supplierName}>
+                                      {po.supplierName}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap text-right">
+                                    <span className="font-medium text-gray-900 text-sm">
+                                      ${formatCurrency(po.poAmount)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap text-right text-gray-700 text-sm">
+                                    {formatCBM(po.totalCBM)}
+                                  </td>
+                                  <td className="px-4 py-3.5 whitespace-nowrap">
+                                    <PaymentStatusBadge status={po.paymentStatus} />
+                                  </td>
+                                  <td className="px-4 py-3.5 min-w-[140px]">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                        <div
+                                          className="h-1.5 rounded-full transition-all duration-300"
+                                          style={{ width: `${pct}%`, backgroundColor: barColor }}
+                                        />
+                                      </div>
+                                      <span
+                                        className="text-xs font-semibold tabular-nums whitespace-nowrap"
+                                        style={{ color: barColor }}
+                                      >
+                                        {po.paidPaymentTerms}/{po.totalPaymentTerms}
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
-                        </td>
-                        <td className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
-                          {formatCBM(
-                            detailModal.data.purchaseOrders.reduce(
-                              (s, p) => s + (p.totalCBM || 0),
-                              0
-                            )
-                          )}
-                        </td>
-                        <td colSpan={2} />
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
+                        </tbody>
+                        {detailModal.data.purchaseOrders.length > 0 && (
+                          <tfoot>
+                            <tr className="bg-slate-800">
+                              <td colSpan={3} className="px-4 py-3 text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                Grand Total
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-bold text-white">
+                                ${formatCurrency(
+                                  detailModal.data.purchaseOrders.reduce((s, p) => s + (p.poAmount || 0), 0)
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-bold text-white">
+                                {formatCBM(
+                                  detailModal.data.purchaseOrders.reduce((s, p) => s + (p.totalCBM || 0), 0)
+                                )}
+                              </td>
+                              <td colSpan={2} />
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="flex justify-end pt-2">
-                <Button variant="secondary" onClick={closeDetail}>
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
-        </Modal>
+                <div className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                  <p className="text-xs text-gray-400">
+                    Payment deadline is 15 days before ETA date
+                  </p>
+                  <Button variant="secondary" onClick={closeDetail}>
+                    Close
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
