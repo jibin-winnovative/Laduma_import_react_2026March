@@ -52,7 +52,7 @@ const poSchema = z.object({
   modeOfPayment: z.string().min(1, 'Please select mode of payment'),
   modeOfShipment: z.string().min(1, 'Please select mode of shipment'),
   expectedDeliveryMonth: z.string().optional(),
-  remarks: z.string().optional(),
+  remarks: z.string().max(500, 'Remarks cannot exceed 500 characters').optional(),
 });
 
 type POFormData = z.infer<typeof poSchema>;
@@ -1539,6 +1539,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                 id="remarks"
                 {...register('remarks')}
                 rows={3}
+                maxLength={500}
                 placeholder="Enter any additional remarks or notes..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
               />
