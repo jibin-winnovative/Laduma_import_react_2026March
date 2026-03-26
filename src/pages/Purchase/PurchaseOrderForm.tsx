@@ -1133,7 +1133,6 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
 
         if (uploadResult.success) {
           console.log('✅ All attachments uploaded successfully');
-          alert(`Purchase Order ${actionText} successfully with ${pendingAttachments.length} attachment(s)!`);
         } else {
           console.log('⚠️ Some attachments failed to upload. Failed count:', uploadResult.failedCount);
           alert(
@@ -1143,11 +1142,20 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         }
       } else {
         console.log('✅ No attachments to upload');
-        alert(`Purchase Order ${actionText} successfully!`);
       }
 
       onSuccess?.();
       onClose();
+
+      const wantsPrint = window.confirm(`Purchase Order ${actionText} successfully!\n\nDo you want to print / view the PDF?`);
+      if (wantsPrint) {
+        try {
+          await purchaseOrdersService.printPdf(savedPurchaseOrderId);
+        } catch (pdfErr) {
+          console.error('Failed to generate PDF:', pdfErr);
+          alert('Purchase Order saved, but PDF generation failed. You can print it from the view screen.');
+        }
+      }
     } catch (error: any) {
       console.error('Failed to save Purchase Order:', error);
       let errorMessage = error.message || 'Failed to save Purchase Order';

@@ -216,4 +216,16 @@ export const purchaseOrdersService = {
     });
     return response.data;
   },
+
+  printPdf: async (purchaseOrderId: number): Promise<void> => {
+    const response = await apiClient.get(`/api/purchaseorders/${purchaseOrderId}/print-pdf`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (win) {
+      win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+    }
+  },
 };

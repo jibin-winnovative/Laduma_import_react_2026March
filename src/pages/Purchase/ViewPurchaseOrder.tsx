@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, FileText, Calendar, User, Package, DollarSign, Ship, MapPin, File as FileEdit, CheckCircle, Send, Truck, PackageCheck, PackageOpen, CheckCheck, XCircle, Download, ExternalLink } from 'lucide-react';
+import { X, FileText, Calendar, User, Package, DollarSign, Ship, MapPin, File as FileEdit, CheckCircle, Send, Truck, PackageCheck, PackageOpen, CheckCheck, XCircle, Download, ExternalLink, Printer } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
@@ -212,6 +212,20 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
     }
   };
 
+  const [printLoading, setPrintLoading] = useState(false);
+
+  const handlePrintPdf = async () => {
+    setPrintLoading(true);
+    try {
+      await purchaseOrdersService.printPdf(purchaseOrderId);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -242,10 +256,20 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
             View complete purchase order information
           </p>
         </div>
-        <Button onClick={onClose} variant="secondary" className="flex items-center gap-2">
-          <X className="w-4 h-4" />
-          Close
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handlePrintPdf}
+            disabled={printLoading}
+            className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white"
+          >
+            <Printer className="w-4 h-4" />
+            {printLoading ? 'Generating...' : 'Print PDF'}
+          </Button>
+          <Button onClick={onClose} variant="secondary" className="flex items-center gap-2">
+            <X className="w-4 h-4" />
+            Close
+          </Button>
+        </div>
       </div>
 
       <Card className="p-6 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white">
