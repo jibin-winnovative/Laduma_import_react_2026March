@@ -23,6 +23,7 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
     status: 'Approved',
     fromDate: '',
     toDate: '',
+    refNumber: '',
   });
 
   const loadSummary = async () => {
@@ -47,6 +48,7 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
       if (filters.status) params.status = filters.status;
       if (filters.fromDate) params.fromDate = filters.fromDate;
       if (filters.toDate) params.toDate = filters.toDate;
+      if (filters.refNumber) params.refNumber = filters.refNumber;
 
       const response = await paymentsService.getPaymentRequests(params);
       setPayments(response.data);
@@ -79,6 +81,7 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
       status: 'Approved',
       fromDate: '',
       toDate: '',
+      refNumber: '',
     });
     setCurrentPage(1);
   };
@@ -206,7 +209,7 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
 
       <Card className="p-6">
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                 Vendor Name
@@ -217,6 +220,19 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
                 onChange={(e) => setFilters({ ...filters, vendorName: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="Search vendor name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                Ref Number
+              </label>
+              <input
+                type="text"
+                value={filters.refNumber}
+                onChange={(e) => setFilters({ ...filters, refNumber: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Search ref number"
               />
             </div>
 
@@ -277,7 +293,7 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
               />
             </div>
 
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-2 lg:col-span-2">
               <Button onClick={handleSearch} className="flex items-center gap-2 flex-1">
                 <Search className="w-4 h-4" />
                 Search
@@ -319,6 +335,9 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
                       <th className="text-left py-3 px-4 text-sm font-medium text-[var(--color-text-primary)]">
                         Source Module
                       </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-[var(--color-text-primary)]">
+                        Ref Number
+                      </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-[var(--color-text-primary)]">
                         Amount
                       </th>
@@ -353,6 +372,9 @@ export function PaymentsList({ onSelectRequest }: PaymentsListProps) {
                         </td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">
                           {payment.sourceModule}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">
+                          {payment.refNumber || '-'}
                         </td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-primary)] text-right font-medium">
                           {formatCurrency(payment.amount)}

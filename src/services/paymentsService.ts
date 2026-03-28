@@ -12,6 +12,7 @@ export interface PaymentRequest {
   paymentRequestId: number;
   sourceModule: string;
   sourceId: number;
+  refNumber?: string;
   vendorId: number;
   vendorName: string;
   vendorType: string;
@@ -92,6 +93,7 @@ export const paymentsService = {
     status?: string;
     fromDate?: string;
     toDate?: string;
+    refNumber?: string;
   }): Promise<PaymentRequestsResponse> => {
     const response = await apiClient.get<PaymentRequestsResponse>('/api/Payments/requests', {
       params,
