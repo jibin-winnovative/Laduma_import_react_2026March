@@ -101,6 +101,11 @@ export const POItemAllocationModal = ({
     if (isSelected) {
       const allIds = new Set(items.map((item) => item.purchaseOrderItemId));
       setSelectedRowIds(allIds);
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.loadQty === 0 ? { ...item, loadQty: item.remainingQty } : item
+        )
+      );
     } else {
       setSelectedRowIds(new Set());
       setItems((prevItems) =>
