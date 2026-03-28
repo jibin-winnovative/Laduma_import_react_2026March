@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { poPaymentsService, POPaymentDetails } from '../../services/poPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { ViewPurchaseOrder } from './ViewPurchaseOrder';
 
 interface ViewPOPaymentDetailsProps {
   paymentId: number;
@@ -33,6 +34,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
 
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
@@ -330,10 +332,19 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                   <p className="text-sm text-white/90">Payment Request Details</p>
                 </div>
               </div>
-              <span className={`px-3 py-1.5 text-sm font-semibold rounded-lg flex items-center gap-2 ${statusConfig.color}`}>
-                <StatusIcon className="w-4 h-4" />
-                {statusConfig.label}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowPurchaseOrderModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View PO
+                </button>
+                <span className={`px-3 py-1.5 text-sm font-semibold rounded-lg flex items-center gap-2 ${statusConfig.color}`}>
+                  <StatusIcon className="w-4 h-4" />
+                  {statusConfig.label}
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -684,6 +695,18 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
             </div>
           </div>
         </Modal>
+      )}
+
+      {showPurchaseOrderModal && details?.purchaseOrderId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowPurchaseOrderModal(false)} />
+          <div className="relative z-10 bg-white rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <ViewPurchaseOrder
+              purchaseOrderId={details.purchaseOrderId}
+              onClose={() => setShowPurchaseOrderModal(false)}
+            />
+          </div>
+        </div>
       )}
 
       {showRejectDialog && (
