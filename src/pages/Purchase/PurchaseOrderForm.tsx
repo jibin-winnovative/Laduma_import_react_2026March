@@ -1147,14 +1147,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       onSuccess?.();
       onClose();
 
-      const wantsPrint = window.confirm(`Purchase Order ${actionText} successfully!\n\nDo you want to print / view the PDF?`);
-      if (wantsPrint) {
-        try {
-          await purchaseOrdersService.printPdf(savedPurchaseOrderId);
-        } catch (pdfErr) {
-          console.error('Failed to generate PDF:', pdfErr);
-          alert('Purchase Order saved, but PDF generation failed. You can print it from the view screen.');
-        }
+      try {
+        await purchaseOrdersService.printPdf(savedPurchaseOrderId);
+      } catch (pdfErr) {
+        console.error('Failed to generate PDF:', pdfErr);
+        alert('Purchase Order saved, but PDF generation failed. You can print it from the view screen.');
       }
     } catch (error: any) {
       console.error('Failed to save Purchase Order:', error);
