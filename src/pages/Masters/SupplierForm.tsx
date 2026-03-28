@@ -65,9 +65,7 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
   const [selectedPortIds, setSelectedPortIds] = useState<number[]>([]);
   const [portIdsError, setPortIdsError] = useState('');
   const [socialMediaGroups, setSocialMediaGroups] = useState<SocialMediaGroup[]>([]);
-  const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([
-    { description: '', percentage: 0 }
-  ]);
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [paymentTermsError, setPaymentTermsError] = useState('');
 
   const {
@@ -222,8 +220,9 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
   };
 
   const removePaymentTerm = (index: number) => {
-    if (paymentTerms.length > 1) {
-      setPaymentTerms(paymentTerms.filter((_, i) => i !== index));
+    setPaymentTerms(paymentTerms.filter((_, i) => i !== index));
+    if (paymentTerms.length <= 1) {
+      setPaymentTermsError('');
     }
   };
 
@@ -239,18 +238,20 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
   };
 
   const validatePaymentTerms = (terms: PaymentTerm[]) => {
-    if (terms.length === 0) {
-      setPaymentTermsError('At least one payment term is required');
-      return false;
+    const filledTerms = terms.filter(term => term.description.trim() || term.percentage > 0);
+
+    if (filledTerms.length === 0) {
+      setPaymentTermsError('');
+      return true;
     }
 
-    const hasEmptyDescription = terms.some(term => !term.description.trim());
+    const hasEmptyDescription = filledTerms.some(term => !term.description.trim());
     if (hasEmptyDescription) {
       setPaymentTermsError('All payment terms must have a description');
       return false;
     }
 
-    const total = terms.reduce((sum, term) => sum + term.percentage, 0);
+    const total = filledTerms.reduce((sum, term) => sum + term.percentage, 0);
     if (Math.abs(total - 100) > 0.01) {
       setPaymentTermsError(`Total percentage must be 100% (current: ${total.toFixed(2)}%)`);
       return false;
@@ -298,7 +299,7 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
         swiftCode: data.swiftCode || null,
         bankBranchCode: data.bankBranchCode || null,
         isActive: data.isActive,
-        paymentTerms: paymentTerms,
+        paymentTerms: paymentTerms.filter(term => term.description.trim() || term.percentage > 0),
       };
 
       let createdSupplierId: number | undefined;
@@ -651,6 +652,9 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                   </div>
 
                   <div className="space-y-3">
+                    {paymentTerms.length === 0 && (
+                      <p className="text-sm text-gray-500 italic py-2">No payment terms added. Click "Add Term" to add one.</p>
+                    )}
                     {paymentTerms.map((term, index) => (
                       <div key={index} className="flex gap-3 items-start">
                         <div className="flex-1">
@@ -678,7 +682,6 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                           type="button"
                           onClick={() => removePaymentTerm(index)}
                           variant="secondary"
-                          disabled={paymentTerms.length === 1}
                           className="text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -691,14 +694,16 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                     <p className="text-red-500 text-sm mt-2">{paymentTermsError}</p>
                   )}
 
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      Total: {paymentTerms.reduce((sum, term) => sum + term.percentage, 0).toFixed(2)}%
-                      {Math.abs(paymentTerms.reduce((sum, term) => sum + term.percentage, 0) - 100) < 0.01 && (
-                        <span className="ml-2 text-green-600">✓</span>
-                      )}
-                    </p>
-                  </div>
+                  {paymentTerms.length > 0 && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        Total: {paymentTerms.reduce((sum, term) => sum + term.percentage, 0).toFixed(2)}%
+                        {Math.abs(paymentTerms.reduce((sum, term) => sum + term.percentage, 0) - 100) < 0.01 && (
+                          <span className="ml-2 text-green-600">✓</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {mode === 'edit' && (
