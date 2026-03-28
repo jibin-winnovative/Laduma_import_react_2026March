@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { wasSessionExpired, clearSessionExpiredFlag } from '../../services/apiClient';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,7 +19,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const expired = wasSessionExpired();
+    if (expired) {
+      clearSessionExpiredFlag();
+    }
+    const target = expired ? '/login?sessionExpired=true' : '/login';
+    return <Navigate to={target} state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

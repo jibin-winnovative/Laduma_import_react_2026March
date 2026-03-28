@@ -16,6 +16,9 @@ const REFRESH_TOKEN_STORAGE_KEY = 'app_refresh_token';
 let accessToken: string | null = localStorage.getItem(TOKEN_STORAGE_KEY);
 let refreshToken: string | null = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
 let tokenRefreshTimer: NodeJS.Timeout | null = null;
+let tokenCheckInterval: NodeJS.Timeout | null = null;
+let isSessionExpiring = false;
+let sessionExpiredFlag = false;
 
 let onSessionExpiredCallback: (() => void) | null = null;
 
@@ -62,6 +65,31 @@ const decodeJWT = (token: string): { exp?: number } => {
   }
 };
 
+const startPeriodicTokenCheck = () => {
+  if (tokenCheckInterval) {
+    clearInterval(tokenCheckInterval);
+  }
+  tokenCheckInterval = setInterval(() => {
+    if (!accessToken) return;
+
+    if (isRefreshTokenExpired()) {
+      handleSessionExpired();
+      return;
+    }
+
+    if (isTokenExpired()) {
+      refreshTokenProactively();
+    }
+  }, 30000);
+};
+
+const stopPeriodicTokenCheck = () => {
+  if (tokenCheckInterval) {
+    clearInterval(tokenCheckInterval);
+    tokenCheckInterval = null;
+  }
+};
+
 const scheduleTokenRefresh = () => {
   if (tokenRefreshTimer) {
     clearTimeout(tokenRefreshTimer);
@@ -92,19 +120,21 @@ const scheduleTokenRefresh = () => {
     console.log('⚠️ Token expired or about to expire, refreshing now');
     refreshTokenProactively();
   }
+
+  startPeriodicTokenCheck();
 };
 
 const handleVisibilityChange = () => {
   if (document.visibilityState === 'visible' && accessToken) {
-    const decoded = decodeJWT(accessToken);
-    if (decoded.exp) {
-      const timeUntilExpiry = decoded.exp * 1000 - Date.now();
-      if (timeUntilExpiry <= 65000) {
-        console.log('👁️ Tab visible, token near expiry — refreshing proactively');
-        refreshTokenProactively();
-      } else {
-        scheduleTokenRefresh();
-      }
+    if (isRefreshTokenExpired()) {
+      handleSessionExpired();
+      return;
+    }
+
+    if (isTokenExpired()) {
+      refreshTokenProactively();
+    } else {
+      scheduleTokenRefresh();
     }
   }
 };
@@ -115,6 +145,11 @@ if (typeof document !== 'undefined') {
 
 const refreshTokenProactively = async () => {
   if (!refreshToken) {
+    return;
+  }
+
+  if (isRefreshTokenExpired()) {
+    handleSessionExpired();
     return;
   }
 
@@ -134,6 +169,10 @@ const refreshTokenProactively = async () => {
 };
 
 const handleSessionExpired = () => {
+  if (isSessionExpiring) return;
+  isSessionExpiring = true;
+  sessionExpiredFlag = true;
+
   clearTokens();
   if (onSessionExpiredCallback) {
     onSessionExpiredCallback();
@@ -142,6 +181,18 @@ const handleSessionExpired = () => {
   if (currentPath !== '/login') {
     window.location.href = '/login?sessionExpired=true';
   }
+
+  setTimeout(() => {
+    isSessionExpiring = false;
+  }, 2000);
+};
+
+export const wasSessionExpired = (): boolean => {
+  return sessionExpiredFlag;
+};
+
+export const clearSessionExpiredFlag = () => {
+  sessionExpiredFlag = false;
 };
 
 if (accessToken) {
@@ -153,6 +204,8 @@ export const setTokens = (access: string, refresh: string) => {
   refreshToken = refresh;
   localStorage.setItem(TOKEN_STORAGE_KEY, access);
   localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, refresh);
+  isSessionExpiring = false;
+  sessionExpiredFlag = false;
   scheduleTokenRefresh();
 };
 
@@ -168,6 +221,7 @@ export const clearTokens = () => {
     clearTimeout(tokenRefreshTimer);
     tokenRefreshTimer = null;
   }
+  stopPeriodicTokenCheck();
 };
 
 const apiClient: AxiosInstance = axios.create({
@@ -210,7 +264,6 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       console.log('⚠️ Received 401 Unauthorized response');
 
-      // Check if this is a login request (no refresh token available yet)
       const isLoginRequest = originalRequest.url?.includes('/api/Auth/login');
 
       if (!refreshToken || isLoginRequest) {
@@ -219,7 +272,6 @@ apiClient.interceptors.response.use(
           handleSessionExpired();
         }
 
-        // For login errors, return the proper error message from the API
         const apiError: ApiError = {
           message: error.response?.data?.message || error.message || 'An error occurred',
           statusCode: error.response?.status || 500,
@@ -227,6 +279,11 @@ apiClient.interceptors.response.use(
         };
 
         return Promise.reject(apiError);
+      }
+
+      if (isRefreshTokenExpired()) {
+        handleSessionExpired();
+        return Promise.reject(error);
       }
 
       if (originalRequest._retry) {
