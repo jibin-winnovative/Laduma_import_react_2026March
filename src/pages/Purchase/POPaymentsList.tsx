@@ -361,6 +361,9 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
                       PO Number
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Supplier
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -394,6 +397,7 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
                       <td className="px-4 py-4 text-sm font-medium text-gray-900">
                         {payment.poNumber}
                       </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{payment.description || '-'}</td>
                       <td className="px-4 py-4 text-sm text-gray-900">{payment.supplierName}</td>
                       <td className="px-4 py-4 text-sm text-gray-900 text-right">
                         {formatCurrency(payment.totalPOAmount)}

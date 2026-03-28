@@ -14,6 +14,7 @@ export interface POPaymentListItem {
   purchaseOrderPaymentId: number;
   purchaseOrderId: number;
   poNumber: string;
+  description?: string;
   supplierId: number;
   supplierName: string;
   totalPOAmount: number;
