@@ -26,6 +26,23 @@ export const setSessionExpiredCallback = (callback: () => void) => {
   onSessionExpiredCallback = callback;
 };
 
+const decodeJWT = (token: string): { exp?: number } => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Failed to decode JWT:', error);
+    return {};
+  }
+};
+
 export const isTokenExpired = (): boolean => {
   if (!accessToken) return true;
   try {
@@ -45,23 +62,6 @@ export const isRefreshTokenExpired = (): boolean => {
     return Date.now() >= decoded.exp * 1000;
   } catch {
     return true;
-  }
-};
-
-const decodeJWT = (token: string): { exp?: number } => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Failed to decode JWT:', error);
-    return {};
   }
 };
 
