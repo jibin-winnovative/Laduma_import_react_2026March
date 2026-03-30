@@ -107,7 +107,7 @@ interface PurchaseOrderFormProps {
   mode: 'add' | 'edit';
   purchaseOrderId?: number;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (savedPurchaseOrderId?: number) => void;
 }
 
 export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }: PurchaseOrderFormProps) => {
@@ -1144,15 +1144,8 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         console.log('✅ No attachments to upload');
       }
 
-      onSuccess?.();
+      onSuccess?.(savedPurchaseOrderId);
       onClose();
-
-      try {
-        await purchaseOrdersService.printPdf(savedPurchaseOrderId);
-      } catch (pdfErr) {
-        console.error('Failed to generate PDF:', pdfErr);
-        alert('Purchase Order saved, but PDF generation failed. You can print it from the view screen.');
-      }
     } catch (error: any) {
       console.error('Failed to save Purchase Order:', error);
       let errorMessage = error.message || 'Failed to save Purchase Order';
