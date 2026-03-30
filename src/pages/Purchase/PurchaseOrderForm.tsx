@@ -16,6 +16,7 @@ import {
   Download,
   RefreshCw,
   Trash,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -655,6 +656,16 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       alert('Failed to download file. Please try again.');
     } finally {
       setDownloadingAttachmentId(null);
+    }
+  };
+
+  const handleViewAttachment = async (attachmentId: number) => {
+    try {
+      const viewUrl = await attachmentService.getDownloadUrl(attachmentId, 60, true);
+      window.open(viewUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('Failed to view attachment:', err);
+      alert('Failed to view file. Please try again.');
     }
   };
 
@@ -2135,6 +2146,14 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           ) : (
                             <Download className="w-4 h-4" />
                           )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleViewAttachment(attachment.attachmentId)}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="View"
+                        >
+                          <ExternalLink className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
