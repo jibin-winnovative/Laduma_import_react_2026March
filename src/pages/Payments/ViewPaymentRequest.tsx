@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   X, DollarSign, Calendar, Clock, CheckCircle, Building, FileText,
   User, AlertTriangle, Package, ExternalLink, XCircle, Truck, Ship, CreditCard,
-  Upload, Download, Landmark,
+  Upload, Download, Landmark, ThumbsUp, FileCheck,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -41,6 +41,8 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [apnUpdating, setApnUpdating] = useState(false);
   const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
   const [paymentData, setPaymentData] = useState({
     paidDate: new Date().toISOString().split('T')[0],
@@ -236,7 +238,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   };
 
   const isOverdue = (dueDate: string, status: string) => {
-    if (status !== 'Approved') return false;
+    if (status === 'Paid' || status === 'Rejected') return false;
     const due = new Date(dueDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -245,11 +247,13 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { color: string; icon: any }> = {
-      Approved: { color: 'bg-blue-100 text-blue-800', icon: Clock },
+      Requested: { color: 'bg-blue-100 text-blue-800', icon: Clock },
+      Approved: { color: 'bg-amber-100 text-amber-800', icon: ThumbsUp },
+      ApnUpdated: { color: 'bg-teal-100 text-teal-800', icon: FileCheck },
       Paid: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
       Rejected: { color: 'bg-red-100 text-red-800', icon: XCircle },
     };
-    return configs[status] || configs.Approved;
+    return configs[status] || configs['Requested'];
   };
 
   const getSourceModuleIcon = (module: string) => {
@@ -274,6 +278,32 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
     } else if (sourceModule === 'Transport') {
       onClose();
       navigate(`/transport/${sourceContext.referenceId}`);
+    }
+  };
+
+  const handleApprove = async () => {
+    setApproving(true);
+    try {
+      await paymentRequestsService.approveRequest(requestId);
+      onRefresh?.();
+      onClose();
+    } catch (error) {
+      console.error('Failed to approve payment request:', error);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleApnUpdate = async () => {
+    setApnUpdating(true);
+    try {
+      await paymentRequestsService.apnUpdate(requestId);
+      onRefresh?.();
+      onClose();
+    } catch (error) {
+      console.error('Failed to update APN status:', error);
+    } finally {
+      setApnUpdating(false);
     }
   };
 
@@ -344,7 +374,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
 
   if (!isOpen) return null;
 
-  const isApproved = request?.status === 'Approved';
+  const status = request?.status ?? '';
+  const isApnUpdated = status === 'ApnUpdated';
+  const canModifyAttachments = status === 'Requested' || status === 'Approved' || status === 'ApnUpdated';
 
   return (
     <>
@@ -483,7 +515,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
               </div>
             )}
 
-            {showPaymentForm && isApproved && (
+            {showPaymentForm && isApnUpdated && (
               <div className="rounded-lg border p-6" style={{ backgroundColor: 'rgb(239 246 255)', borderColor: 'rgb(216 224 241)' }}>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-gray-900" />
@@ -748,7 +780,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                           <ExternalLink className="w-3 h-3" />
                           View
                         </Button>
-                        {isApproved && (
+                        {canModifyAttachments && (
                           <Button
                             onClick={() => removeExisting(att.attachmentId)}
                             variant="danger"
@@ -770,7 +802,53 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              {isApproved ? (
+              {status === 'Requested' && (
+                <>
+                  <Button variant="secondary" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setShowRejectDialog(true)}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={handleApprove}
+                    disabled={approving}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                    {approving ? 'Approving...' : 'Approve'}
+                  </Button>
+                </>
+              )}
+
+              {status === 'Approved' && (
+                <>
+                  <Button variant="secondary" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setShowRejectDialog(true)}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={handleApnUpdate}
+                    disabled={apnUpdating}
+                    className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
+                  >
+                    <FileCheck className="w-4 h-4" />
+                    {apnUpdating ? 'Processing...' : 'APN Updated'}
+                  </Button>
+                </>
+              )}
+
+              {status === 'ApnUpdated' && (
                 <>
                   {!showPaymentForm ? (
                     <>
@@ -813,7 +891,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                     </>
                   )}
                 </>
-              ) : (
+              )}
+
+              {(status === 'Paid' || status === 'Rejected' || status === '') && (
                 <Button onClick={onClose}>Close</Button>
               )}
             </div>

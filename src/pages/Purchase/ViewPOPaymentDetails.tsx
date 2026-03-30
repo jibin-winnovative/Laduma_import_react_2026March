@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  FileText, AlertCircle, Clock, CheckCircle, Send, ThumbsUp, XCircle,
+  FileText, AlertCircle, Clock, CheckCircle, Send,
   Upload, Download, ExternalLink, X,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -31,8 +31,6 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
 
@@ -218,54 +216,6 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
     }
   };
 
-  const handleApproveRequest = async () => {
-    if (!details) return;
-    if (hasMissingTypes) {
-      alert('Please select a type for all attachments before approving');
-      return;
-    }
-    setActionLoading(true);
-    setError(null);
-    try {
-      if (pendingAttachments.length > 0) {
-        await uploadAll(details.purchaseOrderPaymentId);
-      }
-      await poPaymentsService.approveRequest(details.purchaseOrderPaymentId);
-      setShowApproveDialog(false);
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      console.error('Failed to approve payment request:', err);
-      setError(err.message || 'Failed to approve payment request');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRejectRequest = async () => {
-    if (!details) return;
-    if (hasMissingTypes) {
-      alert('Please select a type for all attachments before rejecting');
-      return;
-    }
-    setActionLoading(true);
-    setError(null);
-    try {
-      if (pendingAttachments.length > 0) {
-        await uploadAll(details.purchaseOrderPaymentId);
-      }
-      await poPaymentsService.rejectRequest(details.purchaseOrderPaymentId);
-      setShowRejectDialog(false);
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      console.error('Failed to reject payment request:', err);
-      setError(err.message || 'Failed to reject payment request');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const formatCurrency = (amount: number) =>
     amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -276,7 +226,9 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
       case 'Requested':
         return { icon: Send, color: 'bg-blue-50 text-blue-700 border border-blue-200', label: 'Requested' };
       case 'Approved':
-        return { icon: ThumbsUp, color: 'bg-green-50 text-green-700 border border-green-200', label: 'Approved' };
+        return { icon: CheckCircle, color: 'bg-green-50 text-green-700 border border-green-200', label: 'Approved' };
+      case 'ApnUpdated':
+        return { icon: CheckCircle, color: 'bg-teal-50 text-teal-700 border border-teal-200', label: 'APN Updated' };
       case 'Paid':
         return { icon: CheckCircle, color: 'bg-emerald-50 text-emerald-700 border border-emerald-200', label: 'Paid' };
       case 'Rejected':
@@ -307,7 +259,6 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
 
   const isPending = details.status === 'Pending';
   const isRequested = details.status === 'Requested';
-  const isApproved = details.status === 'Approved';
   const isRejected = details.status === 'Rejected';
 
   const requestAmountLabel = isPending || isRejected ? 'Requesting Amount' : 'Requested Amount';
@@ -572,7 +523,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
 
           <div className="flex gap-3 pt-4 border-t">
             <Button onClick={onClose} variant="secondary" className="flex-1">
-              {isApproved || isRequested ? 'Close' : 'Cancel'}
+              {isRequested ? 'Close' : 'Cancel'}
             </Button>
             {(isPending || isRejected) && (
               <Button
@@ -585,25 +536,9 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
               </Button>
             )}
             {isRequested && (
-              <>
-                <Button
-                  onClick={() => setShowRejectDialog(true)}
-                  disabled={isUploading}
-                  variant="secondary"
-                  className="flex-1 flex items-center justify-center gap-2 border-red-300 text-red-700 hover:bg-red-50"
-                >
-                  <XCircle className="w-4 h-4" />
-                  Reject
-                </Button>
-                <Button
-                  onClick={() => setShowApproveDialog(true)}
-                  disabled={isUploading}
-                  className="flex-1 flex items-center justify-center gap-2"
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                  Approve
-                </Button>
-              </>
+              <div className="flex-1 text-sm text-gray-600 flex items-center">
+                Payment request submitted. Further processing is done in Accounts Payable.
+              </div>
             )}
           </div>
         </div>
@@ -653,50 +588,6 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
         </Modal>
       )}
 
-      {showApproveDialog && (
-        <Modal isOpen={true} onClose={() => setShowApproveDialog(false)} title="Confirm Payment Approval">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-green-900">
-                  Are you sure you want to approve this payment request?
-                </p>
-                <p className="text-sm text-green-700 mt-2">
-                  Amount: <span className="font-semibold">${formatCurrency(details.requestedAmount || details.expectedAmount)}</span>
-                </p>
-                <p className="text-sm text-green-700">
-                  Supplier: <span className="font-semibold">{details.supplierName}</span>
-                </p>
-                <p className="text-sm text-green-700">
-                  PO Number: <span className="font-semibold">{details.poNumber}</span>
-                </p>
-                {pendingAttachments.length > 0 && (
-                  <p className="text-sm text-green-700 mt-2">
-                    {pendingAttachments.length} attachment(s) will be uploaded.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button onClick={() => setShowApproveDialog(false)} variant="secondary" className="flex-1" disabled={actionLoading}>
-                Cancel
-              </Button>
-              <Button onClick={handleApproveRequest} className="flex-1" disabled={actionLoading}>
-                {actionLoading ? 'Approving...' : 'Approve'}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {showPurchaseOrderModal && details?.purchaseOrderId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowPurchaseOrderModal(false)} />
@@ -709,49 +600,6 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
         </div>
       )}
 
-      {showRejectDialog && (
-        <Modal isOpen={true} onClose={() => setShowRejectDialog(false)} title="Confirm Payment Rejection">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-red-900">
-                  Are you sure you want to reject this payment request?
-                </p>
-                <p className="text-sm text-red-700 mt-2">
-                  Amount: <span className="font-semibold">${formatCurrency(details.requestedAmount || details.expectedAmount)}</span>
-                </p>
-                <p className="text-sm text-red-700">
-                  Supplier: <span className="font-semibold">{details.supplierName}</span>
-                </p>
-                <p className="text-sm text-red-700">
-                  PO Number: <span className="font-semibold">{details.poNumber}</span>
-                </p>
-                {pendingAttachments.length > 0 && (
-                  <p className="text-sm text-red-700 mt-2">
-                    {pendingAttachments.length} attachment(s) will be uploaded.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button onClick={() => setShowRejectDialog(false)} variant="secondary" className="flex-1" disabled={actionLoading}>
-                Cancel
-              </Button>
-              <Button onClick={handleRejectRequest} className="flex-1 bg-red-600 hover:bg-red-700" disabled={actionLoading}>
-                {actionLoading ? 'Rejecting...' : 'Reject'}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </>
   );
 };

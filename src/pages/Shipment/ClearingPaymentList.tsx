@@ -34,7 +34,7 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
 
   const [containerNumber, setContainerNumber] = useState('');
   const [clearingAgent, setClearingAgent] = useState('');
-  const [statuses, setStatuses] = useState<string[]>(['Pending', 'Requested', 'Approved', 'Rejected']);
+  const [statuses, setStatuses] = useState<string[]>(['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected']);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -42,12 +42,13 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
     { value: 'Pending', label: 'Pending' },
     { value: 'Requested', label: 'Requested' },
     { value: 'Approved', label: 'Approved' },
+    { value: 'ApnUpdated', label: 'APN Updated' },
     { value: 'Rejected', label: 'Rejected' },
     { value: 'Paid', label: 'Paid' },
   ];
 
   const [appliedFilters, setAppliedFilters] = useState<ClearingPaymentSearchRequest>({
-    statuses: ['Pending', 'Requested', 'Approved', 'Rejected'],
+    statuses: ['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected'],
     pageNumber: 1,
     pageSize,
   });
@@ -111,12 +112,12 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
   const handleReset = () => {
     setContainerNumber('');
     setClearingAgent('');
-    setStatuses(['Pending', 'Requested', 'Approved', 'Rejected']);
+    setStatuses(['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected']);
     setFromDate('');
     setToDate('');
     setCurrentPage(1);
     setAppliedFilters({
-      statuses: ['Pending', 'Requested', 'Approved', 'Rejected'],
+      statuses: ['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected'],
       pageNumber: 1,
       pageSize
     });
@@ -129,7 +130,9 @@ export const ClearingPaymentList = ({ onAdd, onEdit, onView, onDelete }: Clearin
       case 'Requested':
         return { icon: FileText, color: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' };
       case 'Approved':
-        return { icon: CheckCheck, color: 'text-green-700', badge: 'bg-green-100 text-green-800' };
+        return { icon: CheckCheck, color: 'text-amber-700', badge: 'bg-amber-100 text-amber-800' };
+      case 'ApnUpdated':
+        return { icon: CheckCheck, color: 'text-teal-700', badge: 'bg-teal-100 text-teal-800' };
       case 'Rejected':
         return { icon: FileText, color: 'text-red-700', badge: 'bg-red-100 text-red-800' };
       case 'Paid':

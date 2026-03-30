@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, CheckCircle, XCircle, Pencil, AlertCircle, FileText, Download, ExternalLink, Package } from 'lucide-react';
+import { ArrowLeft, Send, Pencil, AlertCircle, FileText, Download, ExternalLink, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import {
@@ -55,41 +55,6 @@ export const ViewLocalPayment = ({
       console.error('Request failed:', err);
       setError(err?.response?.data?.message || 'Failed to request payment.');
       alert(err?.response?.data?.message || 'Failed to request payment.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleApprove = async () => {
-    if (!data) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await localPaymentsService.approvePayment(localPaymentId);
-      alert('Payment approved successfully!');
-      loadData();
-    } catch (err: any) {
-      console.error('Approve failed:', err);
-      setError(err?.response?.data?.message || 'Failed to approve payment.');
-      alert(err?.response?.data?.message || 'Failed to approve payment.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!data) return;
-    if (!confirm('Are you sure you want to reject this local payment?')) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await localPaymentsService.rejectPayment(localPaymentId);
-      alert('Payment rejected successfully!');
-      loadData();
-    } catch (err: any) {
-      console.error('Reject failed:', err);
-      setError(err?.response?.data?.message || 'Failed to reject payment.');
-      alert(err?.response?.data?.message || 'Failed to reject payment.');
     } finally {
       setActionLoading(false);
     }
@@ -168,8 +133,6 @@ export const ViewLocalPayment = ({
   }
 
   const canRequestPayment = data.status === 'Pending';
-  const canApprove = data.status === 'Requested';
-  const canReject = data.status === 'Requested' || data.status === 'Approved';
 
   return (
     <div className="space-y-6">
@@ -369,25 +332,10 @@ export const ViewLocalPayment = ({
           </Button>
         )}
 
-        {canApprove && (
-          <>
-            <Button
-              onClick={handleReject}
-              disabled={actionLoading}
-              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
-            >
-              <XCircle className="w-4 h-4" />
-              {actionLoading ? 'Processing...' : 'Reject'}
-            </Button>
-            <Button
-              onClick={handleApprove}
-              disabled={actionLoading}
-              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
-            >
-              <CheckCircle className="w-4 h-4" />
-              {actionLoading ? 'Processing...' : 'Approve'}
-            </Button>
-          </>
+        {(data.status === 'Requested' || data.status === 'Approved' || data.status === 'ApnUpdated') && (
+          <span className="text-sm text-gray-600">
+            Payment request submitted. Further processing is done in Accounts Payable.
+          </span>
         )}
       </div>
 

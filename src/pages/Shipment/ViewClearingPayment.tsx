@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, AlertCircle, FileText, Download, ExternalLink, Package } from 'lucide-react';
+import { ArrowLeft, Send, AlertCircle, FileText, Download, ExternalLink, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import {
@@ -54,37 +54,6 @@ export const ViewClearingPayment = ({
     } catch (err: any) {
       console.error('Request failed:', err);
       setError(err?.response?.data?.message || 'Failed to request payment.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleApprove = async () => {
-    if (!data) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await clearingPaymentsService.approvePayment(clearingPaymentId);
-      onSuccess();
-    } catch (err: any) {
-      console.error('Approve failed:', err);
-      setError(err?.response?.data?.message || 'Failed to approve payment.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!data) return;
-    if (!confirm('Are you sure you want to reject this clearing payment?')) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await clearingPaymentsService.rejectPayment(clearingPaymentId);
-      onSuccess();
-    } catch (err: any) {
-      console.error('Reject failed:', err);
-      setError(err?.response?.data?.message || 'Failed to reject payment.');
     } finally {
       setActionLoading(false);
     }
@@ -364,30 +333,9 @@ export const ViewClearingPayment = ({
           </Button>
         )}
 
-        {data.status === 'Requested' && (
-          <>
-            <Button
-              onClick={handleReject}
-              disabled={actionLoading}
-              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
-            >
-              <XCircle className="w-4 h-4" />
-              {actionLoading ? 'Processing...' : 'Reject'}
-            </Button>
-            <Button
-              onClick={handleApprove}
-              disabled={actionLoading}
-              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
-            >
-              <CheckCircle className="w-4 h-4" />
-              {actionLoading ? 'Processing...' : 'Approve'}
-            </Button>
-          </>
-        )}
-
-        {data.status === 'Approved' && data.paymentRequestId && (
+        {(data.status === 'Requested' || data.status === 'Approved' || data.status === 'ApnUpdated') && (
           <div className="text-sm text-gray-600">
-            Payment Request #{data.paymentRequestId} created. Payment can be processed from Accounts Payable.
+            Payment request submitted. Further processing is done in Accounts Payable.
           </div>
         )}
       </div>

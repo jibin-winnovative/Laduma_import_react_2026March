@@ -35,7 +35,7 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
   const [filters, setFilters] = useState({
     companyId: undefined as number | undefined,
     supplierId: undefined as number | undefined,
-    statuses: ['Pending', 'Requested', 'Approved', 'Rejected'] as string[],
+    statuses: ['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected'] as string[],
     fromDate: '',
     toDate: '',
     searchTerm: '',
@@ -45,6 +45,7 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
     { value: 'Pending', label: 'Pending' },
     { value: 'Requested', label: 'Requested' },
     { value: 'Approved', label: 'Approved' },
+    { value: 'ApnUpdated', label: 'APN Updated' },
     { value: 'Rejected', label: 'Rejected' },
     { value: 'Paid', label: 'Paid' },
   ];
@@ -156,7 +157,7 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
     setFilters({
       companyId: undefined,
       supplierId: undefined,
-      statuses: ['Pending', 'Requested', 'Approved', 'Rejected'],
+      statuses: ['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected'],
       fromDate: '',
       toDate: '',
       searchTerm: '',
@@ -180,7 +181,9 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
       case 'Requested':
         return 'bg-blue-100 text-blue-800';
       case 'Approved':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-amber-100 text-amber-800';
+      case 'ApnUpdated':
+        return 'bg-teal-100 text-teal-800';
       case 'Rejected':
         return 'bg-red-100 text-red-800';
       case 'Paid':

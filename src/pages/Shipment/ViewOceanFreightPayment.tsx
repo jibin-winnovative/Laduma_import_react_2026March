@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, CheckCircle, XCircle, FileText, Download, ExternalLink, Package } from 'lucide-react';
+import { ArrowLeft, Send, FileText, Download, ExternalLink, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import {
@@ -54,37 +54,6 @@ export const ViewOceanFreightPayment = ({
     } catch (err: any) {
       console.error('Request failed:', err);
       setError(err?.response?.data?.message || 'Failed to request payment.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleApprove = async () => {
-    if (!data) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await oceanFreightPaymentsService.approvePayment(oceanFreightPaymentId);
-      onSuccess();
-    } catch (err: any) {
-      console.error('Approve failed:', err);
-      setError(err?.response?.data?.message || 'Failed to approve payment.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!data) return;
-    if (!confirm('Are you sure you want to reject this ocean freight payment?')) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await oceanFreightPaymentsService.rejectPayment(oceanFreightPaymentId);
-      onSuccess();
-    } catch (err: any) {
-      console.error('Reject failed:', err);
-      setError(err?.response?.data?.message || 'Failed to reject payment.');
     } finally {
       setActionLoading(false);
     }
@@ -188,35 +157,10 @@ export const ViewOceanFreightPayment = ({
               {actionLoading ? 'Requesting...' : 'Request'}
             </Button>
           )}
-          {data.status === 'Requested' && (
-            <>
-              <Button
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-              >
-                <CheckCircle className="w-4 h-4" />
-                {actionLoading ? 'Approving...' : 'Approve'}
-              </Button>
-              <Button
-                onClick={handleReject}
-                disabled={actionLoading}
-                className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
-              >
-                <XCircle className="w-4 h-4" />
-                {actionLoading ? 'Rejecting...' : 'Reject'}
-              </Button>
-            </>
-          )}
-          {data.status === 'Pending' && (
-            <Button
-              onClick={handleReject}
-              disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
-            >
-              <XCircle className="w-4 h-4" />
-              {actionLoading ? 'Rejecting...' : 'Reject'}
-            </Button>
+          {(data.status === 'Requested' || data.status === 'Approved' || data.status === 'ApnUpdated') && (
+            <span className="text-sm text-gray-600">
+              Payment request submitted. Further processing is done in Accounts Payable.
+            </span>
           )}
         </div>
       </div>

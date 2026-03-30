@@ -29,6 +29,16 @@ export const paymentRequestsService = {
     return response.data;
   },
 
+  approveRequest: async (paymentRequestId: number): Promise<PaymentRequestResponse> => {
+    const response = await apiClient.post(`/api/Payments/requests/${paymentRequestId}/approve`);
+    return response.data;
+  },
+
+  apnUpdate: async (paymentRequestId: number): Promise<PaymentRequestResponse> => {
+    const response = await apiClient.post(`/api/Payments/requests/${paymentRequestId}/apn-update`);
+    return response.data;
+  },
+
   rejectRequest: async (paymentRequestId: number): Promise<{ paymentRequestId: number; status: string }> => {
     const response = await apiClient.post(`/api/Payments/requests/${paymentRequestId}/reject`);
     return response.data;
