@@ -39,10 +39,14 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [rejectRemarks, setRejectRemarks] = useState('');
   const [rejecting, setRejecting] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showApnForm, setShowApnForm] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showApnConfirmDialog, setShowApnConfirmDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [approving, setApproving] = useState(false);
   const [apnUpdating, setApnUpdating] = useState(false);
+  const [apnPendingAttachments, setApnPendingAttachments] = useState<PendingAttachment[]>([]);
   const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
   const [paymentData, setPaymentData] = useState({
     paidDate: new Date().toISOString().split('T')[0],
@@ -63,8 +67,10 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
     if (isOpen && requestId) {
       loadRequest();
       setShowPaymentForm(false);
+      setShowApnForm(false);
       setShowPurchaseOrderModal(false);
       setPendingAttachments([]);
+      setApnPendingAttachments([]);
       setPaymentData({
         paidDate: new Date().toISOString().split('T')[0],
         referenceNo: '',
@@ -285,6 +291,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
     setApproving(true);
     try {
       await paymentRequestsService.approveRequest(requestId);
+      setShowApproveDialog(false);
       onRefresh?.();
       onClose();
     } catch (error) {
@@ -294,10 +301,86 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
     }
   };
 
+  const addApnPendingAttachment = (file: File) => {
+    setApnPendingAttachments(prev => [...prev, {
+      id: `apn-att-${Date.now()}-${Math.random()}`,
+      file,
+      type: '',
+      status: 'pending',
+      progress: 0,
+      retryCount: 0,
+    }]);
+  };
+
+  const updateApnAttachmentType = (id: string, type: string) => {
+    setApnPendingAttachments(prev => prev.map(a => a.id === id ? { ...a, type } : a));
+  };
+
+  const removeApnPending = (id: string) => {
+    setApnPendingAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const uploadApnSingle = async (attachment: PendingAttachment): Promise<boolean> => {
+    const MAX_RETRIES = 3;
+    let retry = attachment.retryCount;
+    while (retry <= MAX_RETRIES) {
+      try {
+        setApnPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploading', progress: 10 } : a
+        ));
+        const presigned = await attachmentService.requestPresignedUpload({
+          fileName: attachment.file.name,
+          contentType: attachment.file.type,
+          entityType: 'PaymentRequest',
+          entityId: requestId,
+        });
+        setApnPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 40 } : a
+        ));
+        await attachmentService.uploadToS3(presigned.uploadUrl, attachment.file);
+        setApnPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 70 } : a
+        ));
+        await attachmentService.confirmUpload(presigned.attachmentId);
+        setApnPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploaded', progress: 100 } : a
+        ));
+        return true;
+      } catch {
+        retry++;
+        if (retry <= MAX_RETRIES) {
+          setApnPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, retryCount: retry, progress: 0, error: `Retry ${retry}/${MAX_RETRIES}...` } : a
+          ));
+          await new Promise(r => setTimeout(r, 1000 * retry));
+        } else {
+          setApnPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, status: 'failed', error: 'Upload failed after 3 retries', progress: 0 } : a
+          ));
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
   const handleApnUpdate = async () => {
+    const hasMissingApnTypes = apnPendingAttachments.some(a => !a.type);
+    if (hasMissingApnTypes) {
+      alert('Please select a type for all attachments before proceeding');
+      return;
+    }
     setApnUpdating(true);
     try {
+      if (apnPendingAttachments.length > 0) {
+        const toUpload = apnPendingAttachments.filter(a => a.status === 'pending' || a.status === 'failed');
+        for (const att of toUpload) {
+          await uploadApnSingle(att);
+        }
+      }
       await paymentRequestsService.apnUpdate(requestId);
+      setShowApnConfirmDialog(false);
+      setShowApnForm(false);
       onRefresh?.();
       onClose();
     } catch (error) {
@@ -512,6 +595,95 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-xs text-blue-700 font-semibold mb-1">DESCRIPTION</p>
                 <p className="text-sm text-blue-900">{request.description}</p>
+              </div>
+            )}
+
+            {showApnForm && status === 'Approved' && (
+              <div className="rounded-lg border p-6" style={{ backgroundColor: 'rgb(240 253 250)', borderColor: 'rgb(153 234 214)' }}>
+                <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+                  <FileCheck className="w-5 h-5 text-teal-700" />
+                  APN Update - Attachments (Optional)
+                </h3>
+                <div className="mb-4">
+                  <div className="border-2 border-dashed border-teal-300 rounded-lg p-5 hover:border-teal-500 transition-colors">
+                    <input
+                      id="apn-attachment-upload"
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        Array.from(e.target.files || []).forEach(file => {
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert(`File ${file.name} exceeds 10MB limit`);
+                            return;
+                          }
+                          addApnPendingAttachment(file);
+                        });
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <label htmlFor="apn-attachment-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                      <Upload className="w-10 h-10 text-teal-400 mb-2" />
+                      <p className="text-sm text-gray-600 font-medium mb-1">Click to upload or drag and drop</p>
+                      <p className="text-xs text-gray-500">PDF, DOC, XLS, PNG, JPG (Max 10MB per file)</p>
+                    </label>
+                  </div>
+                </div>
+                {apnPendingAttachments.length > 0 && (
+                  <div className="space-y-3">
+                    {apnPendingAttachments.map((att) => (
+                      <div key={att.id} className="border border-teal-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-start gap-3">
+                          <FileText className="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{att.file.name}</p>
+                                <p className="text-xs text-gray-500">{(att.file.size / 1024).toFixed(0)} KB</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={att.type}
+                                  onChange={(e) => updateApnAttachmentType(att.id, e.target.value)}
+                                  disabled={att.status === 'uploading'}
+                                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                >
+                                  <option value="">Select Type</option>
+                                  <option value="APN Document">APN Document</option>
+                                  <option value="Bank Confirmation">Bank Confirmation</option>
+                                  <option value="Supporting Document">Supporting Document</option>
+                                  <option value="Other">Other</option>
+                                </select>
+                                <Button
+                                  onClick={() => removeApnPending(att.id)}
+                                  variant="danger"
+                                  className="px-2 py-1.5"
+                                  disabled={att.status === 'uploading'}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            {att.status === 'uploading' && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-teal-600">Uploading...</p>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div className="bg-teal-600 h-1.5 rounded-full transition-all" style={{ width: `${att.progress}%` }} />
+                                </div>
+                              </div>
+                            )}
+                            {att.status === 'uploaded' && <p className="text-xs text-green-600">Uploaded successfully</p>}
+                            {att.status === 'failed' && <p className="text-xs text-red-600">{att.error || 'Upload failed'}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {apnPendingAttachments.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-2">No attachments added (optional)</p>
+                )}
               </div>
             )}
 
@@ -815,17 +987,16 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                     Reject
                   </Button>
                   <Button
-                    onClick={handleApprove}
-                    disabled={approving}
+                    onClick={() => setShowApproveDialog(true)}
                     className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                   >
                     <ThumbsUp className="w-4 h-4" />
-                    {approving ? 'Approving...' : 'Approve'}
+                    Approve
                   </Button>
                 </>
               )}
 
-              {status === 'Approved' && (
+              {status === 'Approved' && !showApnForm && (
                 <>
                   <Button variant="secondary" onClick={onClose}>
                     Cancel
@@ -838,12 +1009,31 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                     Reject
                   </Button>
                   <Button
-                    onClick={handleApnUpdate}
-                    disabled={apnUpdating}
+                    onClick={() => setShowApnForm(true)}
                     className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
                   >
                     <FileCheck className="w-4 h-4" />
-                    {apnUpdating ? 'Processing...' : 'APN Updated'}
+                    APN Updated
+                  </Button>
+                </>
+              )}
+
+              {status === 'Approved' && showApnForm && (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => { setShowApnForm(false); setApnPendingAttachments([]); }}
+                    disabled={apnUpdating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setShowApnConfirmDialog(true)}
+                    disabled={apnUpdating || apnPendingAttachments.some(a => a.status === 'uploading')}
+                    className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
+                  >
+                    <FileCheck className="w-4 h-4" />
+                    Confirm APN Updated
                   </Button>
                 </>
               )}
@@ -903,6 +1093,82 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
             <p className="text-[var(--color-text-secondary)]">Payment request not found</p>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showApproveDialog}
+        onClose={() => setShowApproveDialog(false)}
+        title="Confirm Approval"
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <ThumbsUp className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-blue-900">Approve Payment Request</h4>
+                <p className="text-sm text-blue-700 mt-1">
+                  Are you sure you want to approve this payment request? This will move it to the Approved status.
+                </p>
+                {request && (
+                  <p className="text-sm font-semibold text-blue-900 mt-2">
+                    Amount: {formatCurrency(request.requestAmount, request.sourceContext?.currencyCode)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="secondary" onClick={() => setShowApproveDialog(false)} disabled={approving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={approving}
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+            >
+              <ThumbsUp className="w-4 h-4" />
+              {approving ? 'Approving...' : 'Confirm Approval'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showApnConfirmDialog}
+        onClose={() => setShowApnConfirmDialog(false)}
+        title="Confirm APN Updated"
+      >
+        <div className="space-y-4">
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <FileCheck className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-teal-900">Mark as APN Updated</h4>
+                <p className="text-sm text-teal-700 mt-1">
+                  Are you sure you want to mark this payment request as APN Updated? This will make it ready for payment processing.
+                </p>
+                {apnPendingAttachments.length > 0 && (
+                  <p className="text-sm text-teal-700 mt-2">
+                    {apnPendingAttachments.filter(a => a.status !== 'uploaded').length} attachment(s) will be uploaded.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="secondary" onClick={() => setShowApnConfirmDialog(false)} disabled={apnUpdating}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApnUpdate}
+              disabled={apnUpdating}
+              className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
+            >
+              <FileCheck className="w-4 h-4" />
+              {apnUpdating ? 'Processing...' : 'Confirm APN Updated'}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal

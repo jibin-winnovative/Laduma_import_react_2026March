@@ -386,13 +386,15 @@ export const LocalPaymentList = ({ onAdd, onEdit, onView, onDelete }: LocalPayme
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => onDelete(item.localPaymentId)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {(item.status === 'Pending' || item.status === 'Rejected') && (
+                            <button
+                              onClick={() => onDelete(item.localPaymentId)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

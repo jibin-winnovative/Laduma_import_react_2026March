@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, DollarSign, Clock, CheckCircle, TrendingUp, Calendar, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ThumbsUp, FileCheck, XCircle } from 'lucide-react';
+import { Search, DollarSign, CheckCircle, TrendingUp, Calendar, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { paymentsService, PaymentRequest, DashboardSummary } from '../../services/paymentsService';
-import { paymentRequestsService } from '../../services/paymentRequestsService';
 
 interface PaymentsListProps {
   onSelectRequest: (requestId: number) => void;
@@ -14,7 +13,6 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
   const [payments, setPayments] = useState<PaymentRequest[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -89,49 +87,6 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
     setCurrentPage(1);
   };
 
-  const handleApprove = async (e: React.MouseEvent, paymentRequestId: number) => {
-    e.stopPropagation();
-    setActionLoadingId(paymentRequestId);
-    try {
-      await paymentRequestsService.approveRequest(paymentRequestId);
-      loadPayments();
-      loadSummary();
-    } catch (err) {
-      console.error('Failed to approve:', err);
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleApnUpdate = async (e: React.MouseEvent, paymentRequestId: number) => {
-    e.stopPropagation();
-    setActionLoadingId(paymentRequestId);
-    try {
-      await paymentRequestsService.apnUpdate(paymentRequestId);
-      loadPayments();
-      loadSummary();
-    } catch (err) {
-      console.error('Failed to APN update:', err);
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleReject = async (e: React.MouseEvent, paymentRequestId: number) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to reject this payment request?')) return;
-    setActionLoadingId(paymentRequestId);
-    try {
-      await paymentRequestsService.rejectRequest(paymentRequestId);
-      loadPayments();
-      loadSummary();
-    } catch (err) {
-      console.error('Failed to reject:', err);
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { bg: string; text: string }> = {
       Requested: { bg: 'bg-blue-100', text: 'text-blue-800' },
@@ -152,8 +107,6 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
   };
 
   const renderRowActions = (payment: PaymentRequest) => {
-    const isLoading = actionLoadingId === payment.paymentRequestId;
-
     return (
       <div className="flex items-center gap-1 flex-wrap">
         <Button
@@ -168,77 +121,6 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
           <Eye className="w-3 h-3" />
           View
         </Button>
-
-        {payment.status === 'Requested' && (
-          <>
-            <Button
-              size="sm"
-              onClick={(e) => handleApprove(e, payment.paymentRequestId)}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white"
-            >
-              <ThumbsUp className="w-3 h-3" />
-              {isLoading ? '...' : 'Approve'}
-            </Button>
-            <Button
-              size="sm"
-              onClick={(e) => handleReject(e, payment.paymentRequestId)}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-            >
-              <XCircle className="w-3 h-3" />
-              {isLoading ? '...' : 'Reject'}
-            </Button>
-          </>
-        )}
-
-        {payment.status === 'Approved' && (
-          <>
-            <Button
-              size="sm"
-              onClick={(e) => handleApnUpdate(e, payment.paymentRequestId)}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-teal-600 hover:bg-teal-700 text-white"
-            >
-              <FileCheck className="w-3 h-3" />
-              {isLoading ? '...' : 'APN Updated'}
-            </Button>
-            <Button
-              size="sm"
-              onClick={(e) => handleReject(e, payment.paymentRequestId)}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-            >
-              <XCircle className="w-3 h-3" />
-              {isLoading ? '...' : 'Reject'}
-            </Button>
-          </>
-        )}
-
-        {payment.status === 'ApnUpdated' && (
-          <>
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectRequest(payment.paymentRequestId);
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-[var(--color-primary)] hover:opacity-90 text-white"
-            >
-              <DollarSign className="w-3 h-3" />
-              Pay
-            </Button>
-            <Button
-              size="sm"
-              onClick={(e) => handleReject(e, payment.paymentRequestId)}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-            >
-              <XCircle className="w-3 h-3" />
-              {isLoading ? '...' : 'Reject'}
-            </Button>
-          </>
-        )}
       </div>
     );
   };
