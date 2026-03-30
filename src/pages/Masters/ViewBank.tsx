@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Edit2, Phone, MapPin, Hash, GitBranch } from 'lucide-react';
+import { X, CreditCard as Edit2, Phone, MapPin, Hash, GitBranch } from 'lucide-react';
 import { banksService } from '../../services/banksService';
 import { Bank } from '../../types/api';
 import { Button } from '../../components/ui/Button';

@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { DollarSign, Calendar, CreditCard, FileText, AlertCircle, Package, Ship, Truck, User, Upload, Download, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { DollarSign, Calendar, CreditCard, FileText, AlertCircle, Package, Ship, Truck, User, Upload, Download, X, Landmark } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { paymentsService, MakePaymentRequest } from '../../services/paymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { banksService } from '../../services/banksService';
 
 interface MakePaymentFormProps {
   requestId: number;
@@ -50,6 +51,7 @@ export function MakePaymentForm({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeBanks, setActiveBanks] = useState<Array<{ bankId: number; name: string; accountNumber: string }>>([]);
 
   const [formData, setFormData] = useState<MakePaymentRequest>({
     paymentRequestId: requestId,
@@ -58,7 +60,13 @@ export function MakePaymentForm({
     paidAmount: requestAmount,
     paidDate: new Date().toISOString().split('T')[0],
     remarks: '',
+    bankId: undefined,
+    amountInZar: undefined,
   });
+
+  useEffect(() => {
+    banksService.getActive().then(setActiveBanks).catch(console.error);
+  }, []);
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
@@ -423,6 +431,41 @@ export function MakePaymentForm({
                 </p>
               </div>
 
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                  <Landmark className="w-4 h-4 text-[var(--color-primary)]" />
+                  Bank
+                </label>
+                <select
+                  value={formData.bankId ?? ''}
+                  onChange={(e) => setFormData({ ...formData, bankId: e.target.value ? Number(e.target.value) : undefined })}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-white dark:bg-gray-700 text-[var(--color-text-primary)]"
+                >
+                  <option value="">Select Bank</option>
+                  {activeBanks.map((b) => (
+                    <option key={b.bankId} value={b.bankId}>
+                      {b.name} - {b.accountNumber}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                  <DollarSign className="w-4 h-4 text-[var(--color-primary)]" />
+                  Amount in ZAR
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.amountInZar ?? ''}
+                  onChange={(e) => setFormData({ ...formData, amountInZar: e.target.value ? parseFloat(e.target.value) : undefined })}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-white dark:bg-gray-700 text-[var(--color-text-primary)]"
+                  placeholder="0.00"
+                />
+              </div>
+
               <div className="col-span-1 md:col-span-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-primary)] mb-2">
                   <FileText className="w-4 h-4 text-[var(--color-primary)]" />
@@ -609,6 +652,24 @@ export function MakePaymentForm({
                 {formatCurrency(formData.paidAmount, sourceContext?.currencyCode)}
               </span>
             </div>
+            {formData.bankId && (
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--color-text-secondary)]">Bank:</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                  {activeBanks.find(b => b.bankId === formData.bankId)
+                    ? `${activeBanks.find(b => b.bankId === formData.bankId)!.name} - ${activeBanks.find(b => b.bankId === formData.bankId)!.accountNumber}`
+                    : ''}
+                </span>
+              </div>
+            )}
+            {formData.amountInZar !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-sm text-[var(--color-text-secondary)]">Amount in ZAR:</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                  ZAR {formData.amountInZar.toFixed(2)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-sm text-[var(--color-text-secondary)]">Payment Date:</span>
               <span className="text-sm font-medium text-[var(--color-text-primary)]">

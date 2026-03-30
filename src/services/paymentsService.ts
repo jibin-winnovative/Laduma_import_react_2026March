@@ -67,6 +67,8 @@ export interface MakePaymentRequest {
   paidAmount: number;
   paidDate: string;
   remarks?: string;
+  bankId?: number;
+  amountInZar?: number;
 }
 
 export interface PaymentResponse {
