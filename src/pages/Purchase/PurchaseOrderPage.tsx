@@ -54,10 +54,14 @@ export const PurchaseOrderPage = () => {
   };
 
   const handleClose = () => {
+    setSelectedPO(undefined);
+    setViewMode('list');
     navigate('/purchase/purchase-orders');
   };
 
   const handleSuccess = (savedPurchaseOrderId?: number) => {
+    setSelectedPO(undefined);
+    setViewMode('list');
     navigate('/purchase/purchase-orders');
     if (savedPurchaseOrderId) {
       setPrintDialogPoId(savedPurchaseOrderId);
