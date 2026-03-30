@@ -22,6 +22,7 @@ import {
   DollarSign,
   Receipt,
   Container,
+  Landmark,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -61,6 +62,7 @@ const menuItems: MenuItem[] = [
       { label: 'Currencies', path: '/masters/currencies', icon: DollarSign },
       { label: 'Addon Charges', path: '/masters/addon-charges', icon: Receipt },
       { label: 'Clearing Payment Charges', path: '/masters/clearing-payment-charges', icon: Receipt },
+      { label: 'Banks', path: '/masters/banks', icon: Landmark },
     ],
   },
   {

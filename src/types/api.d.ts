@@ -1,3 +1,26 @@
+export interface Bank {
+  bankId: number;
+  name: string;
+  accountNumber: string;
+  branchCode?: string;
+  branch?: string;
+  address?: string;
+  contactNumber?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  isActive: boolean;
+}
+
+export interface BankSummary {
+  totalBanks: number;
+  activeBanks: number;
+  lastUpdatedDate?: string;
+  lastUpdatedBy?: string;
+  formattedLastUpdated?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
