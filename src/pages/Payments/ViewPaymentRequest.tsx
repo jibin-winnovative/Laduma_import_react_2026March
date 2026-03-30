@@ -11,6 +11,9 @@ import { paymentsService, PaymentRequestDetails } from '../../services/paymentsS
 import { paymentRequestsService } from '../../services/paymentRequestsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
 import { ViewPurchaseOrder } from '../Purchase/ViewPurchaseOrder';
+import { ViewClearingPayment } from '../Shipment/ViewClearingPayment';
+import { ViewOceanFreightPayment } from '../Shipment/ViewOceanFreightPayment';
+import { ViewLocalPayment } from '../Shipment/ViewLocalPayment';
 import { banksService } from '../../services/banksService';
 
 interface ViewPaymentRequestProps {
@@ -48,6 +51,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [apnUpdating, setApnUpdating] = useState(false);
   const [apnPendingAttachments, setApnPendingAttachments] = useState<PendingAttachment[]>([]);
   const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
+  const [showSourceDetailModal, setShowSourceDetailModal] = useState(false);
   const [paymentData, setPaymentData] = useState({
     paidDate: new Date().toISOString().split('T')[0],
     referenceNo: '',
@@ -69,6 +73,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       setShowPaymentForm(false);
       setShowApnForm(false);
       setShowPurchaseOrderModal(false);
+      setShowSourceDetailModal(false);
       setPendingAttachments([]);
       setApnPendingAttachments([]);
       setPaymentData({
@@ -273,18 +278,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
 
   const handleViewMore = () => {
     if (!request?.sourceContext.hasMoreDetails) return;
-
-    const { sourceModule, sourceContext } = request;
-
-    if (sourceModule === 'Purchase') {
-      setShowPurchaseOrderModal(true);
-    } else if (sourceModule === 'Shipment') {
-      onClose();
-      navigate(`/shipments/${sourceContext.referenceId}`);
-    } else if (sourceModule === 'Transport') {
-      onClose();
-      navigate(`/transport/${sourceContext.referenceId}`);
-    }
+    setShowSourceDetailModal(true);
   };
 
   const handleApprove = async () => {
@@ -1385,6 +1379,41 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
           </div>
         </div>
       </Modal>
+
+      {request?.sourceContext?.referenceId && showSourceDetailModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowSourceDetailModal(false)} />
+          <div className="relative z-10 bg-white rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            {request.sourceModule === 'Purchase' && (
+              <ViewPurchaseOrder
+                purchaseOrderId={request.sourceContext.referenceId}
+                onClose={() => setShowSourceDetailModal(false)}
+              />
+            )}
+            {request.sourceModule === 'ClearingPayment' && (
+              <ViewClearingPayment
+                clearingPaymentId={request.sourceContext.referenceId}
+                onClose={() => setShowSourceDetailModal(false)}
+                onSuccess={() => setShowSourceDetailModal(false)}
+              />
+            )}
+            {request.sourceModule === 'OceanFreightPayment' && (
+              <ViewOceanFreightPayment
+                oceanFreightPaymentId={request.sourceContext.referenceId}
+                onClose={() => setShowSourceDetailModal(false)}
+                onSuccess={() => setShowSourceDetailModal(false)}
+              />
+            )}
+            {request.sourceModule === 'LocalPayment' && (
+              <ViewLocalPayment
+                localPaymentId={request.sourceContext.referenceId}
+                onClose={() => setShowSourceDetailModal(false)}
+                onEdit={() => setShowSourceDetailModal(false)}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {request?.sourceContext?.referenceId && showPurchaseOrderModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
