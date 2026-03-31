@@ -34,7 +34,7 @@ export const LocalPaymentList = ({ onAdd, onEdit, onView, onDelete }: LocalPayme
 
   const [containerNumber, setContainerNumber] = useState('');
   const [paymentNature, setPaymentNature] = useState('');
-  const [statuses, setStatuses] = useState<string[]>(['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected']);
+  const [statuses, setStatuses] = useState<string[]>(['Pending', 'Requested', 'Approved', 'Rejected']);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -42,13 +42,12 @@ export const LocalPaymentList = ({ onAdd, onEdit, onView, onDelete }: LocalPayme
     { value: 'Pending', label: 'Pending' },
     { value: 'Requested', label: 'Requested' },
     { value: 'Approved', label: 'Approved' },
-    { value: 'ApnUpdated', label: 'APN Updated' },
     { value: 'Rejected', label: 'Rejected' },
     { value: 'Paid', label: 'Paid' },
   ];
 
   const [appliedFilters, setAppliedFilters] = useState<LocalPaymentSearchRequest>({
-    statuses: ['Pending', 'Requested', 'Approved', 'ApnUpdated', 'Rejected'],
+    statuses: ['Pending', 'Requested', 'Approved', 'Rejected'],
     pageNumber: 1,
     pageSize,
   });

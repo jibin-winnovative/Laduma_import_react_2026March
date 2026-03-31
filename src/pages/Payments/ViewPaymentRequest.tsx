@@ -682,7 +682,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
               </div>
             )}
 
-            {showPaymentForm && isApnUpdated && (
+            {showPaymentForm && (isApnUpdated || (status === 'Approved' && request?.sourceModule !== 'Purchase')) && (
               <div className="rounded-lg border p-6" style={{ backgroundColor: 'rgb(239 246 255)', borderColor: 'rgb(216 224 241)' }}>
                 <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-gray-900" />
@@ -1003,17 +1003,27 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                     <XCircle className="w-4 h-4" />
                     Reject
                   </Button>
-                  <Button
-                    onClick={() => setShowApnForm(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
-                  >
-                    <FileCheck className="w-4 h-4" />
-                    APN Updated
-                  </Button>
+                  {request?.sourceModule === 'Purchase' ? (
+                    <Button
+                      onClick={() => setShowApnForm(true)}
+                      className="flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
+                    >
+                      <FileCheck className="w-4 h-4" />
+                      APN Updated
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleMakePaymentClick}
+                      className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                    >
+                      <DollarSign className="w-4 h-4" />
+                      Make Payment
+                    </Button>
+                  )}
                 </>
               )}
 
-              {status === 'Approved' && showApnForm && (
+              {status === 'Approved' && showApnForm && request?.sourceModule === 'Purchase' && (
                 <>
                   <Button
                     variant="secondary"
@@ -1029,6 +1039,26 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                   >
                     <FileCheck className="w-4 h-4" />
                     Confirm APN Updated
+                  </Button>
+                </>
+              )}
+
+              {status === 'Approved' && showPaymentForm && request?.sourceModule !== 'Purchase' && (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowPaymentForm(false)}
+                    disabled={submitting || isUploading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmPayment}
+                    disabled={!paymentData.referenceNo.trim() || submitting || isUploading}
+                    className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {isUploading ? 'Uploading...' : 'Submit Payment'}
                   </Button>
                 </>
               )}

@@ -340,10 +340,9 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
                     {payments.map((payment) => (
                       <tr
                         key={payment.paymentRequestId}
-                        className={`border-b hover:bg-gray-50 cursor-pointer ${
+                        className={`border-b hover:bg-gray-50 ${
                           isOverdue(payment.dueDate, payment.status) ? 'bg-red-50' : ''
                         }`}
-                        onClick={() => onSelectRequest(payment.paymentRequestId)}
                       >
                         <td className="py-3 px-4 text-sm text-[var(--color-text-primary)]">{payment.vendorName}</td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">{payment.vendorType}</td>

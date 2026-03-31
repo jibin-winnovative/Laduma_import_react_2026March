@@ -1230,12 +1230,13 @@ export const ClearingPaymentForm = ({
 
           {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
             <Button
-              onClick={handleSaveDraft}
+              onClick={onClose}
+              variant="secondary"
               disabled={saving}
-              className="flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:opacity-90 text-white w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save'}
+              <ArrowLeft className="w-4 h-4" />
+              Cancel
             </Button>
           )}
         </div>
