@@ -547,43 +547,44 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border p-6">
-              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Payment Summary</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                  <span className="text-base text-[var(--color-text-secondary)]">Total Amount</span>
-                  <span className="text-base font-semibold text-[var(--color-text)]">
-                    ${formatCurrency(request.sourceContext.totalAmount)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                  <span className="text-base text-[var(--color-text-secondary)]">Paid Amount</span>
-                  <span className="text-base font-semibold text-[var(--color-text)]">
-                    ${formatCurrency(request.sourceContext.totalPaidAmount)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg -mx-2">
-                  <span className="text-base font-bold text-[var(--color-primary)]">Requesting Amount</span>
-                  <span className="text-lg font-bold text-[var(--color-primary)]">
-                    ${formatCurrency(request.requestAmount)}
-                  </span>
-                </div>
-                {request.sourceContext.currencyCode !== 'USD' && (
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-lg -mx-2">
-                    <span className="text-base font-bold text-amber-700">Amount in {request.sourceContext.currencyCode}</span>
-                    <span className="text-lg font-bold text-amber-700">
-                      {request.sourceContext.currencyCode} {(request.requestAmount * request.sourceContext.exchangeRate).toFixed(2)}
-                    </span>
+            {(() => {
+              const isZarSource = request.sourceModule === 'ClearingPayment' || request.sourceModule === 'LocalPayment';
+              const currency = isZarSource ? 'ZAR' : 'USD';
+              const currencySymbol = isZarSource ? 'R' : '$';
+              const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
+              return (
+                <div className="bg-white rounded-lg border p-6">
+                  <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Payment Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-base text-[var(--color-text-secondary)]">Total Amount</span>
+                      <span className="text-base font-semibold text-[var(--color-text)]">
+                        {fmt(request.sourceContext.totalAmount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-base text-[var(--color-text-secondary)]">Paid Amount</span>
+                      <span className="text-base font-semibold text-[var(--color-text)]">
+                        {fmt(request.sourceContext.totalPaidAmount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg -mx-2">
+                      <span className="text-base font-bold text-[var(--color-primary)]">Requesting Amount</span>
+                      <span className="text-lg font-bold text-[var(--color-primary)]">
+                        {fmt(request.requestAmount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-base font-semibold text-[var(--color-text)]">Balance After Payment</span>
+                      <span className="text-base font-bold text-green-600">
+                        {fmt(request.sourceContext.totalAmount - request.sourceContext.totalPaidAmount - request.requestAmount)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-base font-semibold text-[var(--color-text)]">Balance After Payment</span>
-                  <span className="text-base font-bold text-green-600">
-                    ${formatCurrency(request.sourceContext.totalAmount - request.sourceContext.totalPaidAmount - request.requestAmount)}
-                  </span>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-3">{currency}</p>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {request.description && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
