@@ -79,10 +79,25 @@ export const LocalPaymentForm = ({
   })();
 
   useEffect(() => {
+    loadDropdowns();
     if (mode === 'edit' && localPaymentId) {
       loadExisting();
     }
   }, [mode, localPaymentId]);
+
+  const loadDropdowns = async () => {
+    try {
+      const items = await containersService.getDropdown();
+      setContainers(
+        items.map((c) => ({
+          containerId: c.containerId,
+          containerNumber: c.containerNumber,
+        }))
+      );
+    } catch (err) {
+      console.error('Failed to load containers:', err);
+    }
+  };
 
   useEffect(() => {
     if (paymentNature === 'Transport') {
@@ -123,13 +138,6 @@ export const LocalPaymentForm = ({
       setRemarks(data.remarks || '');
       setStatus(data.status);
 
-      if (data.containerNumber) {
-        setContainers([{
-          containerId: data.containerId,
-          containerNumber: data.containerNumber,
-        }]);
-      }
-
       if (data.paymentNature === 'Transport') {
         await loadTransportCompanies();
       }
@@ -154,9 +162,11 @@ export const LocalPaymentForm = ({
   };
 
   const handleContainerSelect = (cId: number, cNumber: string) => {
-    setContainers([{ containerId: cId, containerNumber: cNumber }]);
     setContainerId(cId);
     setShowContainerSearch(false);
+    if (!containers.find((c) => c.containerId === cId)) {
+      setContainers((prev) => [...prev, { containerId: cId, containerNumber: cNumber }]);
+    }
   };
 
   const addAttachment = (type: string, file: File) => {
