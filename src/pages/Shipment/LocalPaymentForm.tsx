@@ -1042,6 +1042,7 @@ export const LocalPaymentForm = ({
         isOpen={showContainerSearch}
         onClose={() => setShowContainerSearch(false)}
         onSelect={handleContainerSelect}
+        statuses={['Booked', 'InTransit', 'Received']}
       />
 
       {showRequestDialog && (

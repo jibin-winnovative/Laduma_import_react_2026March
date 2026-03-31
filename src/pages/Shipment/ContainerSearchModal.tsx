@@ -9,12 +9,16 @@ interface ContainerSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (containerId: number, containerNumber: string) => void;
+  status?: string;
+  statuses?: string[];
 }
 
 export const ContainerSearchModal = ({
   isOpen,
   onClose,
   onSelect,
+  status,
+  statuses,
 }: ContainerSearchModalProps) => {
   const [searchText, setSearchText] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -36,7 +40,8 @@ export const ContainerSearchModal = ({
     try {
       const response = await containersService.search({
         searchText: searchText || undefined,
-        status: 'Booked',
+        status: statuses ? undefined : (status || 'Booked'),
+        statuses: statuses,
         fromDate: fromDate || null,
         toDate: toDate || null,
         pageNumber: currentPage,
