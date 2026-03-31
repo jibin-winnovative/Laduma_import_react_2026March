@@ -1,28 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { containersService, ContainerListItem } from '../../services/containersService';
 
+const AVAILABLE_STATUSES = ['Draft', 'Booked', 'In Transit'];
+const DEFAULT_SELECTED_STATUSES = ['Draft', 'Booked', 'In Transit'];
+
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  Draft: 'bg-gray-100 text-gray-800',
+  Booked: 'bg-blue-100 text-blue-800',
+  'In Transit': 'bg-amber-100 text-amber-800',
+  Received: 'bg-green-100 text-green-800',
+  Canceled: 'bg-red-100 text-red-800',
+};
+
 interface ContainerSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (containerId: number, containerNumber: string) => void;
-  status?: string;
-  statuses?: string[];
 }
 
 export const ContainerSearchModal = ({
   isOpen,
   onClose,
   onSelect,
-  status,
-  statuses,
 }: ContainerSearchModalProps) => {
   const [searchText, setSearchText] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(DEFAULT_SELECTED_STATUSES);
   const [containers, setContainers] = useState<ContainerListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,8 +48,7 @@ export const ContainerSearchModal = ({
     try {
       const response = await containersService.search({
         searchText: searchText || undefined,
-        status: statuses ? undefined : (status || 'Booked'),
-        statuses: statuses,
+        statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
         fromDate: fromDate || null,
         toDate: toDate || null,
         pageNumber: currentPage,
@@ -66,7 +73,14 @@ export const ContainerSearchModal = ({
     setSearchText('');
     setFromDate('');
     setToDate('');
+    setSelectedStatuses(DEFAULT_SELECTED_STATUSES);
     setCurrentPage(1);
+  };
+
+  const toggleStatus = (s: string) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    );
   };
 
   const handleSelectContainer = (container: ContainerListItem) => {
@@ -128,11 +142,30 @@ export const ContainerSearchModal = ({
                 />
               </div>
             </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <div className="flex flex-wrap gap-3">
+                {AVAILABLE_STATUSES.map((s) => (
+                  <label key={s} className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={selectedStatuses.includes(s)}
+                      onChange={() => toggleStatus(s)}
+                      className="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    />
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE_CLASSES[s] ?? 'bg-gray-100 text-gray-800'}`}
+                    >
+                      {s}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-2">
-              <Button
-                onClick={handleSearchClick}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={handleSearchClick} className="flex items-center gap-2">
                 <Search className="w-4 h-4" />
                 Search
               </Button>
@@ -150,7 +183,7 @@ export const ContainerSearchModal = ({
             </div>
           ) : containers.length === 0 ? (
             <div className="px-6 py-12 text-center text-gray-400 text-sm">
-              No confirmed containers found
+              No containers found
             </div>
           ) : (
             <>
@@ -206,7 +239,9 @@ export const ContainerSearchModal = ({
                           {fmt(container.totalAmount)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <span
+                            className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE_CLASSES[container.status] ?? 'bg-gray-100 text-gray-800'}`}
+                          >
                             {container.status}
                           </span>
                         </td>
