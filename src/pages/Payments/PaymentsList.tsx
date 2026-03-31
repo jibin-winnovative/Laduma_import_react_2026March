@@ -125,12 +125,12 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
     );
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const formatCurrency = (amount: number, sourceModule?: string) => {
+    const isZar = sourceModule === 'LocalPayment' || sourceModule === 'ClearingPayment';
+    if (isZar) {
+      return 'R ' + new Intl.NumberFormat('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    }
+    return '$ ' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -349,7 +349,7 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
                         <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">{payment.sourceModule}</td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">{payment.refNumber || '-'}</td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-primary)] text-right font-medium">
-                          {formatCurrency(payment.amount)}
+                          {formatCurrency(payment.amount, payment.sourceModule)}
                         </td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">
                           <div className={isOverdue(payment.dueDate, payment.status) ? 'text-red-600 font-medium' : ''}>
