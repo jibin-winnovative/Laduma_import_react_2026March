@@ -78,10 +78,9 @@ export const OceanFreightPaymentForm = ({
 
   const loadDropdowns = async () => {
     try {
-      const containerRes = await containersService.search({ pageNumber: 1, pageSize: 500 });
-
+      const items = await containersService.getDropdown();
       setContainers(
-        (containerRes.items || []).map((c) => ({
+        items.map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
         }))

@@ -218,7 +218,31 @@ export interface ContainerEventLog {
   createdAt: string;
 }
 
+export interface ContainerDropdownItem {
+  containerId: number;
+  containerNumber: string;
+  containerDate: string;
+  status: string;
+  oceanFreightCompanyId: number;
+  oceanFreightCompanyName: string;
+}
+
 export const containersService = {
+  getDropdown: async (): Promise<ContainerDropdownItem[]> => {
+    const response = await apiClient.get<ContainerDropdownItem[]>(
+      '/api/Containers/dropdown',
+      {
+        params: {
+          statuses: ['Draft', 'Booked', 'InTransit'],
+        },
+        paramsSerializer: (params) => {
+          return params.statuses.map((s: string) => `statuses=${encodeURIComponent(s)}`).join('&');
+        },
+      }
+    );
+    return response.data;
+  },
+
   getDashboard: async (): Promise<ContainerDashboard> => {
     const response = await apiClient.get<ContainerDashboard>('/api/containers/dashboard');
     return response.data;

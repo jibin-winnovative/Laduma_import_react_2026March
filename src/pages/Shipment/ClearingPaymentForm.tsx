@@ -86,13 +86,13 @@ export const ClearingPaymentForm = ({
 
   const loadDropdowns = async () => {
     const [containerRes, agentsRes] = await Promise.allSettled([
-      containersService.search({ pageNumber: 1, pageSize: 500 }),
+      containersService.getDropdown(),
       clearingAgentsService.getDropdown(),
     ]);
 
     if (containerRes.status === 'fulfilled') {
       setContainers(
-        (containerRes.value.items || []).map((c) => ({
+        containerRes.value.map((c) => ({
           containerId: c.containerId,
           containerNumber: c.containerNumber,
         }))
