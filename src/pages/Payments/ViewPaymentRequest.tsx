@@ -1383,7 +1383,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       {request?.sourceContext?.referenceId && showSourceDetailModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowSourceDetailModal(false)} />
-          <div className="relative z-10 bg-[var(--color-bg)] rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative z-10 bg-white rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             {request.sourceModule === 'Purchase' && (
               <ViewPurchaseOrder
                 purchaseOrderId={request.sourceContext.referenceId}
