@@ -585,6 +585,45 @@ export const ClearingPaymentForm = ({
     }
   };
 
+  const handleReRequest = async () => {
+    const err = validateBeforeSave();
+    if (err) {
+      setError(err);
+      return;
+    }
+
+    const missingTypes = pendingAttachments.some(att => !att.type);
+    if (missingTypes) {
+      alert('Please select a type for all attachments before submitting');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = buildPayload();
+      if (clearingPaymentId) {
+        await clearingPaymentsService.update(clearingPaymentId, payload);
+      }
+
+      if (pendingAttachments.length > 0 && clearingPaymentId) {
+        await uploadAttachments(clearingPaymentId);
+      }
+
+      if (clearingPaymentId) {
+        await clearingPaymentsService.requestPayment(clearingPaymentId);
+      }
+
+      alert('Payment re-requested successfully!');
+      onSuccess();
+    } catch (e: any) {
+      console.error('Re-request failed:', e);
+      setError(e?.response?.data?.message || 'Failed to re-request payment.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleApprove = async () => {
     if (!clearingPaymentId) return;
     const err = validateBeforeSave();
@@ -1155,25 +1194,38 @@ export const ClearingPaymentForm = ({
             </>
           )}
 
-          {mode === 'edit' && status === 'Requested' && (
+          {mode === 'edit' && status === 'Rejected' && (
             <>
               <Button
-                onClick={() => setShowRejectDialog(true)}
+                onClick={handleSaveDraft}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+                variant="outline"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                <XCircle className="w-4 h-4" />
-                {saving ? 'Processing...' : 'Reject'}
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Draft'}
               </Button>
               <Button
-                onClick={() => setShowApproveDialog(true)}
+                onClick={handleReRequest}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
               >
-                <CheckCheck className="w-4 h-4" />
-                {saving ? 'Processing...' : 'Approve'}
+                <Send className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Re-Request'}
               </Button>
             </>
+          )}
+
+          {mode === 'edit' && status === 'Requested' && (
+            <Button
+              onClick={onClose}
+              variant="secondary"
+              disabled={saving}
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Cancel
+            </Button>
           )}
 
           {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
