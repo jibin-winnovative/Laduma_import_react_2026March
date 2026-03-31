@@ -78,7 +78,9 @@ export const POChargeEntryModal = ({
           if (ct?.vat != null && excl > 0) {
             updated.vat = calcVat(excl, ct.vat);
           } else if (ct?.vat != null) {
-            updated.vat = '';
+            updated.vat = 0;
+          } else {
+            updated.vat = 0;
           }
         }
 
@@ -86,7 +88,9 @@ export const POChargeEntryModal = ({
           const ct = chargeTypes.find((c) => c.clearingPaymentChargeId === Number(updated.clearingPaymentChargeId));
           if (ct?.vat != null) {
             const excl = Number(value) || 0;
-            updated.vat = excl > 0 ? calcVat(excl, ct.vat) : '';
+            updated.vat = excl > 0 ? calcVat(excl, ct.vat) : 0;
+          } else {
+            updated.vat = 0;
           }
         }
 
