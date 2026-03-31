@@ -210,16 +210,6 @@ export const ViewOceanFreightPayment = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Exchange Rate</label>
-              <p className="text-base text-[var(--color-text)] font-medium">{fmt(data.exchangeRate)}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Amount in Rand</label>
-              <p className="text-base text-[var(--color-text)] font-medium">R {fmt(data.amountInRand || 0)}</p>
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">Payment Date</label>
               <p className="text-base text-[var(--color-text)]">{formatDate(data.paymentDate)}</p>
             </div>

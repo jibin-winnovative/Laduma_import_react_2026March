@@ -10,7 +10,6 @@ import {
   PaymentStatus,
 } from '../../services/oceanFreightPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
-import { currencyService } from '../../services/currencyService';
 import { ContainerSearchModal } from './ContainerSearchModal';
 
 interface OceanFreightPaymentFormProps {
@@ -47,12 +46,9 @@ export const OceanFreightPaymentForm = ({
   const [containerId, setContainerId] = useState<number | ''>('');
   const [oceanFreightCompanyName, setOceanFreightCompanyName] = useState('');
   const [oceanFreightUSD, setOceanFreightUSD] = useState<number | ''>('');
-  const [exchangeRate, setExchangeRate] = useState<number | ''>('');
   const [paymentDate, setPaymentDate] = useState('');
   const [billDate, setBillDate] = useState('');
   const [status, setStatus] = useState<PaymentStatus>('Pending');
-
-  const [zarRateWarning, setZarRateWarning] = useState<string | null>(null);
 
   const [loadingInit, setLoadingInit] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
@@ -66,16 +62,11 @@ export const OceanFreightPaymentForm = ({
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
 
-  const amountInRand = oceanFreightUSD && exchangeRate
-    ? Number(oceanFreightUSD) * Number(exchangeRate)
-    : 0;
-
   useEffect(() => {
     if (mode === 'edit' && oceanFreightPaymentId) {
       loadExisting();
     } else {
       loadDropdowns();
-      loadZarRate();
     }
   }, [mode, oceanFreightPaymentId]);
 
@@ -84,27 +75,6 @@ export const OceanFreightPaymentForm = ({
       loadOceanFreightCompany();
     }
   }, [containerId, mode]);
-
-  const loadZarRate = async () => {
-    try {
-      const currencies = await currencyService.getActive();
-      const zarCurrency = currencies.find(
-        (c) => c.currencyCode.toUpperCase() === 'ZAR'
-      );
-      if (zarCurrency && zarCurrency.conversionRate > 0) {
-        setExchangeRate(zarCurrency.conversionRate);
-        setZarRateWarning(null);
-      } else {
-        setExchangeRate('');
-        setZarRateWarning(
-          'ZAR exchange rate not found. Please create a ZAR currency in Currency Master before proceeding.'
-        );
-      }
-    } catch (err) {
-      console.error('Failed to load ZAR exchange rate:', err);
-      setZarRateWarning('Failed to load ZAR exchange rate. Please check Currency Master.');
-    }
-  };
 
   const loadDropdowns = async () => {
     try {
@@ -140,7 +110,6 @@ export const OceanFreightPaymentForm = ({
 
       setContainerId(data.containerId);
       setOceanFreightUSD(data.oceanFreightUSD);
-      setExchangeRate(data.exchangeRate);
       setPaymentDate(data.paymentDate ? data.paymentDate.slice(0, 10) : '');
       setBillDate(data.billDate ? data.billDate.slice(0, 10) : '');
       setStatus(data.status);
@@ -409,10 +378,6 @@ export const OceanFreightPaymentForm = ({
       setError('Please enter a valid Ocean Freight USD amount');
       return false;
     }
-    if (!exchangeRate || Number(exchangeRate) <= 0) {
-      setError('Please enter a valid exchange rate');
-      return false;
-    }
     if (!paymentDate) {
       setError('Please select a payment date');
       return false;
@@ -439,7 +404,6 @@ export const OceanFreightPaymentForm = ({
       const payload: OceanFreightPaymentDetail = {
         containerId: Number(containerId),
         oceanFreightUSD: Number(oceanFreightUSD),
-        exchangeRate: Number(exchangeRate),
         paymentDate,
         billDate,
         status,
@@ -499,7 +463,6 @@ export const OceanFreightPaymentForm = ({
         const payload: OceanFreightPaymentDetail = {
           containerId: Number(containerId),
           oceanFreightUSD: Number(oceanFreightUSD),
-          exchangeRate: Number(exchangeRate),
           paymentDate,
           billDate,
           status: 'Pending',
@@ -705,39 +668,6 @@ export const OceanFreightPaymentForm = ({
               disabled={!canEdit}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent disabled:bg-gray-100"
               placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Exchange Rate (ZAR) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.0001"
-              value={exchangeRate}
-              readOnly
-              disabled
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
-              placeholder="Loading from Currency Master..."
-            />
-            {zarRateWarning && (
-              <div className="flex items-start gap-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-amber-700">{zarRateWarning}</p>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Amount in Rand (Calculated)
-            </label>
-            <input
-              type="text"
-              value={amountInRand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              disabled
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
             />
           </div>
 
