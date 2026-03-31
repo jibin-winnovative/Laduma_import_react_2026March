@@ -889,7 +889,7 @@ export const OceanFreightPaymentForm = ({
             </>
           )}
 
-          {mode === 'edit' && (status === 'Pending' || status === 'Rejected') && (
+          {mode === 'edit' && status === 'Pending' && (
             <>
               <Button
                 onClick={handleSave}
@@ -910,25 +910,36 @@ export const OceanFreightPaymentForm = ({
             </>
           )}
 
-          {mode === 'edit' && status === 'Requested' && (
+          {mode === 'edit' && status === 'Rejected' && (
             <>
               <Button
-                onClick={() => setShowRejectDialog(true)}
+                onClick={handleSave}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white w-full sm:w-auto"
               >
-                <XCircle className="w-4 h-4" />
-                {saving ? 'Processing...' : 'Reject'}
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Draft'}
               </Button>
               <Button
-                onClick={() => setShowApproveDialog(true)}
+                onClick={() => setShowRequestDialog(true)}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
               >
-                <CheckCheck className="w-4 h-4" />
-                {saving ? 'Processing...' : 'Approve'}
+                <Send className="w-4 h-4" />
+                {saving ? 'Processing...' : 'Re-Request'}
               </Button>
             </>
+          )}
+
+          {mode === 'edit' && status === 'Requested' && (
+            <Button
+              onClick={onClose}
+              variant="secondary"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Cancel
+            </Button>
           )}
 
           {mode === 'edit' && (status === 'Approved' || status === 'Paid') && (
