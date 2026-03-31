@@ -217,6 +217,12 @@ export const POChargeEntryModal = ({
                             step="0.01"
                             value={line.vat}
                             onChange={(e) => updateLine(line.id, 'vat', e.target.value)}
+                            onFocus={(e) => {
+                              if (line.vat === '' || line.vat == null) {
+                                updateLine(line.id, 'vat', 0);
+                              }
+                              e.target.select();
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                             placeholder="0.00"
                           />
