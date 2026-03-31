@@ -258,6 +258,9 @@ export const ClearingPaymentChargesList = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  VAT (%)
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
@@ -269,13 +272,13 @@ export const ClearingPaymentChargesList = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : charges.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     No clearing payment charges found
                   </td>
                 </tr>
@@ -287,6 +290,9 @@ export const ClearingPaymentChargesList = () => {
                     </td>
                     <td className="px-4 py-4 text-sm text-[var(--color-text)] max-w-xs truncate">
                       {item.description || '-'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-[var(--color-text)]">
+                      {item.vat != null ? `${item.vat}%` : '-'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       {item.isActive ? (

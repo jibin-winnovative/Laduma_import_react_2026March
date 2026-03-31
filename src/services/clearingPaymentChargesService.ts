@@ -6,6 +6,7 @@ export interface ClearingPaymentCharge {
   clearingPaymentChargeId: number;
   chargeName: string;
   description: string;
+  vat: number | null;
   isActive: boolean;
   createdDate?: string;
   modifiedDate?: string;
@@ -15,6 +16,7 @@ export interface ClearingPaymentChargeDto {
   clearingPaymentChargeId?: number;
   chargeName: string;
   description: string;
+  vat: number | null;
   isActive: boolean;
 }
 
