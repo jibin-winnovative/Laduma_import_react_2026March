@@ -140,6 +140,15 @@ export const ViewClearingPaymentCharge = ({
 
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <label className="text-sm font-medium text-gray-600 block mb-1">
+                      VAT (%)
+                    </label>
+                    <div className="text-base text-[var(--color-text)]">
+                      {charge.vat != null ? `${charge.vat}%` : '-'}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <label className="text-sm font-medium text-gray-600 block mb-1">
                       Status
                     </label>
                     <span

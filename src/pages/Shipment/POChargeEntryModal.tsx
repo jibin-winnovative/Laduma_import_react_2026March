@@ -30,6 +30,11 @@ const newLine = (): ChargeLineDraft => ({
   amountIncl: 0,
 });
 
+const calcVat = (amountExcl: number, vatPct: number | null | undefined): number => {
+  if (!vatPct) return 0;
+  return parseFloat(((amountExcl * vatPct) / 100).toFixed(2));
+};
+
 export const POChargeEntryModal = ({
   poNumber,
   supplierName,
@@ -68,11 +73,26 @@ export const POChargeEntryModal = ({
         if (field === 'clearingPaymentChargeId') {
           const ct = chargeTypes.find((c) => c.clearingPaymentChargeId === Number(value));
           updated.clearingPaymentChargeName = ct?.chargeName || '';
+
+          const excl = Number(updated.amountExcl) || 0;
+          if (ct?.vat != null && excl > 0) {
+            updated.vat = calcVat(excl, ct.vat);
+          } else if (ct?.vat != null) {
+            updated.vat = '';
+          }
         }
 
-        const excl = field === 'amountExcl' ? Number(value) || 0 : Number(updated.amountExcl) || 0;
-        const vat = field === 'vat' ? Number(value) || 0 : Number(updated.vat) || 0;
-        updated.amountIncl = excl + vat;
+        if (field === 'amountExcl') {
+          const ct = chargeTypes.find((c) => c.clearingPaymentChargeId === Number(updated.clearingPaymentChargeId));
+          if (ct?.vat != null) {
+            const excl = Number(value) || 0;
+            updated.vat = excl > 0 ? calcVat(excl, ct.vat) : '';
+          }
+        }
+
+        const excl = Number(updated.amountExcl) || 0;
+        const vat = Number(updated.vat) || 0;
+        updated.amountIncl = parseFloat((excl + vat).toFixed(2));
 
         return updated;
       })
@@ -86,14 +106,16 @@ export const POChargeEntryModal = ({
     setLines((prev) => prev.filter((l) => l.id !== id));
   };
 
+  const totalAmountExcl = lines.reduce((s, l) => s + (Number(l.amountExcl) || 0), 0);
+  const totalVat = lines.reduce((s, l) => s + (Number(l.vat) || 0), 0);
   const totalAmountIncl = lines.reduce((s, l) => s + (l.amountIncl || 0), 0);
 
   const handleSave = () => {
     const valid = lines.every(
-      (l) => l.clearingPaymentChargeId !== '' && l.amountExcl !== '' && l.vat !== ''
+      (l) => l.clearingPaymentChargeId !== '' && l.amountExcl !== ''
     );
     if (!valid) {
-      alert('Please fill in all charge line fields.');
+      alert('Please fill in Charge Type and Amount Excl for all rows.');
       return;
     }
 
@@ -101,7 +123,7 @@ export const POChargeEntryModal = ({
       clearingPaymentChargeId: Number(l.clearingPaymentChargeId),
       clearingPaymentChargeName: l.clearingPaymentChargeName,
       amountExcl: Number(l.amountExcl),
-      vat: Number(l.vat),
+      vat: Number(l.vat) || 0,
       amountIncl: l.amountIncl,
     }));
 
@@ -110,6 +132,12 @@ export const POChargeEntryModal = ({
 
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const getVatPctHint = (chargeId: number | '') => {
+    if (!chargeId) return null;
+    const ct = chargeTypes.find((c) => c.clearingPaymentChargeId === Number(chargeId));
+    return ct?.vat != null ? ct.vat : null;
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-2 sm:p-4">
@@ -142,85 +170,106 @@ export const POChargeEntryModal = ({
                     Amount Excl <span className="text-red-500">*</span>
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    VAT <span className="text-red-500">*</span>
+                    VAT
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Amount Incl
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider w-12">
-
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {lines.map((line) => (
-                  <tr key={line.id} className="bg-white">
-                    <td className="px-4 py-3">
-                      <select
-                        value={line.clearingPaymentChargeId}
-                        onChange={(e) => updateLine(line.id, 'clearingPaymentChargeId', Number(e.target.value) || '')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent min-w-[200px]"
-                      >
-                        <option value="">Select charge type...</option>
-                        {chargeTypes.map((ct) => (
-                          <option key={ct.clearingPaymentChargeId} value={ct.clearingPaymentChargeId}>
-                            {ct.chargeName}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={line.amountExcl}
-                        onChange={(e) => updateLine(line.id, 'amountExcl', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                        placeholder="0.00"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={line.vat}
-                        onChange={(e) => updateLine(line.id, 'vat', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                        placeholder="0.00"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 whitespace-nowrap">
-                      {fmt(line.amountIncl)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => removeLine(line.id)}
-                        disabled={lines.length === 1}
-                        className="text-red-500 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {lines.map((line) => {
+                  const vatPct = getVatPctHint(line.clearingPaymentChargeId);
+                  return (
+                    <tr key={line.id} className="bg-white">
+                      <td className="px-4 py-3">
+                        <select
+                          value={line.clearingPaymentChargeId}
+                          onChange={(e) => updateLine(line.id, 'clearingPaymentChargeId', Number(e.target.value) || '')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent min-w-[200px]"
+                        >
+                          <option value="">Select charge type...</option>
+                          {chargeTypes.map((ct) => (
+                            <option key={ct.clearingPaymentChargeId} value={ct.clearingPaymentChargeId}>
+                              {ct.chargeName}{ct.vat != null ? ` (VAT ${ct.vat}%)` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={line.amountExcl}
+                          onChange={(e) => updateLine(line.id, 'amountExcl', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={line.vat}
+                            onChange={(e) => updateLine(line.id, 'vat', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                            placeholder="0.00"
+                          />
+                          {vatPct != null && (
+                            <span className="absolute -bottom-4 right-0 text-xs text-gray-400 whitespace-nowrap">
+                              {vatPct}% of excl
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 whitespace-nowrap">
+                        {fmt(line.amountIncl)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => removeLine(line.id)}
+                          disabled={lines.length === 1}
+                          className="text-red-500 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <button
             onClick={addLine}
-            className="mt-4 flex items-center gap-2 text-sm text-[var(--color-primary)] hover:text-[var(--color-primary)] font-medium"
+            className="mt-6 flex items-center gap-2 text-sm text-[var(--color-primary)] hover:text-[var(--color-primary)] font-medium"
           >
             <Plus className="w-4 h-4" />
             Add Charge
           </button>
 
           <div className="mt-6 flex justify-end">
-            <div className="bg-white rounded-lg border border-gray-200 px-6 py-4 text-right shadow-sm">
-              <p className="text-sm text-gray-500 mb-1">Total Amount Incl</p>
-              <p className="text-2xl font-bold text-[var(--color-primary)]">{fmt(totalAmountIncl)}</p>
+            <div className="bg-white rounded-lg border border-gray-200 px-6 py-4 shadow-sm min-w-[260px]">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Total Amount Excl</span>
+                  <span className="font-medium text-gray-900">{fmt(totalAmountExcl)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Total VAT</span>
+                  <span className="font-medium text-gray-900">{fmt(totalVat)}</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2 flex justify-between">
+                  <p className="text-sm font-semibold text-gray-700">Total Amount Incl</p>
+                  <p className="text-xl font-bold text-[var(--color-primary)]">{fmt(totalAmountIncl)}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

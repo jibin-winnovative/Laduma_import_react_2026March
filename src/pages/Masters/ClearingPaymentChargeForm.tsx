@@ -17,6 +17,12 @@ const clearingPaymentChargeSchema = z.object({
     .max(500, 'Description must be 500 characters or less')
     .optional()
     .or(z.literal('')),
+  vat: z
+    .string()
+    .optional()
+    .refine((val) => !val || val.trim() === '' || (!isNaN(Number(val)) && Number(val) >= 0), {
+      message: 'VAT must be a valid non-negative number',
+    }),
   isActive: z.boolean(),
 });
 
@@ -49,6 +55,7 @@ export const ClearingPaymentChargeForm = ({
       isActive: true,
       chargeName: '',
       description: '',
+      vat: '',
     },
   });
 
@@ -66,6 +73,7 @@ export const ClearingPaymentChargeForm = ({
       const data = await clearingPaymentChargesService.getById(clearingPaymentChargeId);
       setValue('chargeName', data.chargeName);
       setValue('description', data.description || '');
+      setValue('vat', data.vat != null ? String(data.vat) : '');
       setValue('isActive', data.isActive);
     } catch (error) {
       console.error('Failed to fetch clearing payment charge:', error);
@@ -78,12 +86,15 @@ export const ClearingPaymentChargeForm = ({
 
   const onSubmit = async (data: ClearingPaymentChargeFormData) => {
     setLoading(true);
+    const vatValue = data.vat && data.vat.trim() !== '' ? parseFloat(data.vat) : null;
+
     try {
       if (mode === 'add') {
         await clearingPaymentChargesService.create({
           clearingPaymentChargeId: 0,
           chargeName: data.chargeName,
           description: data.description || '',
+          vat: vatValue,
           isActive: true,
         });
         alert('Clearing payment charge created successfully!');
@@ -92,6 +103,7 @@ export const ClearingPaymentChargeForm = ({
           clearingPaymentChargeId,
           chargeName: data.chargeName,
           description: data.description || '',
+          vat: vatValue,
           isActive: data.isActive,
         });
         alert('Clearing payment charge updated successfully!');
@@ -185,6 +197,23 @@ export const ClearingPaymentChargeForm = ({
                       />
                       {errors.description && (
                         <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        VAT (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...register('vat')}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+                        placeholder="e.g., 15.50"
+                      />
+                      {errors.vat && (
+                        <p className="text-red-500 text-sm mt-1">{errors.vat.message}</p>
                       )}
                     </div>
                   </div>
