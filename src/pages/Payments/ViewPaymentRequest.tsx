@@ -386,16 +386,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
 
   const handleReject = async () => {
     if (!rejectRemarks.trim()) return;
-    if (hasMissingTypes) {
-      alert('Please select a type for all attachments before rejecting');
-      return;
-    }
 
     setRejecting(true);
     try {
-      if (pendingAttachments.length > 0) {
-        await uploadAll(requestId);
-      }
       await paymentRequestsService.rejectRequest(requestId);
       setShowRejectDialog(false);
       setRejectRemarks('');
@@ -540,10 +533,6 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                   <p className="text-[var(--color-text-secondary)] mb-1">Party Name</p>
                   <p className="font-semibold text-[var(--color-text-primary)]">{request.sourceContext.partyName}</p>
                 </div>
-                <div>
-                  <p className="text-[var(--color-text-secondary)] mb-1">Exchange Rate</p>
-                  <p className="font-semibold text-[var(--color-text-primary)]">{request.sourceContext.exchangeRate.toFixed(4)}</p>
-                </div>
               </div>
             </div>
 
@@ -560,12 +549,6 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                       <span className="text-base text-[var(--color-text-secondary)]">Total Amount</span>
                       <span className="text-base font-semibold text-[var(--color-text)]">
                         {fmt(request.sourceContext.totalAmount)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="text-base text-[var(--color-text-secondary)]">Paid Amount</span>
-                      <span className="text-base font-semibold text-[var(--color-text)]">
-                        {fmt(request.sourceContext.totalPaidAmount)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg -mx-2">
@@ -1231,79 +1214,6 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
             />
           </div>
 
-          <div className="border rounded-lg p-4">
-            <p className="text-sm font-medium text-gray-700 mb-3">Attachments (optional)</p>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-red-400 transition-colors mb-3">
-              <input
-                id="reject-attachment-upload"
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                onChange={(e) => {
-                  Array.from(e.target.files || []).forEach(file => {
-                    if (file.size > 10 * 1024 * 1024) {
-                      alert(`File ${file.name} exceeds 10MB limit`);
-                      return;
-                    }
-                    addPendingAttachment(file);
-                  });
-                  e.target.value = '';
-                }}
-                className="hidden"
-              />
-              <label htmlFor="reject-attachment-upload" className="flex flex-col items-center justify-center cursor-pointer">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 font-medium">Click to upload supporting documents</p>
-                <p className="text-xs text-gray-500 mt-1">PDF, DOC, XLS, PNG, JPG (Max 10MB)</p>
-              </label>
-            </div>
-            {pendingAttachments.length > 0 && (
-              <div className="space-y-2">
-                {pendingAttachments.map((att) => (
-                  <div key={att.id} className="border border-gray-200 rounded-lg p-3 bg-white">
-                    <div className="flex items-start gap-3">
-                      <FileText className="w-4 h-4 text-[var(--color-primary)] mt-1 flex-shrink-0" />
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">{att.file.name}</p>
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={att.type}
-                              onChange={(e) => updateAttachmentType(att.id, e.target.value)}
-                              disabled={att.status === 'uploading'}
-                              className="px-2 py-1 text-xs border border-gray-300 rounded-md"
-                            >
-                              <option value="">Select Type</option>
-                              <option value="Rejection Document">Rejection Document</option>
-                              <option value="Supporting Evidence">Supporting Evidence</option>
-                              <option value="Other">Other</option>
-                            </select>
-                            <Button
-                              onClick={() => removePending(att.id)}
-                              variant="danger"
-                              className="px-2 py-1"
-                              disabled={att.status === 'uploading'}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        {att.status === 'uploading' && (
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                            <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${att.progress}%` }} />
-                          </div>
-                        )}
-                        {att.status === 'failed' && (
-                          <p className="text-xs text-red-600">{att.error || 'Upload failed'}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               variant="secondary"
@@ -1317,10 +1227,10 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
             </Button>
             <Button
               onClick={handleReject}
-              disabled={!rejectRemarks.trim() || rejecting || isUploading}
+              disabled={!rejectRemarks.trim() || rejecting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {rejecting || isUploading ? 'Processing...' : 'Confirm Rejection'}
+              {rejecting ? 'Processing...' : 'Confirm Rejection'}
             </Button>
           </div>
         </div>
