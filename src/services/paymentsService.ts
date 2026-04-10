@@ -119,4 +119,9 @@ export const paymentsService = {
     const response = await apiClient.post<PaymentResponse>('/api/Payments/pay', data);
     return response.data;
   },
+
+  getSupplierDetailsByPaymentRequest: async (paymentRequestId: number): Promise<any> => {
+    const response = await apiClient.get<any>(`/api/Payments/requests/${paymentRequestId}/supplier-details`);
+    return response.data;
+  },
 };

@@ -14,6 +14,7 @@ import { ViewPurchaseOrder } from '../Purchase/ViewPurchaseOrder';
 import { ViewClearingPayment } from '../Shipment/ViewClearingPayment';
 import { ViewOceanFreightPayment } from '../Shipment/ViewOceanFreightPayment';
 import { ViewLocalPayment } from '../Shipment/ViewLocalPayment';
+import { ViewSupplier } from '../Masters/ViewSupplier';
 import { banksService } from '../../services/banksService';
 
 interface ViewPaymentRequestProps {
@@ -52,6 +53,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [apnPendingAttachments, setApnPendingAttachments] = useState<PendingAttachment[]>([]);
   const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
   const [showSourceDetailModal, setShowSourceDetailModal] = useState(false);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [supplierIdToView, setSupplierIdToView] = useState<number | null>(null);
+  const [loadingSupplier, setLoadingSupplier] = useState(false);
   const [paymentData, setPaymentData] = useState({
     paidDate: new Date().toISOString().split('T')[0],
     referenceNo: '',
@@ -74,6 +78,8 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       setShowApnForm(false);
       setShowPurchaseOrderModal(false);
       setShowSourceDetailModal(false);
+      setShowSupplierModal(false);
+      setSupplierIdToView(null);
       setPendingAttachments([]);
       setApnPendingAttachments([]);
       setPaymentData({
@@ -279,6 +285,22 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const handleViewMore = () => {
     if (!request?.sourceContext.hasMoreDetails) return;
     setShowSourceDetailModal(true);
+  };
+
+  const handleViewSupplier = async () => {
+    setLoadingSupplier(true);
+    try {
+      const supplierData = await paymentsService.getSupplierDetailsByPaymentRequest(requestId);
+      const data = supplierData?.data || supplierData;
+      if (data?.supplierId) {
+        setSupplierIdToView(data.supplierId);
+        setShowSupplierModal(true);
+      }
+    } catch (error) {
+      console.error('Failed to load supplier details:', error);
+    } finally {
+      setLoadingSupplier(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -531,7 +553,20 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                 </div>
                 <div>
                   <p className="text-[var(--color-text-secondary)] mb-1">Party Name</p>
-                  <p className="font-semibold text-[var(--color-text-primary)]">{request.sourceContext.partyName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-[var(--color-text-primary)]">{request.sourceContext.partyName}</p>
+                    {request.sourceModule === 'Purchase' && (
+                      <button
+                        type="button"
+                        onClick={handleViewSupplier}
+                        disabled={loadingSupplier}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors disabled:opacity-50"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {loadingSupplier ? 'Loading...' : 'View'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1380,6 +1415,14 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
             />
           </div>
         </div>
+      )}
+
+      {showSupplierModal && supplierIdToView && (
+        <ViewSupplier
+          supplierId={supplierIdToView}
+          onClose={() => { setShowSupplierModal(false); setSupplierIdToView(null); }}
+          onEdit={() => { setShowSupplierModal(false); setSupplierIdToView(null); }}
+        />
       )}
     </>
   );
