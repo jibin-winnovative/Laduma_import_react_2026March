@@ -126,13 +126,30 @@ export const POItemAllocationGrid = ({
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {po.items.map((item) => {
                     const error = getValidationError(item);
+                    const isFullyAllocated = item.remainingQty === 0;
                     return (
-                      <tr key={item.purchaseOrderItemId} className={error ? 'bg-red-50' : ''}>
+                      <tr
+                        key={item.purchaseOrderItemId}
+                        className={
+                          isFullyAllocated
+                            ? 'bg-gray-50 opacity-70'
+                            : error
+                            ? 'bg-red-50'
+                            : ''
+                        }
+                      >
                         <td className="px-3 py-2 text-sm font-medium text-[var(--color-text)]">
                           {item.itemCode}
                         </td>
                         <td className="px-3 py-2 text-sm text-[var(--color-text)]">
-                          {item.itemName}
+                          <div className="flex items-center gap-2">
+                            {item.itemName}
+                            {isFullyAllocated && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                                Fully Allocated
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-sm text-right text-[var(--color-text)]">
                           {item.orderedQty.toLocaleString()}
@@ -144,34 +161,40 @@ export const POItemAllocationGrid = ({
                           {item.remainingQty.toLocaleString()}
                         </td>
                         <td className="px-3 py-2 text-sm text-right">
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={item.loadQty}
-                              onChange={(e) =>
-                                onUpdateItem(
-                                  po.purchaseOrderId,
-                                  item.purchaseOrderItemId,
-                                  'loadQty',
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              className={`w-24 px-2 py-1 text-right border rounded ${
-                                error ? 'border-red-500' : 'border-gray-300'
-                              }`}
-                              min="0"
-                              max={item.remainingQty}
-                              step="1"
-                            />
-                            {error && (
-                              <div className="absolute top-full left-0 mt-1 z-10">
-                                <div className="bg-red-100 border border-red-300 text-red-700 px-2 py-1 rounded text-xs whitespace-nowrap flex items-center gap-1">
-                                  <AlertCircle className="w-3 h-3" />
-                                  {error}
+                          {isFullyAllocated ? (
+                            <span className="block w-24 px-2 py-1 text-right text-sm text-gray-400 bg-gray-100 border border-gray-200 rounded">
+                              {item.loadQty}
+                            </span>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={item.loadQty}
+                                onChange={(e) =>
+                                  onUpdateItem(
+                                    po.purchaseOrderId,
+                                    item.purchaseOrderItemId,
+                                    'loadQty',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className={`w-24 px-2 py-1 text-right border rounded ${
+                                  error ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                                min="0"
+                                max={item.remainingQty}
+                                step="1"
+                              />
+                              {error && (
+                                <div className="absolute top-full left-0 mt-1 z-10">
+                                  <div className="bg-red-100 border border-red-300 text-red-700 px-2 py-1 rounded text-xs whitespace-nowrap flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {error}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-sm text-center text-[var(--color-text)]">
                           {item.uom}
@@ -197,9 +220,10 @@ export const POItemAllocationGrid = ({
                                 parseFloat(e.target.value) || 0
                               )
                             }
-                            className="w-24 px-2 py-1 text-right border border-gray-300 rounded"
+                            className="w-24 px-2 py-1 text-right border border-gray-300 rounded disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200"
                             min="0"
                             step="0.01"
+                            disabled={isFullyAllocated}
                           />
                         </td>
                         <td className="px-3 py-2 text-sm text-right font-semibold text-[var(--color-text)]">
