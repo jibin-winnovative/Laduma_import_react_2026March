@@ -249,10 +249,15 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   }, []);
 
   useEffect(() => {
-    if (selectedSupplierId && mode === 'add') {
+    if (!selectedSupplierId) return;
+    if (mode === 'add') {
       fetchSupplierPaymentTerms(Number(selectedSupplierId));
     }
-  }, [selectedSupplierId, mode]);
+    suppliersService.getTopPort(Number(selectedSupplierId)).then((topPort) => {
+      if (!topPort) return;
+      setValue('exportPortId', String(topPort.portId), { shouldValidate: true });
+    });
+  }, [selectedSupplierId]);
 
   // Check PO number exists (debounced)
   useEffect(() => {

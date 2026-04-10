@@ -212,4 +212,15 @@ export const suppliersService = {
       return { data: { paymentTerms: [] } };
     }
   },
+
+  getTopPort: async (supplierId: number): Promise<{ portId: number; portName: string } | null> => {
+    try {
+      const response: any = await api.get(`${BASE_PATH}/${supplierId}/top-port`);
+      const data = response.data || response;
+      if (data?.portId) return { portId: data.portId, portName: data.portName };
+      return null;
+    } catch {
+      return null;
+    }
+  },
 };
