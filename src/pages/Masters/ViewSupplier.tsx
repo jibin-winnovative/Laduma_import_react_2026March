@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react';
-import { X, CreditCard as Edit2, MapPin, Star, Package, MessageSquare, Landmark, CreditCard } from 'lucide-react';
+import { X, CreditCard as Edit2, MapPin, Star, Package, MessageSquare, Landmark, CreditCard, Upload, FileText, Download, ExternalLink } from 'lucide-react';
 import { suppliersService, Supplier } from '../../services/suppliersService';
+import { attachmentService, Attachment as SupplierAttachment } from '../../services/attachmentService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+
+interface PendingAttachment {
+  id: string;
+  file: File;
+  type: string;
+  status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  progress: number;
+  error?: string;
+  retryCount: number;
+}
 
 interface ViewSupplierProps {
   supplierId: number;
@@ -20,9 +31,13 @@ export const ViewSupplier = ({
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [existingAttachments, setExistingAttachments] = useState<SupplierAttachment[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSupplier();
+    fetchAttachments();
   }, [supplierId]);
 
   const fetchSupplier = async () => {
@@ -37,6 +52,145 @@ export const ViewSupplier = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAttachments = async () => {
+    try {
+      const attachments = await attachmentService.getByEntity('Supplier', supplierId);
+      setExistingAttachments(attachments);
+    } catch (err) {
+      console.error('Failed to fetch attachments:', err);
+    }
+  };
+
+  const addPendingAttachment = (file: File) => {
+    setPendingAttachments(prev => [...prev, {
+      id: `att-${Date.now()}-${Math.random()}`,
+      file,
+      type: '',
+      status: 'pending',
+      progress: 0,
+      retryCount: 0,
+    }]);
+  };
+
+  const updateAttachmentType = (id: string, type: string) => {
+    setPendingAttachments(prev => prev.map(a => a.id === id ? { ...a, type } : a));
+  };
+
+  const removePending = (id: string) => {
+    setPendingAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const removeExisting = async (attachmentId: number) => {
+    if (!confirm('Are you sure you want to remove this attachment?')) return;
+    try {
+      await attachmentService.delete(attachmentId);
+      setExistingAttachments(prev => prev.filter(a => a.attachmentId !== attachmentId));
+    } catch {
+      alert('Failed to remove attachment');
+    }
+  };
+
+  const handleDownload = async (attachmentId: number, fileName: string) => {
+    try {
+      setDownloadingId(attachmentId);
+      const url = await attachmentService.getDownloadUrl(attachmentId, 60, false);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      alert('Failed to download file');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleViewAttachment = async (attachmentId: number) => {
+    try {
+      const url = await attachmentService.getDownloadUrl(attachmentId, 60, true);
+      window.open(url, '_blank');
+    } catch {
+      alert('Failed to view file');
+    }
+  };
+
+  const uploadSingle = async (attachment: PendingAttachment): Promise<boolean> => {
+    const MAX_RETRIES = 3;
+    let retry = attachment.retryCount;
+    while (retry <= MAX_RETRIES) {
+      try {
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploading', progress: 10 } : a
+        ));
+        const presigned = await attachmentService.requestPresignedUpload({
+          fileName: attachment.file.name,
+          contentType: attachment.file.type,
+          entityType: 'Supplier',
+          entityId: supplierId,
+        });
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 40 } : a
+        ));
+        await attachmentService.uploadToS3(presigned.uploadUrl, attachment.file);
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 70 } : a
+        ));
+        await attachmentService.confirmUpload(presigned.attachmentId);
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploaded', progress: 100 } : a
+        ));
+        setExistingAttachments(prev => [...prev, {
+          attachmentId: presigned.attachmentId,
+          fileName: attachment.file.name,
+          fileSize: attachment.file.size,
+          contentType: attachment.file.type,
+          fileUrl: '',
+          entityType: 'Supplier',
+          entityId: supplierId,
+        }]);
+        return true;
+      } catch {
+        retry++;
+        if (retry <= MAX_RETRIES) {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, retryCount: retry, progress: 0, error: `Retry ${retry}/${MAX_RETRIES}...` } : a
+          ));
+          await new Promise(r => setTimeout(r, 1000 * retry));
+        } else {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, status: 'failed', error: 'Upload failed after 3 retries', progress: 0 } : a
+          ));
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  const handleUploadAll = async () => {
+    const toUpload = pendingAttachments.filter(a => !a.type);
+    if (toUpload.length > 0) {
+      alert('Please select a type for all attachments before uploading');
+      return;
+    }
+    const pending = pendingAttachments.filter(a => a.status === 'pending' || a.status === 'failed');
+    for (const att of pending) {
+      await uploadSingle(att);
+    }
+    setPendingAttachments(prev => prev.filter(a => a.status !== 'uploaded'));
+  };
+
+  const retryFailed = async (id: string) => {
+    const att = pendingAttachments.find(a => a.id === id);
+    if (!att) return;
+    setPendingAttachments(prev => prev.map(a =>
+      a.id === id ? { ...a, status: 'pending', retryCount: 0, error: undefined } : a
+    ));
+    await uploadSingle({ ...att, status: 'pending', retryCount: 0 });
   };
 
   const hasEditPermission = () => {
@@ -365,6 +519,170 @@ export const ViewSupplier = ({
                 </div>
               </div>
             )}
+
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)] flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Attachments
+              </h3>
+
+              <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-[var(--color-primary)] transition-colors">
+                  <input
+                    id="supplier-attachment-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      Array.from(e.target.files || []).forEach(file => {
+                        if (file.size > 10 * 1024 * 1024) {
+                          alert(`File ${file.name} exceeds 10MB limit`);
+                          return;
+                        }
+                        addPendingAttachment(file);
+                      });
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                  <label htmlFor="supplier-attachment-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                    <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 font-medium mb-1">Click to upload or drag and drop</p>
+                    <p className="text-xs text-gray-500">PDF, DOC, XLS, PNG, JPG (Max 10MB per file)</p>
+                  </label>
+                </div>
+
+                {pendingAttachments.length > 0 && (
+                  <div className="space-y-3">
+                    {pendingAttachments.map((att) => (
+                      <div key={att.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-start gap-3">
+                          <FileText className="w-5 h-5 text-[var(--color-primary)] mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{att.file.name}</p>
+                                <p className="text-xs text-gray-500">{(att.file.size / 1024).toFixed(0)} KB</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={att.type}
+                                  onChange={(e) => updateAttachmentType(att.id, e.target.value)}
+                                  disabled={att.status === 'uploading'}
+                                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                                >
+                                  <option value="">Select Type</option>
+                                  <option value="Contract">Contract</option>
+                                  <option value="Invoice">Invoice</option>
+                                  <option value="Certificate">Certificate</option>
+                                  <option value="Supporting Document">Supporting Document</option>
+                                  <option value="Other">Other</option>
+                                </select>
+                                {att.status === 'failed' && (
+                                  <Button
+                                    onClick={() => retryFailed(att.id)}
+                                    variant="secondary"
+                                    className="px-3 py-1.5 text-xs"
+                                  >
+                                    Retry
+                                  </Button>
+                                )}
+                                <Button
+                                  onClick={() => removePending(att.id)}
+                                  variant="danger"
+                                  className="px-2 py-1.5"
+                                  disabled={att.status === 'uploading'}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            {att.status === 'pending' && (
+                              <p className="text-xs text-gray-500">Pending upload</p>
+                            )}
+                            {att.status === 'uploading' && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-blue-600">
+                                  Uploading{att.retryCount > 0 ? ` (Retry ${att.retryCount})` : ''}...
+                                </p>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all" style={{ width: `${att.progress}%` }} />
+                                </div>
+                              </div>
+                            )}
+                            {att.status === 'uploaded' && <p className="text-xs text-green-600">Uploaded successfully</p>}
+                            {att.status === 'failed' && <p className="text-xs text-red-600">{att.error || 'Upload failed'}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {pendingAttachments.some(a => a.status === 'pending' || a.status === 'failed') && (
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleUploadAll}
+                          disabled={pendingAttachments.some(a => a.status === 'uploading')}
+                          className="flex items-center gap-2"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload All
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {existingAttachments.length > 0 && (
+                  <div className="space-y-2">
+                    {existingAttachments.map((att) => (
+                      <div
+                        key={att.attachmentId}
+                        className="flex items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-700 truncate font-medium">{att.fileName}</p>
+                            {att.fileSize > 0 && (
+                              <p className="text-xs text-gray-500">{(att.fileSize / 1024).toFixed(0)} KB</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            onClick={() => handleDownload(att.attachmentId, att.fileName)}
+                            disabled={downloadingId === att.attachmentId}
+                            variant="secondary"
+                            className="px-3 py-1.5 text-xs flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" />
+                            {downloadingId === att.attachmentId ? 'Downloading...' : 'Download'}
+                          </Button>
+                          <Button
+                            onClick={() => handleViewAttachment(att.attachmentId)}
+                            variant="secondary"
+                            className="px-3 py-1.5 text-xs flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View
+                          </Button>
+                          <Button
+                            onClick={() => removeExisting(att.attachmentId)}
+                            variant="danger"
+                            className="px-2 py-1.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {existingAttachments.length === 0 && pendingAttachments.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-2">No attachments added</p>
+                )}
+              </div>
+            </div>
 
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
