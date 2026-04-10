@@ -329,6 +329,14 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                 <span className="text-base text-[var(--color-text-secondary)]">Paid Amount</span>
                 <span className="text-base font-semibold text-[var(--color-text)]">${formatCurrency(details.paidAmount)}</span>
               </div>
+              {details.status === 'Paid' && (details as any).paidDate && (
+                <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                  <span className="text-base text-[var(--color-text-secondary)]">Paid Date</span>
+                  <span className="text-base font-semibold text-emerald-700">
+                    {new Date((details as any).paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 px-4 py-3 rounded-lg -mx-2">
                 <span className="text-base font-bold text-[var(--color-primary)]">{requestAmountLabel}</span>
                 <span className="text-lg font-bold text-[var(--color-primary)]">

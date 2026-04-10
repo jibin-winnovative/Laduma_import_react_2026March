@@ -360,7 +360,9 @@ export const OceanFreightPaymentList = ({ onAdd, onEdit, onView, onDelete }: Oce
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${cfg.color}`}>
                           <StatusIcon className="w-3.5 h-3.5" />
-                          {item.status}
+                          {item.status === 'Paid' && (item as any).paidDate
+                            ? `Paid - ${formatDate((item as any).paidDate)}`
+                            : item.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

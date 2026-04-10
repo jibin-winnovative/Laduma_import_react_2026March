@@ -231,6 +231,13 @@ export const ViewLocalPayment = ({
             </span>
           </div>
 
+          {data.status === 'Paid' && (data as any).paidDate && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Paid Date</label>
+              <p className="text-base font-semibold text-gray-900">{formatDate((data as any).paidDate)}</p>
+            </div>
+          )}
+
           {data.remarks && (
             <div className="lg:col-span-3">
               <label className="block text-sm font-medium text-gray-500 mb-1">Remarks</label>

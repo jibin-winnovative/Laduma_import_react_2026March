@@ -417,7 +417,9 @@ export const POPaymentsList = ({ onSelectPayment }: POPaymentsListProps) => {
                             payment.status
                           )}`}
                         >
-                          {payment.status}
+                          {payment.status === 'Paid' && (payment as any).paidDate
+                            ? `Paid - ${new Date((payment as any).paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                            : payment.status}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-900 text-center">

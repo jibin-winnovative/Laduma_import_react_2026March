@@ -175,9 +175,11 @@ export const ViewOceanFreightPayment = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">Payment Information</h2>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadge(data.status)}`}>
-              {data.status}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadge(data.status)}`}>
+                {data.status}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -218,6 +220,13 @@ export const ViewOceanFreightPayment = ({
               <label className="block text-sm font-medium text-gray-500 mb-1">Bill Date</label>
               <p className="text-base text-[var(--color-text)]">{formatDate(data.billDate)}</p>
             </div>
+
+            {data.status === 'Paid' && (data as any).paidDate && (
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Paid Date</label>
+                <p className="text-base text-[var(--color-text)] font-medium">{formatDate((data as any).paidDate)}</p>
+              </div>
+            )}
 
             {data.createdDate && (
               <div>
