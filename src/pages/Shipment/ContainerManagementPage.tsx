@@ -47,6 +47,8 @@ export const ContainerManagementPage = () => {
     label: string;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showTelexWarning, setShowTelexWarning] = useState(false);
+  const [pendingReceivedAction, setPendingReceivedAction] = useState<{ containerId: number } | null>(null);
   const [statusFormData, setStatusFormData] = useState({
     statusChangeDate: new Date().toISOString().split('T')[0],
     remark: '',
@@ -186,13 +188,31 @@ export const ContainerManagementPage = () => {
   const openStatusModal = (
     containerId: number,
     action: 'book' | 'mark-in-transit' | 'mark-received' | 'cancel' | 'telex-release',
-    label: string
+    label: string,
+    hasTelexReleased?: boolean
   ) => {
+    if (action === 'mark-received' && !hasTelexReleased) {
+      setPendingReceivedAction({ containerId });
+      setShowTelexWarning(true);
+      return;
+    }
     setStatusAction({ containerId, action, label });
     setStatusFormData({
       statusChangeDate: new Date().toISOString().split('T')[0],
       remark: '',
     });
+    setShowConfirmModal(true);
+  };
+
+  const handleProceedAfterTelexWarning = () => {
+    if (!pendingReceivedAction) return;
+    setShowTelexWarning(false);
+    setStatusAction({ containerId: pendingReceivedAction.containerId, action: 'mark-received', label: 'Mark Received' });
+    setStatusFormData({
+      statusChangeDate: new Date().toISOString().split('T')[0],
+      remark: '',
+    });
+    setPendingReceivedAction(null);
     setShowConfirmModal(true);
   };
 
@@ -559,7 +579,7 @@ export const ContainerManagementPage = () => {
 
                             {container.status === 'In Transit' && (
                               <button
-                                onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received')}
+                                onClick={() => openStatusModal(container.containerId, 'mark-received', 'Mark Received', container.hasTelexReleased)}
                                 className="text-green-600 hover:text-green-900"
                                 title="Mark Received"
                               >
@@ -630,6 +650,44 @@ export const ContainerManagementPage = () => {
           </div>
         )}
       </Card>
+
+      {showTelexWarning && (
+        <Modal
+          isOpen={true}
+          onClose={() => { setShowTelexWarning(false); setPendingReceivedAction(null); }}
+          title="Telex Release Required"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <FileCheck className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">Telex Not Released</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  The Telex Release has not been completed for this container. It is required before marking it as Received.
+                </p>
+                <p className="text-sm text-amber-700 mt-2">
+                  Do you want to proceed anyway?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => { setShowTelexWarning(false); setPendingReceivedAction(null); }}
+                variant="secondary"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleProceedAfterTelexWarning}
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
+              >
+                Proceed Anyway
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {showConfirmModal && statusAction && (
         <Modal
