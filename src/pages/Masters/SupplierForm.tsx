@@ -2,12 +2,22 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Loader2, Plus, Trash2, Upload, FileText } from 'lucide-react';
 import { suppliersService, Supplier, PaymentTerm } from '../../services/suppliersService';
 import { portsService, Port } from '../../services/portsService';
 import { socialMediaGroupsService, SocialMediaGroup } from '../../services/socialMediaGroupsService';
+import { attachmentService } from '../../services/attachmentService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+
+interface PendingAttachment {
+  id: string;
+  file: File;
+  status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  progress: number;
+  error?: string;
+  retryCount: number;
+}
 
 const supplierSchema = z.object({
   supplierId: z.number().optional(),
@@ -67,6 +77,10 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
   const [socialMediaGroups, setSocialMediaGroups] = useState<SocialMediaGroup[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [paymentTermsError, setPaymentTermsError] = useState('');
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [createdSupplierId, setCreatedSupplierId] = useState<number | undefined>(
+    mode === 'edit' ? supplierId : undefined
+  );
 
   const {
     register,
@@ -261,6 +275,81 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
     return true;
   };
 
+  const addPendingAttachment = (file: File) => {
+    setPendingAttachments(prev => [...prev, {
+      id: `att-${Date.now()}-${Math.random()}`,
+      file,
+      status: 'pending',
+      progress: 0,
+      retryCount: 0,
+    }]);
+  };
+
+  const removePending = (id: string) => {
+    setPendingAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const uploadSingle = async (attachment: PendingAttachment, entityId: number): Promise<boolean> => {
+    const MAX_RETRIES = 3;
+    let retry = attachment.retryCount;
+    while (retry <= MAX_RETRIES) {
+      try {
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploading', progress: 10 } : a
+        ));
+        const presigned = await attachmentService.requestPresignedUpload({
+          fileName: attachment.file.name,
+          contentType: attachment.file.type,
+          entityType: 'Supplier',
+          entityId,
+        });
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 40 } : a
+        ));
+        await attachmentService.uploadToS3(presigned.uploadUrl, attachment.file);
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 70 } : a
+        ));
+        await attachmentService.confirmUpload(presigned.attachmentId);
+        setPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploaded', progress: 100 } : a
+        ));
+        return true;
+      } catch {
+        retry++;
+        if (retry <= MAX_RETRIES) {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, retryCount: retry, progress: 0, error: `Retry ${retry}/${MAX_RETRIES}...` } : a
+          ));
+          await new Promise(r => setTimeout(r, 1000 * retry));
+        } else {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, status: 'failed', error: 'Upload failed after 3 retries', progress: 0 } : a
+          ));
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  const retryFailed = async (id: string) => {
+    if (!createdSupplierId) return;
+    const att = pendingAttachments.find(a => a.id === id);
+    if (!att) return;
+    setPendingAttachments(prev => prev.map(a =>
+      a.id === id ? { ...a, status: 'pending', retryCount: 0, error: undefined } : a
+    ));
+    await uploadSingle({ ...att, status: 'pending', retryCount: 0 }, createdSupplierId);
+  };
+
+  const handleUploadAll = async (entityId: number) => {
+    const pending = pendingAttachments.filter(a => a.status === 'pending' || a.status === 'failed');
+    for (const att of pending) {
+      await uploadSingle(att, entityId);
+    }
+  };
+
   const onSubmit = async (data: SupplierFormData) => {
     if (errors.supplierName) {
       return;
@@ -302,20 +391,37 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
         paymentTerms: paymentTerms.filter(term => term.description.trim() || term.percentage > 0),
       };
 
-      let createdSupplierId: number | undefined;
+      let savedSupplierId: number | undefined;
       if (mode === 'add') {
         const result = await suppliersService.create(payload);
-        createdSupplierId = result.supplierId;
-        alert('Supplier created successfully!');
+        savedSupplierId = result.supplierId;
+        setCreatedSupplierId(savedSupplierId);
       } else if (mode === 'edit' && supplierId) {
         await suppliersService.update(supplierId, payload);
-        alert('Supplier updated successfully!');
+        savedSupplierId = supplierId;
+      }
+
+      if (savedSupplierId && pendingAttachments.some(a => a.status === 'pending' || a.status === 'failed')) {
+        await handleUploadAll(savedSupplierId);
+      }
+
+      const hasFailed = pendingAttachments.some(a => a.status === 'failed');
+      if (hasFailed) {
+        alert(mode === 'add'
+          ? 'Supplier created successfully, but some attachments failed to upload. You can retry them.'
+          : 'Supplier updated successfully, but some attachments failed to upload. You can retry them.');
+      } else {
+        alert(mode === 'add' ? 'Supplier created successfully!' : 'Supplier updated successfully!');
       }
 
       if (onSuccess) {
-        onSuccess(createdSupplierId);
+        onSuccess(savedSupplierId);
       }
-      onClose();
+      if (!hasFailed) {
+        onClose();
+      } else {
+        setLoading(false);
+      }
     } catch (error: any) {
       console.error('Failed to save supplier:', error);
       const errorMessage = error.response?.data?.message || 'Failed to save supplier';
@@ -731,6 +837,93 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)] flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Attachments
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-[var(--color-primary)] transition-colors bg-white">
+                    <input
+                      id="supplier-form-attachment-upload"
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        Array.from(e.target.files || []).forEach(file => {
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert(`File ${file.name} exceeds 10MB limit`);
+                            return;
+                          }
+                          addPendingAttachment(file);
+                        });
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <label htmlFor="supplier-form-attachment-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                      <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600 font-medium mb-1">Click to upload or drag and drop</p>
+                      <p className="text-xs text-gray-500">PDF, DOC, XLS, PNG, JPG (Max 10MB per file)</p>
+                    </label>
+                  </div>
+
+                  {pendingAttachments.length > 0 && (
+                    <div className="space-y-2">
+                      {pendingAttachments.map((att) => (
+                        <div key={att.id} className="border border-gray-200 rounded-lg p-3 bg-white">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{att.file.name}</p>
+                              <p className="text-xs text-gray-500">{(att.file.size / 1024).toFixed(0)} KB</p>
+                              {att.status === 'uploading' && (
+                                <div className="mt-1 space-y-1">
+                                  <p className="text-xs text-blue-600">
+                                    Uploading{att.retryCount > 0 ? ` (Retry ${att.retryCount})` : ''}...
+                                  </p>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all" style={{ width: `${att.progress}%` }} />
+                                  </div>
+                                </div>
+                              )}
+                              {att.status === 'uploaded' && (
+                                <p className="text-xs text-green-600 mt-1">Uploaded successfully</p>
+                              )}
+                              {att.status === 'failed' && (
+                                <p className="text-xs text-red-600 mt-1">{att.error || 'Upload failed'}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {att.status === 'failed' && createdSupplierId && (
+                                <Button
+                                  type="button"
+                                  onClick={() => retryFailed(att.id)}
+                                  variant="secondary"
+                                  className="px-3 py-1.5 text-xs"
+                                >
+                                  Retry
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                onClick={() => removePending(att.id)}
+                                variant="danger"
+                                className="px-2 py-1.5"
+                                disabled={att.status === 'uploading'}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-8 pt-6 border-t border-gray-300">
