@@ -21,6 +21,7 @@ export interface PaymentRequest {
   status: string;
   createdAt: string;
   description?: string;
+  paidDate?: string;
 }
 
 export interface SourceContext {
@@ -50,6 +51,7 @@ export interface PaymentRequestDetails {
   createdAt: string;
   createdBy: string;
   sourceContext: SourceContext;
+  paidDate?: string;
 }
 
 export interface PaymentRequestsResponse {

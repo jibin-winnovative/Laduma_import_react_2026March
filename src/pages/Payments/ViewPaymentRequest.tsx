@@ -551,6 +551,14 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                         {fmt(request.sourceContext.totalAmount)}
                       </span>
                     </div>
+                    {request.status === 'Paid' && request.paidDate && (
+                      <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                        <span className="text-base text-[var(--color-text-secondary)]">Paid Date</span>
+                        <span className="text-base font-semibold text-emerald-700">
+                          {new Date(request.paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg -mx-2">
                       <span className="text-base font-bold text-[var(--color-primary)]">Requesting Amount</span>
                       <span className="text-lg font-bold text-[var(--color-primary)]">

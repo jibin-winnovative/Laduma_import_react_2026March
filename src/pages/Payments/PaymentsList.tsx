@@ -87,7 +87,7 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
     setCurrentPage(1);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, paidDate?: string) => {
     const statusConfig: Record<string, { bg: string; text: string }> = {
       Requested: { bg: 'bg-blue-100', text: 'text-blue-800' },
       Approved: { bg: 'bg-amber-100', text: 'text-amber-800' },
@@ -97,7 +97,10 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
     };
 
     const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
-    const label = status === 'ApnUpdated' ? 'APN Updated' : status;
+    let label = status === 'ApnUpdated' ? 'APN Updated' : status;
+    if (status === 'Paid' && paidDate) {
+      label = `Paid - ${new Date(paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+    }
 
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
@@ -359,7 +362,7 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
                             )}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm">{getStatusBadge(payment.status)}</td>
+                        <td className="py-3 px-4 text-sm">{getStatusBadge(payment.status, payment.paidDate)}</td>
                         <td className="py-3 px-4 text-sm text-[var(--color-text-secondary)]">{formatDate(payment.createdAt)}</td>
                         <td className="py-3 px-4 text-sm" onClick={(e) => e.stopPropagation()}>
                           {renderRowActions(payment)}
