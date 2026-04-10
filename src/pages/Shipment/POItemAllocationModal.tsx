@@ -99,17 +99,19 @@ export const POItemAllocationModal = ({
 
   const handleSelectAll = (isSelected: boolean) => {
     if (isSelected) {
-      const allIds = new Set(items.map((item) => item.purchaseOrderItemId));
+      const allIds = new Set(items.filter((item) => item.remainingQty > 0).map((item) => item.purchaseOrderItemId));
       setSelectedRowIds(allIds);
       setItems((prevItems) =>
         prevItems.map((item) =>
-          item.loadQty === 0 ? { ...item, loadQty: item.remainingQty } : item
+          item.loadQty === 0 && item.remainingQty > 0 ? { ...item, loadQty: item.remainingQty } : item
         )
       );
     } else {
       setSelectedRowIds(new Set());
       setItems((prevItems) =>
-        prevItems.map((item) => ({ ...item, loadQty: 0, extraFreight: 0 }))
+        prevItems.map((item) =>
+          item.remainingQty > 0 ? { ...item, loadQty: 0, extraFreight: 0 } : item
+        )
       );
     }
   };
@@ -170,8 +172,9 @@ export const POItemAllocationModal = ({
     onClose();
   };
 
-  const isAllSelected = items.length > 0 && selectedRowIds.size === items.length;
-  const isSomeSelected = selectedRowIds.size > 0 && selectedRowIds.size < items.length;
+  const selectableItems = items.filter((item) => item.remainingQty > 0);
+  const isAllSelected = selectableItems.length > 0 && selectedRowIds.size === selectableItems.length;
+  const isSomeSelected = selectedRowIds.size > 0 && selectedRowIds.size < selectableItems.length;
 
   if (!isOpen) return null;
 
@@ -267,11 +270,14 @@ export const POItemAllocationModal = ({
                   {items.map((item) => {
                     const error = getValidationError(item);
                     const isSelected = selectedRowIds.has(item.purchaseOrderItemId);
+                    const isFullyAllocated = item.remainingQty === 0;
                     return (
                       <tr
                         key={item.purchaseOrderItemId}
                         className={
-                          error
+                          isFullyAllocated
+                            ? 'bg-gray-50 opacity-70'
+                            : error
                             ? 'bg-red-50'
                             : isSelected && !isViewMode
                             ? 'bg-blue-50'
@@ -286,14 +292,24 @@ export const POItemAllocationModal = ({
                               onChange={(e) =>
                                 handleRowSelect(item.purchaseOrderItemId, e.target.checked)
                               }
-                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              disabled={isFullyAllocated}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
                             />
                           </td>
                         )}
                         <td className="px-3 py-2 text-sm font-medium text-gray-900">
                           {item.itemCode}
                         </td>
-                        <td className="px-3 py-2 text-sm text-gray-900">{item.itemName}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {item.itemName}
+                            {isFullyAllocated && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                                Fully Allocated
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-3 py-2 text-sm text-right text-gray-900">
                           {item.orderedQty.toLocaleString()}
                         </td>
@@ -306,6 +322,10 @@ export const POItemAllocationModal = ({
                         <td className="px-3 py-2 text-sm text-right">
                           {isViewMode ? (
                             <span className="font-semibold">{item.loadQty.toLocaleString()}</span>
+                          ) : isFullyAllocated ? (
+                            <span className="block w-24 px-2 py-1 text-right text-sm text-gray-400 bg-gray-100 border border-gray-200 rounded">
+                              {item.loadQty}
+                            </span>
                           ) : (
                             <div className="relative">
                               <input
@@ -363,9 +383,9 @@ export const POItemAllocationModal = ({
                                   parseFloat(e.target.value) || 0
                                 )
                               }
-                              disabled={!isSelected}
+                              disabled={!isSelected || isFullyAllocated}
                               className={`w-24 px-2 py-1 text-right border border-gray-300 rounded ${
-                                !isSelected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                                !isSelected || isFullyAllocated ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
                               }`}
                               min="0"
                               step="0.01"
