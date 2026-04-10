@@ -13,8 +13,24 @@ console.log('📋 Add this origin to your .NET API CORS settings:', window.locat
 const TOKEN_STORAGE_KEY = 'app_access_token';
 const REFRESH_TOKEN_STORAGE_KEY = 'app_refresh_token';
 
-let accessToken: string | null = localStorage.getItem(TOKEN_STORAGE_KEY);
-let refreshToken: string | null = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+const isValidJWT = (token: string | null): boolean => {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  return parts.length === 3 && parts[1].length > 0;
+};
+
+const storedAccess = localStorage.getItem(TOKEN_STORAGE_KEY);
+const storedRefresh = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+
+if (!isValidJWT(storedAccess) && storedAccess !== null) {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+if (!isValidJWT(storedRefresh) && storedRefresh !== null) {
+  localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+}
+
+let accessToken: string | null = isValidJWT(storedAccess) ? storedAccess : null;
+let refreshToken: string | null = isValidJWT(storedRefresh) ? storedRefresh : null;
 let tokenRefreshTimer: NodeJS.Timeout | null = null;
 let tokenCheckInterval: NodeJS.Timeout | null = null;
 let isSessionExpiring = false;
@@ -28,6 +44,7 @@ export const setSessionExpiredCallback = (callback: () => void) => {
 
 const decodeJWT = (token: string): { exp?: number } => {
   try {
+    if (!isValidJWT(token)) return {};
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
@@ -37,8 +54,7 @@ const decodeJWT = (token: string): { exp?: number } => {
         .join('')
     );
     return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Failed to decode JWT:', error);
+  } catch {
     return {};
   }
 };
@@ -200,6 +216,10 @@ if (accessToken) {
 }
 
 export const setTokens = (access: string, refresh: string) => {
+  if (!isValidJWT(access) || !isValidJWT(refresh)) {
+    console.warn('setTokens: received invalid JWT format, ignoring');
+    return;
+  }
   accessToken = access;
   refreshToken = refresh;
   localStorage.setItem(TOKEN_STORAGE_KEY, access);
