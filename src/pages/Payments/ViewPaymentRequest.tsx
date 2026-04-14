@@ -183,6 +183,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
           contentType: attachment.file.type,
           entityType: 'PaymentRequest',
           entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
 
         setPendingAttachments(prev => prev.map(a =>
@@ -349,6 +350,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
           contentType: attachment.file.type,
           entityType: 'PaymentRequest',
           entityId: requestId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
         setApnPendingAttachments(prev => prev.map(a =>
           a.id === attachment.id ? { ...a, progress: 40 } : a

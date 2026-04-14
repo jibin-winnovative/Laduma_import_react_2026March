@@ -263,6 +263,7 @@ export const OceanFreightPaymentForm = ({
           contentType: attachment.file.type,
           entityType: 'OceanFreightPayment',
           entityId: entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
 
         setPendingAttachments(prev => {

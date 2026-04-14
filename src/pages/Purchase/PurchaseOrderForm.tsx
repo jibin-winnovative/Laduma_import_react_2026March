@@ -701,6 +701,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           contentType: attachment.file.type,
           entityType: 'PurchaseOrder',
           entityId: entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
         console.log(`  ✓ Got presigned URL, attachmentId: ${presignedResponse.attachmentId}`);
 

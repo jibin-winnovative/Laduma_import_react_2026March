@@ -133,6 +133,7 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
           contentType: attachment.file.type,
           entityType: 'POPayment',
           entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
 
         setPendingAttachments(prev => prev.map(a =>

@@ -245,6 +245,7 @@ export const LocalPaymentForm = ({
           contentType: attachment.file.type,
           entityType: 'LocalPayment',
           entityId: entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
 
         setPendingAttachments(prev => {
