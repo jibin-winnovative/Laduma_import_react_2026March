@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ApiError } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://ae5029355f518b558.awsglobalaccelerator.com:5011';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://amyimukvlkhqysqaeicf.supabase.co/functions/v1/api-proxy';
 
 console.log('🌐 API Client Configuration:');
 console.log('   API Base URL:', BASE_URL);
