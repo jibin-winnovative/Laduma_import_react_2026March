@@ -133,6 +133,7 @@ export const OceanFreightPaymentForm = ({
           fileUrl: att.fileUrl,
           entityType: att.entityType,
           entityId: att.entityId,
+          category: att.category,
         })));
       }
 

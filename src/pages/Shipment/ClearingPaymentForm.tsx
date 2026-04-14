@@ -146,6 +146,7 @@ export const ClearingPaymentForm = ({
           fileUrl: att.fileUrl,
           entityType: att.entityType,
           entityId: att.entityId,
+          category: att.category,
         })));
       }
     } catch (err) {

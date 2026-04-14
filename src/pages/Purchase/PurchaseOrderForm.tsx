@@ -420,6 +420,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           fileName: att.fileName,
           fileUrl: att.fileUrl,
           uploadedAt: att.uploadedAt,
+          category: att.category,
         })));
       }
 
