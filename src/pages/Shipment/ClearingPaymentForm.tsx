@@ -329,6 +329,7 @@ export const ClearingPaymentForm = ({
           contentType: attachment.file.type,
           entityType: 'ClearingPayment',
           entityId: entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
 
         setPendingAttachments(prev => {
