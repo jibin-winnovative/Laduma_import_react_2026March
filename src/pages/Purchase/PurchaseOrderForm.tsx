@@ -2138,6 +2138,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                         <span className="text-sm text-gray-700 truncate">
                           {attachment.fileName}
                         </span>
+                        {attachment.category && (
+                          <span className="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            {attachment.category}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <button

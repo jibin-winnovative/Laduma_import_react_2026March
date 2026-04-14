@@ -958,6 +958,11 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                         <span className="text-sm text-gray-700 truncate">{att.fileName}</span>
+                        {att.category && (
+                          <span className="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            {att.category}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Button

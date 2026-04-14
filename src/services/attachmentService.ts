@@ -10,6 +10,7 @@ export interface Attachment {
   fileUrl: string;
   entityType: string;
   entityId: number;
+  category?: string;
   uploadedAt?: string;
   uploadedBy?: string;
 }
