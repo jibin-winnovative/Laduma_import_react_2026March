@@ -200,7 +200,7 @@ export const purchaseOrdersService = {
   },
 
   getApprovedPOs: async (queryString: string): Promise<ApprovedPOListResponse> => {
-    const response = await apiClient.get(`/api/PurchaseOrders/approved?${queryString}`);
+    const response = await apiClient.get(`/api/PurchaseOrders/approved/pending-loading?${queryString}`);
     return response.data;
   },
 
