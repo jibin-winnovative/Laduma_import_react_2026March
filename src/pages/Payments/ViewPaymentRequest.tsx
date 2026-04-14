@@ -595,7 +595,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                       </div>
                     )}
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg -mx-2">
-                      <span className="text-base font-bold text-[var(--color-primary)]">Requesting Amount</span>
+                      <span className="text-base font-bold text-[var(--color-primary)]">Requested Amount</span>
                       <span className="text-lg font-bold text-[var(--color-primary)]">
                         {fmt(request.requestAmount)}
                       </span>
@@ -603,7 +603,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                     <div className="flex justify-between items-center pt-2">
                       <span className="text-base font-semibold text-[var(--color-text)]">Balance After Payment</span>
                       <span className="text-base font-bold text-green-600">
-                        {fmt(request.sourceContext.totalAmount - request.sourceContext.totalPaidAmount - request.requestAmount)}
+                        {request.status === 'Paid'
+                          ? fmt(request.sourceContext.totalAmount - request.sourceContext.totalPaidAmount)
+                          : fmt(request.sourceContext.totalAmount - request.sourceContext.totalPaidAmount - request.requestAmount)}
                       </span>
                     </div>
                   </div>
