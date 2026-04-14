@@ -25,6 +25,8 @@ export interface PresignedUploadRequest {
   contentType: string;
   entityType: string;
   entityId: number;
+  category?: string;
+  isPublic?: boolean;
 }
 
 export interface PresignedDownloadResponse {
@@ -43,6 +45,8 @@ export const attachmentService = {
       contentType: request.contentType,
       entityType: request.entityType,
       entityId: request.entityId,
+      category: request.category,
+      isPublic: request.isPublic,
     });
 
     const response: any = await api.post(`${BASE_PATH}/presigned-upload`, request);
