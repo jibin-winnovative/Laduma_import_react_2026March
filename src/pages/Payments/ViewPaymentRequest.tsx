@@ -1017,7 +1017,7 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                 </>
               )}
 
-              {status === 'Approved' && !showApnForm && (
+              {status === 'Approved' && !showApnForm && !showPaymentForm && (
                 <>
                   <Button variant="secondary" onClick={onClose}>
                     Cancel
