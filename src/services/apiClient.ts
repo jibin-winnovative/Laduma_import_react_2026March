@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ApiError } from '../types/api';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://importmanagement20260130094631.azurewebsites.net';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://ae5029355f518b558.awsglobalaccelerator.com:5011';
 
 console.log('🌐 API Client Configuration:');
 console.log('   API Base URL:', BASE_URL);
