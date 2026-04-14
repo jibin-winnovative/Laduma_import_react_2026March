@@ -262,7 +262,10 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const isRejected = details.status === 'Rejected';
 
   const requestAmountLabel = isPending || isRejected ? 'Requesting Amount' : 'Requested Amount';
-  const balanceAfterPayment = details.totalPOAmount - details.paidAmount - details.expectedAmount;
+  const isPaid = details.status === 'Paid';
+  const balanceAfterPayment = isPaid
+    ? details.totalPOAmount - details.paidAmount
+    : details.totalPOAmount - details.paidAmount - details.expectedAmount;
   const isBalanceNegative = balanceAfterPayment < 0;
 
   const statusConfig = getStatusConfig(details.status);
