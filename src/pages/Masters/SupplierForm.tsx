@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Save, Loader2, Plus, Trash2, Upload, FileText } from 'lucide-react';
+import { X, Save, Loader2, Plus, Trash2, Upload, FileText, Eye, Download } from 'lucide-react';
 import { suppliersService, Supplier, PaymentTerm } from '../../services/suppliersService';
 import { portsService, Port } from '../../services/portsService';
 import { socialMediaGroupsService, SocialMediaGroup } from '../../services/socialMediaGroupsService';
-import { attachmentService } from '../../services/attachmentService';
+import { attachmentService, Attachment } from '../../services/attachmentService';
 import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -80,6 +80,8 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [paymentTermsError, setPaymentTermsError] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
   const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
   const [createdSupplierId, setCreatedSupplierId] = useState<number | undefined>(
     mode === 'edit' ? supplierId : undefined
@@ -187,6 +189,13 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
 
       if (supplier.paymentTerms && supplier.paymentTerms.length > 0) {
         setPaymentTerms(supplier.paymentTerms);
+      }
+
+      try {
+        const attachments = await attachmentService.getByEntity('Supplier', supplierId);
+        setExistingAttachments(Array.isArray(attachments) ? attachments : []);
+      } catch {
+        setExistingAttachments([]);
       }
     } catch (error) {
       console.error('Failed to fetch supplier data:', error);
@@ -351,6 +360,28 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
       a.id === id ? { ...a, status: 'pending', retryCount: 0, error: undefined } : a
     ));
     await uploadSingle({ ...att, status: 'pending', retryCount: 0 }, createdSupplierId);
+  };
+
+  const handleDeleteExisting = async (attachmentId: number) => {
+    if (!confirm('Are you sure you want to delete this attachment?')) return;
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await attachmentService.delete(attachmentId);
+      setExistingAttachments(prev => prev.filter(a => a.attachmentId !== attachmentId));
+    } catch {
+      alert('Failed to delete attachment');
+    } finally {
+      setDeletingAttachmentId(null);
+    }
+  };
+
+  const handleViewExisting = async (attachmentId: number) => {
+    try {
+      const url = await attachmentService.getDownloadUrl(attachmentId, 60, true);
+      window.open(url, '_blank');
+    } catch {
+      alert('Failed to get download URL');
+    }
   };
 
   const handleUploadAll = async (entityId: number) => {
@@ -861,6 +892,48 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                 </h3>
 
                 <div className="space-y-4">
+                  {existingAttachments.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Existing Attachments</p>
+                      {existingAttachments.map((att) => (
+                        <div key={att.attachmentId} className="border border-gray-200 rounded-lg p-3 bg-white flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{att.fileName}</p>
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              {att.attachmentTypeName && <span>{att.attachmentTypeName}</span>}
+                              {att.fileSize > 0 && <span>{(att.fileSize / 1024).toFixed(0)} KB</span>}
+                              {att.uploadedAt && <span>{new Date(att.uploadedAt).toLocaleDateString()}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="px-2 py-1.5"
+                              onClick={() => handleViewExisting(att.attachmentId)}
+                              title="View"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="px-2 py-1.5"
+                              disabled={deletingAttachmentId === att.attachmentId}
+                              onClick={() => handleDeleteExisting(att.attachmentId)}
+                              title="Delete"
+                            >
+                              {deletingAttachmentId === att.attachmentId
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Trash2 className="w-3.5 h-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-[var(--color-primary)] transition-colors bg-white">
                     <input
                       id="supplier-form-attachment-upload"
