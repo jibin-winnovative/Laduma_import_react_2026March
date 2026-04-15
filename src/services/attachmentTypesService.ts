@@ -106,7 +106,12 @@ export const attachmentTypesService = {
   getActiveDropdown: async (belongsTo?: string): Promise<AttachmentTypeDropdownItem[]> => {
     const params = belongsTo ? `?belongsTo=${encodeURIComponent(belongsTo)}` : '';
     const response: any = await api.get(`${BASE_PATH}/active${params}`);
-    return response.data || response;
+    const raw = response?.data?.data ?? response?.data ?? response ?? [];
+    const items: any[] = Array.isArray(raw) ? raw : [];
+    return items.map((item: any) => ({
+      id: item.attachmentTypeId ?? item.id,
+      name: item.type ?? item.name ?? '',
+    }));
   },
 
   getSummary: async (): Promise<AttachmentTypeSummary> => {
