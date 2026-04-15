@@ -2214,15 +2214,9 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                               disabled={attachment.status === 'uploading'}
                             >
                               <option value="">Select Type</option>
-                              <option value="Proforma Invoice">Proforma Invoice</option>
-                              <option value="Initial Deposit POP">Initial Deposit POP</option>
-                              <option value="Bill of Lading">Bill of Lading</option>
-                              <option value="Commercial Invoice">Commercial Invoice</option>
-                              <option value="Packing List">Packing List</option>
-                              <option value="Master Bill of Lading (MBL)">Master Bill of Lading (MBL)</option>
-                              <option value="Balance Payment POP">Balance Payment POP</option>
-                              <option value="Telex Release">Telex Release</option>
-                              <option value="CA Invoice">CA Invoice</option>
+                              {attachmentTypeOptions.map(opt => (
+                                <option key={opt.id} value={opt.name}>{opt.name}</option>
+                              ))}
                             </select>
                           </div>
                         </div>
