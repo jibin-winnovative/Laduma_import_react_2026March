@@ -213,7 +213,7 @@ export const AttachmentTypesList = () => {
 
           <div className="flex items-end gap-2">
             <Button
-              onClick={() => { setCurrentPage(1); fetchList(); }}
+              onClick={() => setCurrentPage(1)}
               className="flex-1 bg-[var(--color-primary)] hover:opacity-90 text-white"
             >
               Search
@@ -232,19 +232,19 @@ export const AttachmentTypesList = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Belongs To</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Loading...</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">Loading...</td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No attachment types found</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No attachment types found</td>
                 </tr>
+
               ) : (
                 items.map((item) => (
                   <tr key={item.attachmentTypeId} className="hover:bg-gray-50">
@@ -263,9 +263,6 @@ export const AttachmentTypesList = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-[var(--color-text)]">
                       {item.createdBy || '-'}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-[var(--color-text)]">
-                      {item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-2">

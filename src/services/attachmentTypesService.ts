@@ -116,10 +116,11 @@ export const attachmentTypesService = {
 
   getSummary: async (): Promise<AttachmentTypeSummary> => {
     const response: any = await api.get(`${BASE_PATH}/summary`);
-    const data = response.data || response;
+    const raw = response.data || response;
+    const data = raw.data || raw;
     return {
-      totalTypes: data.totalTypes || 0,
-      activeTypes: data.activeTypes || 0,
+      totalTypes: data.totalAttachmentTypes ?? data.totalTypes ?? 0,
+      activeTypes: data.activeAttachmentTypes ?? data.activeTypes ?? 0,
       lastUpdatedDate: data.lastUpdatedDate,
       lastUpdatedBy: data.lastUpdatedBy,
     };
