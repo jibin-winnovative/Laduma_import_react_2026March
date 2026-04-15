@@ -13,6 +13,7 @@ import {
   PaymentStatus,
 } from '../../services/clearingPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { POChargeEntryModal } from './POChargeEntryModal';
 import { ContainerSearchModal } from './ContainerSearchModal';
 
@@ -75,6 +76,11 @@ export const ClearingPaymentForm = ({
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    attachmentTypesService.getActiveDropdown('Clearing Payment').then(setAttachmentTypeOptions).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (mode === 'edit' && clearingPaymentId) {
@@ -1072,11 +1078,9 @@ export const ClearingPaymentForm = ({
                             disabled={attachment.status === 'uploading'}
                           >
                             <option value="">Select Type</option>
-                            <option value="Clearing Bill">Clearing Bill</option>
-                            <option value="Payment Receipt">Payment Receipt</option>
-                            <option value="Import Documents">Import Documents</option>
-                            <option value="Tax Invoice">Tax Invoice</option>
-                            <option value="Other">Other</option>
+                            {attachmentTypeOptions.map((opt) => (
+                              <option key={opt.id} value={opt.name}>{opt.name}</option>
+                            ))}
                           </select>
                           {attachment.status === 'failed' && clearingPaymentId && (
                             <Button

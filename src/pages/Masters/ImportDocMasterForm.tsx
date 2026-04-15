@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { X, Save, Loader2, Upload, FileText, Trash2, Download } from 'lucide-react';
 import { importDocMastersService, ImportDocMaster } from '../../services/importDocMastersService';
 import { attachmentService, Attachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 
@@ -50,6 +51,7 @@ interface ImportDocMasterFormProps {
 
 interface PendingFile {
   file: File;
+  type: string;
   status: 'pending' | 'uploading' | 'uploaded' | 'failed';
   progress: number;
   error?: string;
@@ -61,6 +63,11 @@ export const ImportDocMasterForm = ({ mode, documentId, onClose, onSuccess }: Im
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    attachmentTypesService.getActiveDropdown('Import Document').then(setAttachmentTypeOptions).catch(() => {});
+  }, []);
 
   const getDynamicSchema = (category: string) => {
     switch (category) {
@@ -187,6 +194,7 @@ export const ImportDocMasterForm = ({ mode, documentId, onClose, onSuccess }: Im
 
     const newFiles: PendingFile[] = files.map(file => ({
       file,
+      type: '',
       status: 'pending',
       progress: 0,
     }));
@@ -197,6 +205,14 @@ export const ImportDocMasterForm = ({ mode, documentId, onClose, onSuccess }: Im
 
   const removePendingFile = (index: number) => {
     setPendingFiles(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const updatePendingFileType = (index: number, type: string) => {
+    setPendingFiles(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], type };
+      return updated;
+    });
   };
 
   const uploadAttachments = async (entityId: number): Promise<{ success: boolean; failedCount: number }> => {
@@ -231,6 +247,7 @@ export const ImportDocMasterForm = ({ mode, documentId, onClose, onSuccess }: Im
           contentType: pendingFile.file.type,
           entityType: 'ImportDocMaster',
           entityId: entityId,
+          ...(pendingFile.type ? { category: pendingFile.type } : {}),
         });
         console.log(`  ✓ Got presigned URL, attachmentId: ${presignedResponse.attachmentId}`);
 
@@ -334,6 +351,12 @@ export const ImportDocMasterForm = ({ mode, documentId, onClose, onSuccess }: Im
         alert('Please fill in Levy Period, Account No, and Date Of Filing for Levy Declaration');
         return;
       }
+    }
+
+    const missingTypes = pendingFiles.some(f => f.status === 'pending' && !f.type);
+    if (missingTypes) {
+      alert('Please select a type for all attachments before submitting');
+      return;
     }
 
     setLoading(true);
@@ -813,14 +836,27 @@ export const ImportDocMasterForm = ({ mode, documentId, onClose, onSuccess }: Im
                                     {(pendingFile.file.size / 1024).toFixed(0)} KB
                                   </span>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removePendingFile(index)}
-                                  className="p-1 text-red-600 hover:bg-red-50 rounded flex-shrink-0"
-                                  disabled={pendingFile.status === 'uploading'}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <select
+                                    value={pendingFile.type}
+                                    onChange={(e) => updatePendingFileType(index, e.target.value)}
+                                    className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                                    disabled={pendingFile.status === 'uploading'}
+                                  >
+                                    <option value="">Select Type</option>
+                                    {attachmentTypeOptions.map((opt) => (
+                                      <option key={opt.id} value={opt.name}>{opt.name}</option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => removePendingFile(index)}
+                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                    disabled={pendingFile.status === 'uploading'}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </div>
                               {pendingFile.status === 'pending' && (
                                 <p className="text-xs text-gray-600">Pending</p>

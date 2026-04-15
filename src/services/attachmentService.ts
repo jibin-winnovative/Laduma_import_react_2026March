@@ -11,6 +11,7 @@ export interface Attachment {
   entityType: string;
   entityId: number;
   category?: string;
+  attachmentTypeName?: string;
   uploadedAt?: string;
   uploadedBy?: string;
 }

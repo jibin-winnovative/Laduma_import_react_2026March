@@ -10,6 +10,7 @@ import {
   PaymentStatus,
 } from '../../services/oceanFreightPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { ContainerSearchModal } from './ContainerSearchModal';
 
 interface OceanFreightPaymentFormProps {
@@ -60,6 +61,7 @@ export const OceanFreightPaymentForm = ({
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export const OceanFreightPaymentForm = ({
     } else {
       loadDropdowns();
     }
+    attachmentTypesService.getActiveDropdown('Ocean Freight Payment').then(setAttachmentTypeOptions).catch(() => {});
   }, [mode, oceanFreightPaymentId]);
 
   useEffect(() => {
@@ -813,11 +816,9 @@ export const OceanFreightPaymentForm = ({
                             disabled={attachment.status === 'uploading'}
                           >
                             <option value="">Select Type</option>
-                            <option value="Ocean Freight Invoice">Ocean Freight Invoice</option>
-                            <option value="Payment Receipt">Payment Receipt</option>
-                            <option value="Bill of Lading">Bill of Lading</option>
-                            <option value="Shipping Documents">Shipping Documents</option>
-                            <option value="Other">Other</option>
+                            {attachmentTypeOptions.map((opt) => (
+                              <option key={opt.id} value={opt.name}>{opt.name}</option>
+                            ))}
                           </select>
                           {attachment.status === 'failed' && oceanFreightPaymentId && (
                             <Button

@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { paymentsService, MakePaymentRequest } from '../../services/paymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { banksService } from '../../services/banksService';
 
 interface MakePaymentFormProps {
@@ -66,10 +67,12 @@ export function MakePaymentForm({
 
   useEffect(() => {
     banksService.getActive().then(setActiveBanks).catch(console.error);
+    attachmentTypesService.getActiveDropdown('Payment').then(setAttachmentTypeOptions).catch(() => {});
   }, []);
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
 
   const addPendingAttachment = (file: File) => {
     setPendingAttachments(prev => [...prev, {
@@ -534,11 +537,9 @@ export function MakePaymentForm({
                               className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                             >
                               <option value="">Select Type</option>
-                              <option value="Payment Receipt">Payment Receipt</option>
-                              <option value="Bank Slip">Bank Slip</option>
-                              <option value="Invoice">Invoice</option>
-                              <option value="Supporting Document">Supporting Document</option>
-                              <option value="Other">Other</option>
+                              {attachmentTypeOptions.map((opt) => (
+                                <option key={opt.id} value={opt.name}>{opt.name}</option>
+                              ))}
                             </select>
                             {att.status === 'failed' && (
                               <Button

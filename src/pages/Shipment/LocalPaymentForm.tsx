@@ -6,6 +6,7 @@ import { containersService } from '../../services/containersService';
 import { localTransportCompaniesService } from '../../services/localTransportCompaniesService';
 import { localPaymentsService, LocalPayment } from '../../services/localPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { ContainerSearchModal } from './ContainerSearchModal';
 import Decimal from 'decimal.js';
 
@@ -71,6 +72,11 @@ export const LocalPaymentForm = ({
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    attachmentTypesService.getActiveDropdown('Local Payment').then(setAttachmentTypeOptions).catch(() => {});
+  }, []);
 
   const amountIncl = (() => {
     const exclVal = typeof amountExcl === 'number' ? amountExcl : 0;
@@ -942,11 +948,9 @@ export const LocalPaymentForm = ({
                             disabled={attachment.status === 'uploading'}
                           >
                             <option value="">Select Type</option>
-                            <option value="Transport Invoice">Transport Invoice</option>
-                            <option value="Payment Receipt">Payment Receipt</option>
-                            <option value="Delivery Note">Delivery Note</option>
-                            <option value="Warehouse Receipt">Warehouse Receipt</option>
-                            <option value="Other">Other</option>
+                            {attachmentTypeOptions.map((opt) => (
+                              <option key={opt.id} value={opt.name}>{opt.name}</option>
+                            ))}
                           </select>
                           {attachment.status === 'failed' && localPaymentId && (
                             <Button

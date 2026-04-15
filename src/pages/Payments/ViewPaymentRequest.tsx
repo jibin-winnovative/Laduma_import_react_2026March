@@ -10,6 +10,7 @@ import { Modal } from '../../components/ui/Modal';
 import { paymentsService, PaymentRequestDetails } from '../../services/paymentsService';
 import { paymentRequestsService } from '../../services/paymentRequestsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { ViewPurchaseOrder } from '../Purchase/ViewPurchaseOrder';
 import { ViewClearingPayment } from '../Shipment/ViewClearingPayment';
 import { ViewOceanFreightPayment } from '../Shipment/ViewOceanFreightPayment';
@@ -70,6 +71,11 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    attachmentTypesService.getActiveDropdown('Payment').then(setAttachmentTypeOptions).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isOpen && requestId) {
@@ -675,10 +681,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                                   className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                 >
                                   <option value="">Select Type</option>
-                                  <option value="APN Document">APN Document</option>
-                                  <option value="Bank Confirmation">Bank Confirmation</option>
-                                  <option value="Supporting Document">Supporting Document</option>
-                                  <option value="Other">Other</option>
+                                  {attachmentTypeOptions.map((opt) => (
+                                    <option key={opt.id} value={opt.name}>{opt.name}</option>
+                                  ))}
                                 </select>
                                 <Button
                                   onClick={() => removeApnPending(att.id)}
@@ -882,11 +887,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                                     className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                                   >
                                     <option value="">Select Type</option>
-                                    <option value="Payment Receipt">Payment Receipt</option>
-                                    <option value="Bank Slip">Bank Slip</option>
-                                    <option value="Invoice">Invoice</option>
-                                    <option value="Supporting Document">Supporting Document</option>
-                                    <option value="Other">Other</option>
+                                    {attachmentTypeOptions.map((opt) => (
+                                      <option key={opt.id} value={opt.name}>{opt.name}</option>
+                                    ))}
                                   </select>
                                   {att.status === 'failed' && (
                                     <Button

@@ -380,8 +380,15 @@ export const ViewImportDocMaster = ({
                                 <div className="text-base text-[var(--color-text)] font-medium truncate">
                                   {attachment.fileName}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  {(attachment.fileSize / 1024).toFixed(2)} KB
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-gray-500">
+                                    {(attachment.fileSize / 1024).toFixed(2)} KB
+                                  </span>
+                                  {(attachment.category || attachment.attachmentTypeName) && (
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                      {attachment.category || attachment.attachmentTypeName}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>

@@ -7,12 +7,14 @@ import { suppliersService, Supplier, PaymentTerm } from '../../services/supplier
 import { portsService, Port } from '../../services/portsService';
 import { socialMediaGroupsService, SocialMediaGroup } from '../../services/socialMediaGroupsService';
 import { attachmentService } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 
 interface PendingAttachment {
   id: string;
   file: File;
+  type: string;
   status: 'pending' | 'uploading' | 'uploaded' | 'failed';
   progress: number;
   error?: string;
@@ -78,6 +80,7 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [paymentTermsError, setPaymentTermsError] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
   const [createdSupplierId, setCreatedSupplierId] = useState<number | undefined>(
     mode === 'edit' ? supplierId : undefined
   );
@@ -121,6 +124,7 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
       }
     };
     initializeForm();
+    attachmentTypesService.getActiveDropdown('Supplier').then(setAttachmentTypeOptions).catch(() => {});
   }, [mode, supplierId]);
 
   useEffect(() => {
@@ -279,10 +283,15 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
     setPendingAttachments(prev => [...prev, {
       id: `att-${Date.now()}-${Math.random()}`,
       file,
+      type: '',
       status: 'pending',
       progress: 0,
       retryCount: 0,
     }]);
+  };
+
+  const updateAttachmentType = (id: string, type: string) => {
+    setPendingAttachments(prev => prev.map(a => a.id === id ? { ...a, type } : a));
   };
 
   const removePending = (id: string) => {
@@ -302,6 +311,7 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
           contentType: attachment.file.type,
           entityType: 'Supplier',
           entityId,
+          ...(attachment.type ? { category: attachment.type } : {}),
         });
         setPendingAttachments(prev => prev.map(a =>
           a.id === attachment.id ? { ...a, progress: 40 } : a
@@ -367,6 +377,11 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
     }
 
     if (!validatePaymentTerms(paymentTerms)) {
+      return;
+    }
+
+    if (pendingAttachments.some(a => a.status === 'pending' && !a.type)) {
+      alert('Please select a type for all attachments before saving.');
       return;
     }
 
@@ -898,6 +913,18 @@ export const SupplierForm = ({ mode, supplierId, onClose, onSuccess }: SupplierF
                               )}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
+                              {att.status === 'pending' && (
+                                <select
+                                  value={att.type}
+                                  onChange={(e) => updateAttachmentType(att.id, e.target.value)}
+                                  className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-transparent"
+                                >
+                                  <option value="">Select Type</option>
+                                  {attachmentTypeOptions.map((opt) => (
+                                    <option key={opt.id} value={opt.name}>{opt.name}</option>
+                                  ))}
+                                </select>
+                              )}
                               {att.status === 'failed' && createdSupplierId && (
                                 <Button
                                   type="button"

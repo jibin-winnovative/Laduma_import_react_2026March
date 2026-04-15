@@ -28,6 +28,7 @@ import { currencyService, Currency } from '../../services/currencyService';
 import { shipmentTypesService, ShipmentType } from '../../services/shipmentTypesService';
 import { addonChargesService, AddonCharge } from '../../services/addonChargesService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { SearchProductModal } from './SearchProductModal';
 import type { SearchProductResult } from '../../services/productSearchService';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
@@ -134,6 +135,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   ]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
   const [poNumberError, setPONumberError] = useState<string>('');
   const [checkingPONumber, setCheckingPONumber] = useState(false);
@@ -258,6 +260,10 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       setValue('exportPortId', String(topPort.portId), { shouldValidate: true });
     });
   }, [selectedSupplierId]);
+
+  useEffect(() => {
+    attachmentTypesService.getActiveDropdown('Purchase Order').then(setAttachmentTypeOptions).catch(() => {});
+  }, []);
 
   // Check PO number exists (debounced)
   useEffect(() => {

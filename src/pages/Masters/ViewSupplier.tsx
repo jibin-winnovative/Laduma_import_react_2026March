@@ -423,9 +423,16 @@ export const ViewSupplier = ({
                           <FileText className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-gray-700 truncate font-medium">{att.fileName}</p>
-                            {att.fileSize > 0 && (
-                              <p className="text-xs text-gray-500">{(att.fileSize / 1024).toFixed(0)} KB</p>
-                            )}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {att.fileSize > 0 && (
+                                <span className="text-xs text-gray-500">{(att.fileSize / 1024).toFixed(0)} KB</span>
+                              )}
+                              {(att.category || att.attachmentTypeName) && (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                  {att.category || att.attachmentTypeName}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">

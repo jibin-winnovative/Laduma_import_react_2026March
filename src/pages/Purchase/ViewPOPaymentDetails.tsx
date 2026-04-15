@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { poPaymentsService, POPaymentDetails } from '../../services/poPaymentsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
+import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { ViewPurchaseOrder } from './ViewPurchaseOrder';
 
 interface ViewPOPaymentDetailsProps {
@@ -37,11 +38,13 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
 
   const loadingRef = useRef(false);
 
   useEffect(() => {
     loadDetails();
+    attachmentTypesService.getActiveDropdown('PO Payment').then(setAttachmentTypeOptions).catch(() => {});
   }, [paymentId]);
 
   const loadDetails = async () => {
@@ -479,11 +482,9 @@ export const ViewPOPaymentDetails = ({ paymentId, onClose, onSuccess }: ViewPOPa
                               className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                             >
                               <option value="">Select Type</option>
-                              <option value="Payment Document">Payment Document</option>
-                              <option value="Invoice">Invoice</option>
-                              <option value="Receipt">Receipt</option>
-                              <option value="Bank Slip">Bank Slip</option>
-                              <option value="Other">Other</option>
+                              {attachmentTypeOptions.map((opt) => (
+                                <option key={opt.id} value={opt.name}>{opt.name}</option>
+                              ))}
                             </select>
                             {att.status === 'failed' && (
                               <Button
