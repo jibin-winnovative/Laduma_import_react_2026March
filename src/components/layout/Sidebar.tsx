@@ -18,6 +18,7 @@ import {
   Tags,
   Box,
   ShoppingCart,
+  Paperclip,
   Navigation,
   DollarSign,
   Receipt,
@@ -63,6 +64,7 @@ const menuItems: MenuItem[] = [
       { label: 'Addon Charges', path: '/masters/addon-charges', icon: Receipt },
       { label: 'Clearing Payment Charges', path: '/masters/clearing-payment-charges', icon: Receipt },
       { label: 'Banks', path: '/masters/banks', icon: Landmark },
+      { label: 'Attachment Types', path: '/masters/attachment-types', icon: Paperclip },
     ],
   },
   {

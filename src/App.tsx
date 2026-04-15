@@ -29,6 +29,7 @@ import { CurrencyPage } from './pages/Masters/CurrencyPage';
 import { AddonChargesPage } from './pages/Masters/AddonChargesPage';
 import { ClearingPaymentChargesPage } from './pages/Masters/ClearingPaymentChargesPage';
 import { BanksPage } from './pages/Masters/BanksPage';
+import { AttachmentTypesPage } from './pages/Masters/AttachmentTypesPage';
 import { PurchaseOrderPage } from './pages/Purchase/PurchaseOrderPage';
 import { POPaymentsPage } from './pages/Purchase/POPaymentsPage';
 import AccountsPayablePage from './pages/Payments/AccountsPayablePage';
@@ -90,6 +91,7 @@ function App() {
                         <Route path="/masters/addon-charges" element={<AddonChargesPage />} />
                         <Route path="/masters/clearing-payment-charges" element={<ClearingPaymentChargesPage />} />
                         <Route path="/masters/banks" element={<BanksPage />} />
+                        <Route path="/masters/attachment-types" element={<AttachmentTypesPage />} />
 
                         <Route path="/purchase/purchase-orders" element={<PurchaseOrderPage />} />
                         <Route path="/purchase/purchase-orders/:id" element={<PurchaseOrderPage />} />
