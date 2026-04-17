@@ -3,6 +3,7 @@ import { X, FileText, Calendar, User, Package, DollarSign, Ship, MapPin, File as
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
+import { PurchaseOrderEventLogTimeline } from './PurchaseOrderEventLog';
 import { attachmentService } from '../../services/attachmentService';
 import { removeTrailingZeros } from '../../utils/numberUtils';
 import Decimal from 'decimal.js';
@@ -747,6 +748,8 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
           </div>
         </Card>
       )}
+
+      <PurchaseOrderEventLogTimeline purchaseOrderId={purchaseOrderId} />
 
       {(purchaseOrder.createdAt || purchaseOrder.approvedBy) && (
         <Card className="p-6">

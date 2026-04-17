@@ -142,6 +142,18 @@ export interface ExcelImportResponse {
   missingItems: MissingItem[];
 }
 
+export interface PurchaseOrderEventLog {
+  eventId: number;
+  eventType: string;
+  eventName: string;
+  fromStatus?: string;
+  toStatus?: string;
+  eventDate: string;
+  remark?: string;
+  changedBy: string;
+  createdAt: string;
+}
+
 export const purchaseOrdersService = {
   getList: async (params: PurchaseOrderListParams): Promise<PurchaseOrderListResponse> => {
     const urlParams = new URLSearchParams();
@@ -214,6 +226,11 @@ export const purchaseOrdersService = {
       },
       timeout: 180000,
     });
+    return response.data;
+  },
+
+  getEventLog: async (purchaseOrderId: number): Promise<PurchaseOrderEventLog[]> => {
+    const response = await apiClient.get(`/api/purchaseorders/${purchaseOrderId}/event-log`);
     return response.data;
   },
 
