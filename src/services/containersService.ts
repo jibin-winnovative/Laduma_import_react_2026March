@@ -233,7 +233,7 @@ export const containersService = {
       '/api/Containers/dropdown',
       {
         params: {
-          statuses: ['Draft', 'Booked', 'InTransit'],
+          statuses: ['Draft', 'Booked', 'InTransit', 'Received'],
         },
         paramsSerializer: (params) => {
           return params.statuses.map((s: string) => `statuses=${encodeURIComponent(s)}`).join('&');
