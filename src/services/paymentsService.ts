@@ -37,18 +37,18 @@ export interface SourceContext {
   hasMoreDetails: boolean;
 }
 
-export interface PaymentDetails {
-  paymentId: number;
-  paymentMethod: string;
-  referenceNo: string;
-  paidAmount: number;
-  paidDate: string;
-  remarks?: string;
-  bankId?: number;
-  bankName?: string;
-  bankAccountNumber?: string;
-  amountInZar?: number;
-  paidBy: string;
+export interface PaymentRequestAttachment {
+  attachmentId: number;
+  fileName: string;
+  storedFileName: string;
+  s3Key: string;
+  s3Bucket: string;
+  fileSizeBytes: number;
+  fileSizeFormatted: string;
+  contentType: string;
+  category: string;
+  uploadedAt: string;
+  downloadUrl: string | null;
 }
 
 export interface PaymentRequestDetails {
@@ -66,7 +66,15 @@ export interface PaymentRequestDetails {
   createdBy: string;
   sourceContext: SourceContext;
   paidDate?: string;
-  paymentDetails?: PaymentDetails;
+  paidBy?: string;
+  paidAmount?: number;
+  referenceNo?: string;
+  paymentMethod?: string;
+  bankId?: number;
+  bankName?: string;
+  amountInZar?: number;
+  remarks?: string;
+  attachments?: PaymentRequestAttachment[];
 }
 
 export interface PaymentRequestsResponse {
@@ -137,11 +145,6 @@ export const paymentsService = {
 
   getSupplierDetailsByPaymentRequest: async (paymentRequestId: number): Promise<any> => {
     const response = await apiClient.get<any>(`/api/Payments/requests/${paymentRequestId}/supplier-details`);
-    return response.data;
-  },
-
-  getPaymentDetailsByRequestId: async (paymentRequestId: number): Promise<PaymentDetails> => {
-    const response = await apiClient.get<PaymentDetails>(`/api/Payments/requests/${paymentRequestId}/payment-details`);
     return response.data;
   },
 };

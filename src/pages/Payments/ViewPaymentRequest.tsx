@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { paymentsService, PaymentRequestDetails, PaymentDetails } from '../../services/paymentsService';
+import { paymentsService, PaymentRequestDetails } from '../../services/paymentsService';
 import { paymentRequestsService } from '../../services/paymentRequestsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
 import { attachmentTypesService } from '../../services/attachmentTypesService';
@@ -72,7 +72,6 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [paidAttachmentSaving, setPaidAttachmentSaving] = useState(false);
   const [paidPendingAttachments, setPaidPendingAttachments] = useState<PendingAttachment[]>([]);
 
@@ -92,7 +91,6 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       setPendingAttachments([]);
       setApnPendingAttachments([]);
       setPaidPendingAttachments([]);
-      setPaymentDetails(null);
       setPaymentData({
         paidDate: new Date().toISOString().split('T')[0],
         referenceNo: '',
@@ -115,15 +113,21 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       const data = await paymentsService.getPaymentRequestDetails(requestId);
       setRequest(data);
       setPaymentData(prev => ({ ...prev, paidAmount: data.requestAmount }));
-      const attachments = await attachmentService.getByEntity('PaymentRequest', requestId);
-      setExistingAttachments(attachments);
-      if (data.status === 'Paid') {
-        try {
-          const pd = await paymentsService.getPaymentDetailsByRequestId(requestId);
-          setPaymentDetails(pd);
-        } catch {
-          setPaymentDetails(null);
-        }
+      if (data.attachments && data.attachments.length > 0) {
+        setExistingAttachments(data.attachments.map(a => ({
+          attachmentId: a.attachmentId,
+          fileName: a.fileName,
+          category: a.category,
+          contentType: a.contentType,
+          fileSize: a.fileSizeBytes,
+          fileUrl: '',
+          entityType: 'PaymentRequest',
+          entityId: requestId,
+          uploadedAt: a.uploadedAt,
+        } as ExistingAttachment)));
+      } else {
+        const attachments = await attachmentService.getByEntity('PaymentRequest', requestId);
+        setExistingAttachments(attachments);
       }
     } catch (error) {
       console.error('Failed to load payment request:', error);
@@ -720,53 +724,61 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
               );
             })()}
 
-            {status === 'Paid' && paymentDetails && (
+            {status === 'Paid' && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <h3 className="text-lg font-bold text-green-900 mb-4 flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-600" />
                   Payment Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-green-700 mb-1">Payment Date</p>
-                    <p className="text-sm font-semibold text-green-900">
-                      {new Date(paymentDetails.paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-green-700 mb-1">Reference Number</p>
-                    <p className="text-sm font-semibold text-green-900">{paymentDetails.referenceNo}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-green-700 mb-1">Payment Method</p>
-                    <p className="text-sm font-semibold text-green-900">{paymentDetails.paymentMethod}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-green-700 mb-1">Paid Amount</p>
-                    <p className="text-sm font-semibold text-green-900">{paymentDetails.paidAmount.toFixed(2)}</p>
-                  </div>
-                  {paymentDetails.bankName && (
+                  {request.paidDate && (
                     <div>
-                      <p className="text-xs font-semibold text-green-700 mb-1">Bank</p>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Payment Date</p>
                       <p className="text-sm font-semibold text-green-900">
-                        {paymentDetails.bankName}{paymentDetails.bankAccountNumber ? ` - ${paymentDetails.bankAccountNumber}` : ''}
+                        {new Date(request.paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
                     </div>
                   )}
-                  {paymentDetails.amountInZar !== undefined && paymentDetails.amountInZar !== null && (
+                  {request.referenceNo && (
                     <div>
-                      <p className="text-xs font-semibold text-green-700 mb-1">Amount in ZAR</p>
-                      <p className="text-sm font-semibold text-green-900">ZAR {paymentDetails.amountInZar.toFixed(2)}</p>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Reference Number</p>
+                      <p className="text-sm font-semibold text-green-900">{request.referenceNo}</p>
                     </div>
                   )}
-                  <div>
-                    <p className="text-xs font-semibold text-green-700 mb-1">Paid By</p>
-                    <p className="text-sm font-semibold text-green-900">{paymentDetails.paidBy}</p>
-                  </div>
-                  {paymentDetails.remarks && (
+                  {request.paymentMethod && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Payment Method</p>
+                      <p className="text-sm font-semibold text-green-900">{request.paymentMethod}</p>
+                    </div>
+                  )}
+                  {request.paidAmount !== undefined && request.paidAmount !== null && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Paid Amount</p>
+                      <p className="text-sm font-semibold text-green-900">{request.paidAmount.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {request.bankName && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Bank</p>
+                      <p className="text-sm font-semibold text-green-900">{request.bankName}</p>
+                    </div>
+                  )}
+                  {request.amountInZar !== undefined && request.amountInZar !== null && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Amount in ZAR</p>
+                      <p className="text-sm font-semibold text-green-900">ZAR {request.amountInZar.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {request.paidBy && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Paid By</p>
+                      <p className="text-sm font-semibold text-green-900">{request.paidBy}</p>
+                    </div>
+                  )}
+                  {request.remarks && (
                     <div className="col-span-1 md:col-span-2">
                       <p className="text-xs font-semibold text-green-700 mb-1">Remarks</p>
-                      <p className="text-sm text-green-900">{paymentDetails.remarks}</p>
+                      <p className="text-sm text-green-900">{request.remarks}</p>
                     </div>
                   )}
                 </div>
