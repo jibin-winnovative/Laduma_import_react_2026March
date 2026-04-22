@@ -203,22 +203,6 @@ export const ClearingPaymentForm = ({
 
   const handleContainerChange = async (val: string) => {
     const id = val ? Number(val) : '';
-
-    if (id) {
-      try {
-        const paymentStatus = await containersService.getClearingPaymentStatus(id);
-
-        if (paymentStatus.hasClearingPayment) {
-          alert('Payment already exists in this container. Please select a different container.');
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to check clearing payment status:', err);
-        alert('Failed to verify container payment status. Please try again.');
-        return;
-      }
-    }
-
     setContainerId(id);
     setClearingAgentId('');
     setPoList([]);
@@ -229,24 +213,12 @@ export const ClearingPaymentForm = ({
   };
 
   const handleContainerSelect = async (id: number, containerNumber: string) => {
-    try {
-      const paymentStatus = await containersService.getClearingPaymentStatus(id);
-
-      if (paymentStatus.hasClearingPayment) {
-        alert('Payment already exists in this container. Please select a different container.');
-        return;
-      }
-
-      setContainers([{ containerId: id, containerNumber }]);
-      setContainerId(id);
-      setClearingAgentId('');
-      setPoList([]);
-      setChargeMap(new Map());
-      await loadContainerPOs(id);
-    } catch (err) {
-      console.error('Failed to check clearing payment status:', err);
-      alert('Failed to verify container payment status. Please try again.');
-    }
+    setContainers([{ containerId: id, containerNumber }]);
+    setContainerId(id);
+    setClearingAgentId('');
+    setPoList([]);
+    setChargeMap(new Map());
+    await loadContainerPOs(id);
   };
 
   const handleChargesSaved = (poId: number, lines: ClearingPaymentChargeLine[]) => {
