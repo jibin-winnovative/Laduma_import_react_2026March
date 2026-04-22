@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   X, DollarSign, Calendar, Clock, CheckCircle, Building, FileText,
   User, AlertTriangle, Package, ExternalLink, XCircle, Truck, Ship, CreditCard,
-  Upload, Download, Landmark, ThumbsUp, FileCheck,
+  Upload, Download, Landmark, ThumbsUp, FileCheck, Save,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { paymentsService, PaymentRequestDetails } from '../../services/paymentsService';
+import { paymentsService, PaymentRequestDetails, PaymentDetails } from '../../services/paymentsService';
 import { paymentRequestsService } from '../../services/paymentRequestsService';
 import { attachmentService, Attachment as ExistingAttachment } from '../../services/attachmentService';
 import { attachmentTypesService } from '../../services/attachmentTypesService';
@@ -72,6 +72,9 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
+  const [paidAttachmentSaving, setPaidAttachmentSaving] = useState(false);
+  const [paidPendingAttachments, setPaidPendingAttachments] = useState<PendingAttachment[]>([]);
 
   useEffect(() => {
     attachmentTypesService.getActiveDropdown('Payment').then(setAttachmentTypeOptions).catch(() => {});
@@ -88,6 +91,8 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       setSupplierIdToView(null);
       setPendingAttachments([]);
       setApnPendingAttachments([]);
+      setPaidPendingAttachments([]);
+      setPaymentDetails(null);
       setPaymentData({
         paidDate: new Date().toISOString().split('T')[0],
         referenceNo: '',
@@ -112,6 +117,14 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       setPaymentData(prev => ({ ...prev, paidAmount: data.requestAmount }));
       const attachments = await attachmentService.getByEntity('PaymentRequest', requestId);
       setExistingAttachments(attachments);
+      if (data.status === 'Paid') {
+        try {
+          const pd = await paymentsService.getPaymentDetailsByRequestId(requestId);
+          setPaymentDetails(pd);
+        } catch {
+          setPaymentDetails(null);
+        }
+      }
     } catch (error) {
       console.error('Failed to load payment request:', error);
     } finally {
@@ -244,6 +257,91 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
       a.id === id ? { ...a, status: 'pending', retryCount: 0, error: undefined } : a
     ));
     await uploadSingle({ ...att, status: 'pending', retryCount: 0 }, requestId);
+  };
+
+  const addPaidPendingAttachment = (file: File) => {
+    setPaidPendingAttachments(prev => [...prev, {
+      id: `paid-att-${Date.now()}-${Math.random()}`,
+      file,
+      type: '',
+      status: 'pending',
+      progress: 0,
+      retryCount: 0,
+    }]);
+  };
+
+  const updatePaidAttachmentType = (id: string, type: string) => {
+    setPaidPendingAttachments(prev => prev.map(a => a.id === id ? { ...a, type } : a));
+  };
+
+  const removePaidPending = (id: string) => {
+    setPaidPendingAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const uploadPaidSingle = async (attachment: PendingAttachment): Promise<boolean> => {
+    const MAX_RETRIES = 3;
+    let retry = attachment.retryCount;
+    while (retry <= MAX_RETRIES) {
+      try {
+        setPaidPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploading', progress: 10 } : a
+        ));
+        const presigned = await attachmentService.requestPresignedUpload({
+          fileName: attachment.file.name,
+          contentType: attachment.file.type,
+          entityType: 'PaymentRequest',
+          entityId: requestId,
+          ...(attachment.type ? { category: attachment.type } : {}),
+        });
+        setPaidPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 40 } : a
+        ));
+        await attachmentService.uploadToS3(presigned.uploadUrl, attachment.file);
+        setPaidPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, progress: 70 } : a
+        ));
+        await attachmentService.confirmUpload(presigned.attachmentId);
+        setPaidPendingAttachments(prev => prev.map(a =>
+          a.id === attachment.id ? { ...a, status: 'uploaded', progress: 100 } : a
+        ));
+        return true;
+      } catch {
+        retry++;
+        if (retry <= MAX_RETRIES) {
+          setPaidPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, retryCount: retry, progress: 0, error: `Retry ${retry}/${MAX_RETRIES}...` } : a
+          ));
+          await new Promise(r => setTimeout(r, 1000 * retry));
+        } else {
+          setPaidPendingAttachments(prev => prev.map(a =>
+            a.id === attachment.id ? { ...a, status: 'failed', error: 'Upload failed after 3 retries', progress: 0 } : a
+          ));
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  const handleSavePaidAttachments = async () => {
+    if (paidPendingAttachments.some(a => !a.type)) {
+      alert('Please select a type for all attachments before saving');
+      return;
+    }
+    setPaidAttachmentSaving(true);
+    try {
+      const toUpload = paidPendingAttachments.filter(a => a.status === 'pending' || a.status === 'failed');
+      for (const att of toUpload) {
+        await uploadPaidSingle(att);
+      }
+      const refreshed = await attachmentService.getByEntity('PaymentRequest', requestId);
+      setExistingAttachments(refreshed);
+      setPaidPendingAttachments([]);
+    } catch {
+      alert('Some attachments failed to upload');
+    } finally {
+      setPaidAttachmentSaving(false);
+    }
   };
 
   const hasMissingTypes = pendingAttachments.some(a => !a.type);
@@ -621,6 +719,156 @@ export function ViewPaymentRequest({ requestId, isOpen, onClose, onMakePayment, 
                 </div>
               );
             })()}
+
+            {status === 'Paid' && paymentDetails && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-green-900 mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  Payment Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-green-700 mb-1">Payment Date</p>
+                    <p className="text-sm font-semibold text-green-900">
+                      {new Date(paymentDetails.paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-green-700 mb-1">Reference Number</p>
+                    <p className="text-sm font-semibold text-green-900">{paymentDetails.referenceNo}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-green-700 mb-1">Payment Method</p>
+                    <p className="text-sm font-semibold text-green-900">{paymentDetails.paymentMethod}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-green-700 mb-1">Paid Amount</p>
+                    <p className="text-sm font-semibold text-green-900">{paymentDetails.paidAmount.toFixed(2)}</p>
+                  </div>
+                  {paymentDetails.bankName && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Bank</p>
+                      <p className="text-sm font-semibold text-green-900">
+                        {paymentDetails.bankName}{paymentDetails.bankAccountNumber ? ` - ${paymentDetails.bankAccountNumber}` : ''}
+                      </p>
+                    </div>
+                  )}
+                  {paymentDetails.amountInZar !== undefined && paymentDetails.amountInZar !== null && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-700 mb-1">Amount in ZAR</p>
+                      <p className="text-sm font-semibold text-green-900">ZAR {paymentDetails.amountInZar.toFixed(2)}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-semibold text-green-700 mb-1">Paid By</p>
+                    <p className="text-sm font-semibold text-green-900">{paymentDetails.paidBy}</p>
+                  </div>
+                  {paymentDetails.remarks && (
+                    <div className="col-span-1 md:col-span-2">
+                      <p className="text-xs font-semibold text-green-700 mb-1">Remarks</p>
+                      <p className="text-sm text-green-900">{paymentDetails.remarks}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {status === 'Paid' && (
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Add Attachments
+                </h3>
+                <div className="mb-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-blue-400 transition-colors">
+                    <input
+                      id="paid-attachment-upload"
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        Array.from(e.target.files || []).forEach(file => {
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert(`File ${file.name} exceeds 10MB limit`);
+                            return;
+                          }
+                          addPaidPendingAttachment(file);
+                        });
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <label htmlFor="paid-attachment-upload" className="flex flex-col items-center justify-center cursor-pointer">
+                      <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600 font-medium mb-1">Click to upload or drag and drop</p>
+                      <p className="text-xs text-gray-500">PDF, DOC, XLS, PNG, JPG (Max 10MB per file)</p>
+                    </label>
+                  </div>
+                </div>
+                {paidPendingAttachments.length > 0 && (
+                  <div className="space-y-3 mb-4">
+                    {paidPendingAttachments.map((att) => (
+                      <div key={att.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-start gap-3">
+                          <FileText className="w-5 h-5 text-[var(--color-primary)] mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{att.file.name}</p>
+                                <p className="text-xs text-gray-500">{(att.file.size / 1024).toFixed(0)} KB</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={att.type}
+                                  onChange={(e) => updatePaidAttachmentType(att.id, e.target.value)}
+                                  disabled={att.status === 'uploading'}
+                                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                                >
+                                  <option value="">Select Type</option>
+                                  {attachmentTypeOptions.map((opt) => (
+                                    <option key={opt.id} value={opt.name}>{opt.name}</option>
+                                  ))}
+                                </select>
+                                <Button
+                                  onClick={() => removePaidPending(att.id)}
+                                  variant="danger"
+                                  className="px-2 py-1.5"
+                                  disabled={att.status === 'uploading'}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            {att.status === 'uploading' && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-blue-600">Uploading...</p>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${att.progress}%` }} />
+                                </div>
+                              </div>
+                            )}
+                            {att.status === 'uploaded' && <p className="text-xs text-green-600">Uploaded successfully</p>}
+                            {att.status === 'failed' && <p className="text-xs text-red-600">{att.error || 'Upload failed'}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {paidPendingAttachments.some(a => a.status === 'pending' || a.status === 'failed') && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSavePaidAttachments}
+                      disabled={paidAttachmentSaving || paidPendingAttachments.some(a => a.status === 'uploading')}
+                      className="flex items-center gap-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] hover:opacity-90"
+                    >
+                      <Save className="w-4 h-4" />
+                      {paidAttachmentSaving ? 'Saving...' : 'Save Attachments'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {request.description && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
