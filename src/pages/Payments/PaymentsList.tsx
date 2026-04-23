@@ -169,13 +169,16 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
 
           <Card className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--color-text-secondary)]">Ready to Pay Amount</p>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-                  {formatCurrency(summary.pendingAmountTotal)}
+                <p className="text-base font-bold text-[var(--color-text-primary)] mt-1">
+                  USD {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(summary.pendingAmountTotalUsd)}
+                </p>
+                <p className="text-base font-bold text-[var(--color-text-primary)]">
+                  ZAR {new Intl.NumberFormat('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(summary.pendingAmountTotalZar)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <DollarSign className="w-6 h-6 text-orange-600" />
               </div>
             </div>
@@ -211,13 +214,16 @@ export function PaymentsList({ onSelectRequest, refreshKey }: PaymentsListProps)
 
           <Card className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--color-text-secondary)]">Amount This Month</p>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-                  {formatCurrency(summary.paidThisMonthTotal)}
+                <p className="text-base font-bold text-[var(--color-text-primary)] mt-1">
+                  USD {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(summary.paidThisMonthTotalUsd)}
+                </p>
+                <p className="text-base font-bold text-[var(--color-text-primary)]">
+                  ZAR {new Intl.NumberFormat('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(summary.paidThisMonthTotalZar)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <TrendingUp className="w-6 h-6 text-teal-600" />
               </div>
             </div>

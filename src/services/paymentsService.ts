@@ -2,9 +2,11 @@ import apiClient from './apiClient';
 
 export interface DashboardSummary {
   pendingRequestCount: number;
-  pendingAmountTotal: number;
+  pendingAmountTotalUsd: number;
+  pendingAmountTotalZar: number;
   paidRequestCount: number;
-  paidThisMonthTotal: number;
+  paidThisMonthTotalUsd: number;
+  paidThisMonthTotalZar: number;
   paidThisMonthCount: number;
 }
 
