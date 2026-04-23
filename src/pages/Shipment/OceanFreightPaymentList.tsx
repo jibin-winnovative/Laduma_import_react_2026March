@@ -313,7 +313,7 @@ export const OceanFreightPaymentList = ({ onAdd, onEdit, onView, onDelete }: Oce
                   Ocean Freight Company
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment Date
+                  Estimated Payment Date
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ocean Freight USD
