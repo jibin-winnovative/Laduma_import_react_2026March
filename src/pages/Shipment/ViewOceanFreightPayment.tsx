@@ -212,7 +212,7 @@ export const ViewOceanFreightPayment = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Payment Date</label>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Estimated Payment Date</label>
               <p className="text-base text-[var(--color-text)]">{formatDate(data.paymentDate)}</p>
             </div>
 

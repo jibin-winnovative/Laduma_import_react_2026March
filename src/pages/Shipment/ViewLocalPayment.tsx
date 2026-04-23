@@ -215,7 +215,7 @@ export const ViewLocalPayment = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Payment Date</label>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Estimated Payment Date</label>
             <p className="text-base font-semibold text-gray-900">{formatDate(data.paymentDate)}</p>
           </div>
 

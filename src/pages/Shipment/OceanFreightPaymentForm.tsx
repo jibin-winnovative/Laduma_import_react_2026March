@@ -677,7 +677,7 @@ export const OceanFreightPaymentForm = ({
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-              Payment Date <span className="text-red-500">*</span>
+              Estimated Payment Date <span className="text-red-500">*</span>
             </label>
             <input
               type="date"

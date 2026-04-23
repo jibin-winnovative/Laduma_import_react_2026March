@@ -380,7 +380,7 @@ export const LocalPaymentForm = ({
       return false;
     }
     if (!paymentDate) {
-      alert('Please select payment date');
+      alert('Please select estimated payment date');
       return false;
     }
     if (!billDate) {
@@ -448,21 +448,55 @@ export const LocalPaymentForm = ({
     }
   };
 
+  const handleRequestOnCreate = () => {
+    if (!validate()) return;
+    const missingTypes = pendingAttachments.some(att => !att.type);
+    if (missingTypes) {
+      alert('Please select a type for all attachments before submitting');
+      return;
+    }
+    setShowRequestDialog(true);
+  };
+
   const handleRequestPayment = () => {
     setShowRequestDialog(true);
   };
 
   const confirmRequest = async () => {
     setShowRequestDialog(false);
-    if (!localPaymentId) return;
     setSaving(true);
+    setError(null);
     try {
-      await localPaymentsService.requestPayment(localPaymentId);
+      if (mode === 'add') {
+        const payload: any = {
+          containerId: Number(containerId),
+          paymentNature,
+          localTransportCompanyId: paymentNature === 'Transport' ? Number(localTransportCompanyId) : null,
+          amountExcl: Number(amountExcl),
+          vat: Number(vat),
+          paymentDate: paymentDate + 'T00:00:00',
+          billDate: billDate + 'T00:00:00',
+          remarks,
+          status: 'Pending',
+        };
+        const created = await localPaymentsService.create(payload);
+        const newId = created.localPaymentId;
+        if (pendingAttachments.length > 0 && newId) {
+          await uploadAttachments(newId);
+        }
+        if (newId) {
+          await localPaymentsService.requestPayment(newId);
+        }
+      } else {
+        if (!localPaymentId) return;
+        await localPaymentsService.requestPayment(localPaymentId);
+      }
       alert('Payment request submitted successfully!');
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error('Failed to request payment:', err);
+      setError(err.message || 'Failed to request payment');
       alert(err.message || 'Failed to request payment');
     } finally {
       setSaving(false);
@@ -777,7 +811,7 @@ export const LocalPaymentForm = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Date <span className="text-red-500">*</span>
+                  Estimated Payment Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -1046,8 +1080,18 @@ export const LocalPaymentForm = ({
               >
                 <Save className="w-4 h-4" />
                 {pendingAttachments.some(a => a.status === 'uploading')
-                  ? 'Uploading attachments...'
+                  ? 'Uploading...'
                   : saving ? 'Saving...' : 'Save Draft'}
+              </Button>
+              <Button
+                onClick={handleRequestOnCreate}
+                disabled={saving || pendingAttachments.some(a => a.status === 'uploading')}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Send className="w-4 h-4" />
+                {pendingAttachments.some(a => a.status === 'uploading')
+                  ? 'Uploading...'
+                  : saving ? 'Processing...' : 'Request Payment'}
               </Button>
             </>
           )}
@@ -1132,7 +1176,9 @@ export const LocalPaymentForm = ({
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Request Payment</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to request payment for this local payment?
+              {mode === 'add'
+                ? 'This will save the local payment and submit it for approval. Continue?'
+                : 'Are you sure you want to request payment for this local payment?'}
             </p>
             <div className="flex justify-end gap-3">
               <button
