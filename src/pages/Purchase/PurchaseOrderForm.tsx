@@ -204,18 +204,32 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     const LOCKED_STATUSES = ['Requested', 'Paid', 'Rejected'];
 
     setPaymentTerms((prev) => {
+      const lockedAmount = prev
+        .filter((t) => t.status && LOCKED_STATUSES.includes(t.status))
+        .reduce((acc, t) => acc + (t.amount || 0), 0);
+
+      // Amount available for unlocked terms = full invoice minus what is already locked/paid
+      const remainingForUnlocked = Math.max(0, invoiceTotal - lockedAmount);
+
+      const unlockedTerms = prev.filter((t) => !(t.status && LOCKED_STATUSES.includes(t.status)));
+      const totalUnlockedPct = unlockedTerms.reduce((acc, t) => acc + (t.percentage || 0), 0);
+
       return prev.map((term) => {
         const isLocked = term.status && LOCKED_STATUSES.includes(term.status);
         if (isLocked) return term;
 
         if (term.percentage > 0) {
-          // Percentage is always a share of the full invoice total, not the remaining portion
-          const calculatedAmount = toNumber(divide(multiply(invoiceTotal, term.percentage), 100));
+          // Distribute the remaining amount proportionally among unlocked terms
+          const share = totalUnlockedPct > 0 ? term.percentage / totalUnlockedPct : 0;
+          const calculatedAmount = toNumber(
+            divide(multiply(remainingForUnlocked, share * 100), 100)
+          );
           return { ...term, amount: calculatedAmount };
         } else if (term.amount > 0) {
-          const calculatedPercentage = invoiceTotal > 0
-            ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
-            : 0;
+          const calculatedPercentage =
+            invoiceTotal > 0
+              ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
+              : 0;
           return { ...term, percentage: calculatedPercentage };
         }
         return term;
@@ -584,11 +598,19 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       alert(`Cannot edit this payment term because its status is "${term.status}".`);
       return;
     }
+
+    const LOCKED_STATUSES = ['Requested', 'Paid', 'Rejected'];
+    const lockedAmount = paymentTerms
+      .filter((t) => t.id !== id && t.status && LOCKED_STATUSES.includes(t.status))
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
+    const remainingForUnlocked = Math.max(0, invoiceTotal - lockedAmount);
+
     setPaymentTerms(paymentTerms.map(term => {
       if (term.id === id) {
         if (field === 'percentage') {
           const pct = value;
-          const calculatedAmount = toNumber(divide(multiply(invoiceTotal, pct), 100));
+          // Percentage entered by user is their share of the unlocked pool
+          const calculatedAmount = toNumber(divide(multiply(remainingForUnlocked, pct), 100));
           return {
             ...term,
             percentage: pct,
@@ -596,7 +618,8 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           };
         } else if (field === 'amount') {
           const amt = value;
-          const calculatedPercentage = invoiceTotal > 0 ? toNumber(multiply(divide(amt, invoiceTotal), 100)) : 0;
+          const calculatedPercentage =
+            invoiceTotal > 0 ? toNumber(multiply(divide(amt, invoiceTotal), 100)) : 0;
           return {
             ...term,
             amount: amt,
