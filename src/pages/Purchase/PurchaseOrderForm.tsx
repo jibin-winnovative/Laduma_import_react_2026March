@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -113,6 +113,7 @@ interface PurchaseOrderFormProps {
 }
 
 export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }: PurchaseOrderFormProps) => {
+  const paymentTermsLoadedRef = useRef(false);
   const [loading, setLoading] = useState(mode === 'edit' && !!purchaseOrderId);
   const [companies, setCompanies] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -201,6 +202,13 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   }, [items, charges]);
 
   useEffect(() => {
+    // On initial edit load the amounts are already correct from the API — skip recalculation.
+    // Only recalculate when the user subsequently changes items/charges.
+    if (!paymentTermsLoadedRef.current) {
+      paymentTermsLoadedRef.current = true;
+      return;
+    }
+
     const LOCKED_STATUSES = ['Requested', 'Paid', 'Rejected'];
 
     setPaymentTerms((prev) => {
@@ -218,7 +226,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         const isLocked = term.status && LOCKED_STATUSES.includes(term.status);
 
         if (isLocked) {
-          // Locked terms (Paid/Requested/Rejected): keep amount fixed, update % to reflect real share
+          // Locked terms: keep amount fixed, update % to reflect real share of new invoice total
           const updatedPct =
             invoiceTotal > 0
               ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
@@ -431,13 +439,22 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         })));
       }
 
-      // Populate payment terms
+      // Populate payment terms — derive % from loaded amounts so display is accurate
       if (data.payments && data.payments.length > 0) {
+        const invoiceTotalForPct = data.payments.reduce(
+          (acc: number, p: any) => acc + (p.expectedAmount || 0),
+          0
+        );
+        // Reset the guard so the upcoming invoiceTotal change (from setting items) is skipped
+        paymentTermsLoadedRef.current = false;
         setPaymentTerms(data.payments.map((payment: any) => ({
           id: `pt-${payment.purchaseOrderPaymentId}`,
           purchaseOrderPaymentId: payment.purchaseOrderPaymentId,
           description: payment.description,
-          percentage: payment.percentage,
+          percentage:
+            invoiceTotalForPct > 0
+              ? toNumber(multiply(divide(payment.expectedAmount, invoiceTotalForPct), 100))
+              : payment.percentage,
           amount: payment.expectedAmount,
           expectedDate: payment.expectedDate ? payment.expectedDate.split('T')[0] : '',
           status: payment.status,
