@@ -98,6 +98,7 @@ const menuItems: MenuItem[] = [
     icon: BarChart2,
     children: [
       { label: 'PO Reports', path: '/reports/purchase-orders', icon: FileText },
+      { label: 'PO Payments Report', path: '/reports/po-payments', icon: Receipt },
     ],
   },
 ];

@@ -41,6 +41,7 @@ import { OceanFreightPaymentPage } from './pages/Shipment/OceanFreightPaymentPag
 import { LocalPaymentPage } from './pages/Shipment/LocalPaymentPage';
 import { ETAPaymentStatusPage } from './pages/Shipment/ETAPaymentStatusPage';
 import { POReportsPage } from './pages/Reports/POReportsPage';
+import { POPaymentsReportPage } from './pages/Reports/POPaymentsReportPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,6 +111,7 @@ function App() {
                         <Route path="/eta-payment-status" element={<ETAPaymentStatusPage />} />
 
                         <Route path="/reports/purchase-orders" element={<POReportsPage />} />
+                        <Route path="/reports/po-payments" element={<POPaymentsReportPage />} />
                       </Routes>
                     </MainLayout>
                   </ProtectedRoute>
