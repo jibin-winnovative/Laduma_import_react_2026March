@@ -144,14 +144,36 @@ export interface ExcelImportResponse {
 
 export interface PurchaseOrderEventLog {
   eventId: number;
+  purchaseOrderEventLogId?: number;
   eventType: string;
   eventName: string;
-  fromStatus?: string;
-  toStatus?: string;
+  fromStatus?: string | null;
+  toStatus?: string | null;
   eventDate: string;
-  remark?: string;
+  remark?: string | null;
   changedBy: string;
   createdAt: string;
+}
+
+export interface PurchaseOrderStatusChangeDto {
+  status: string;
+  statusChangeDate: string;
+  remark?: string | null;
+}
+
+export const OPERATIONAL_STATUS_SEQUENCE = [
+  'Goods Ready From Supplier',
+  'Customs Clearance',
+  'Goods Collected By Transporter',
+  'Goods Receipt In Warehouse',
+  'GRV Completed',
+] as const;
+
+export function getNextOperationalStatus(current?: string | null): string | null {
+  if (!current) return OPERATIONAL_STATUS_SEQUENCE[0];
+  const index = OPERATIONAL_STATUS_SEQUENCE.indexOf(current as any);
+  if (index < 0 || index === OPERATIONAL_STATUS_SEQUENCE.length - 1) return null;
+  return OPERATIONAL_STATUS_SEQUENCE[index + 1];
 }
 
 export const purchaseOrdersService = {
@@ -231,6 +253,11 @@ export const purchaseOrdersService = {
 
   getEventLog: async (purchaseOrderId: number): Promise<PurchaseOrderEventLog[]> => {
     const response = await apiClient.get(`/api/purchaseorders/${purchaseOrderId}/event-log`);
+    return response.data;
+  },
+
+  changeOperationalStatus: async (id: number, payload: PurchaseOrderStatusChangeDto): Promise<PurchaseOrderResponse> => {
+    const response = await apiClient.post(`/api/PurchaseOrders/${id}/operational-status`, payload);
     return response.data;
   },
 
