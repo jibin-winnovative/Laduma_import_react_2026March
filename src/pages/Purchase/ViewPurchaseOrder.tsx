@@ -4,7 +4,6 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
 import { PurchaseOrderEventLogTimeline } from './PurchaseOrderEventLog';
-import { POOperationalStatusWorkflow } from './POOperationalStatusWorkflow';
 import { attachmentService } from '../../services/attachmentService';
 import { removeTrailingZeros } from '../../utils/numberUtils';
 import Decimal from 'decimal.js';
@@ -757,33 +756,7 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
         </Card>
       )}
 
-      {purchaseOrder.poStatus === 'Approved' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-[var(--color-text)] mb-1 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-emerald-600" />
-            Operational Status
-          </h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            Track the logistics progression of this purchase order.
-          </p>
-          {purchaseOrder.operationalStatus && (
-            <div className="mb-4 flex items-center gap-2">
-              <span className="text-sm text-[var(--color-text-secondary)]">Current:</span>
-              <span className="px-2.5 py-1 text-sm font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {purchaseOrder.operationalStatus}
-              </span>
-            </div>
-          )}
-          <POOperationalStatusWorkflow
-            purchaseOrderId={purchaseOrderId}
-            poStatus={purchaseOrder.poStatus}
-            operationalStatus={purchaseOrder.operationalStatus}
-            onStatusChanged={fetchPurchaseOrder}
-          />
-        </Card>
-      )}
-
-      <PurchaseOrderEventLogTimeline purchaseOrderId={purchaseOrderId} key={purchaseOrder.operationalStatus ?? 'log'} />
+      <PurchaseOrderEventLogTimeline purchaseOrderId={purchaseOrderId} />
 
       {(purchaseOrder.createdAt || purchaseOrder.approvedBy) && (
         <Card className="p-6">
