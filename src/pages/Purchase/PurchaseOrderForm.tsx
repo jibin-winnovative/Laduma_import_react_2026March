@@ -208,29 +208,39 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         .filter((t) => t.status && LOCKED_STATUSES.includes(t.status))
         .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-      // Amount available for unlocked terms = full invoice minus what is already locked/paid
-      const remainingForUnlocked = Math.max(0, invoiceTotal - lockedAmount);
+      // Remaining amount to be distributed among Pending (unlocked) terms
+      const remainingForPending = Math.max(0, invoiceTotal - lockedAmount);
 
-      const unlockedTerms = prev.filter((t) => !(t.status && LOCKED_STATUSES.includes(t.status)));
-      const totalUnlockedPct = unlockedTerms.reduce((acc, t) => acc + (t.percentage || 0), 0);
+      const pendingTerms = prev.filter((t) => !(t.status && LOCKED_STATUSES.includes(t.status)));
+      const totalPendingPct = pendingTerms.reduce((acc, t) => acc + (t.percentage || 0), 0);
 
       return prev.map((term) => {
         const isLocked = term.status && LOCKED_STATUSES.includes(term.status);
-        if (isLocked) return term;
 
+        if (isLocked) {
+          // Locked terms (Paid/Requested/Rejected): keep amount fixed, update % to reflect real share
+          const updatedPct =
+            invoiceTotal > 0
+              ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
+              : term.percentage;
+          return { ...term, percentage: updatedPct };
+        }
+
+        // Pending terms: distribute remaining amount proportionally, update both % and amount
         if (term.percentage > 0) {
-          // Distribute the remaining amount proportionally among unlocked terms
-          const share = totalUnlockedPct > 0 ? term.percentage / totalUnlockedPct : 0;
-          const calculatedAmount = toNumber(
-            divide(multiply(remainingForUnlocked, share * 100), 100)
-          );
-          return { ...term, amount: calculatedAmount };
+          const share = totalPendingPct > 0 ? term.percentage / totalPendingPct : 0;
+          const calculatedAmount = toNumber(multiply(remainingForPending, share));
+          const calculatedPct =
+            invoiceTotal > 0
+              ? toNumber(multiply(divide(calculatedAmount, invoiceTotal), 100))
+              : term.percentage;
+          return { ...term, amount: calculatedAmount, percentage: calculatedPct };
         } else if (term.amount > 0) {
-          const calculatedPercentage =
+          const calculatedPct =
             invoiceTotal > 0
               ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
               : 0;
-          return { ...term, percentage: calculatedPercentage };
+          return { ...term, percentage: calculatedPct };
         }
         return term;
       });
@@ -599,32 +609,18 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       return;
     }
 
-    const LOCKED_STATUSES = ['Requested', 'Paid', 'Rejected'];
-    const lockedAmount = paymentTerms
-      .filter((t) => t.id !== id && t.status && LOCKED_STATUSES.includes(t.status))
-      .reduce((acc, t) => acc + (t.amount || 0), 0);
-    const remainingForUnlocked = Math.max(0, invoiceTotal - lockedAmount);
-
     setPaymentTerms(paymentTerms.map(term => {
       if (term.id === id) {
         if (field === 'percentage') {
           const pct = value;
-          // Percentage entered by user is their share of the unlocked pool
-          const calculatedAmount = toNumber(divide(multiply(remainingForUnlocked, pct), 100));
-          return {
-            ...term,
-            percentage: pct,
-            amount: calculatedAmount
-          };
+          // % is entered as a share of the full invoice total
+          const calculatedAmount = toNumber(divide(multiply(invoiceTotal, pct), 100));
+          return { ...term, percentage: pct, amount: calculatedAmount };
         } else if (field === 'amount') {
           const amt = value;
           const calculatedPercentage =
             invoiceTotal > 0 ? toNumber(multiply(divide(amt, invoiceTotal), 100)) : 0;
-          return {
-            ...term,
-            amount: amt,
-            percentage: calculatedPercentage
-          };
+          return { ...term, amount: amt, percentage: calculatedPercentage };
         }
         return { ...term, [field]: value };
       }
