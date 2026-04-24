@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -100,73 +101,156 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-// Simple tooltip shown to the right of the icon — pointer-events: none so it never blocks clicks
-const IconTooltip = ({ label }: { label: string }) => (
-  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-[9999] pointer-events-none select-none">
-    <div className="bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-lg whitespace-nowrap">
-      {label}
-      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
-    </div>
-  </div>
-);
-
-// Flyout panel shown to the right of the sidebar when a parent icon is hovered/clicked in collapsed mode
-interface FlyoutProps {
+// ── Portal-based flyout for collapsed parent items ──
+interface FlyoutMenuProps {
   item: MenuItem;
+  anchorEl: HTMLElement;
   onClose: () => void;
 }
 
-const CollapsedFlyout = ({ item, onClose }: FlyoutProps) => {
+const FlyoutMenu = ({ item, anchorEl, onClose }: FlyoutMenuProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  const rect = anchorEl.getBoundingClientRect();
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+    const handlePointerDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node) && !anchorEl.contains(e.target as Node)) {
         onClose();
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [onClose]);
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [anchorEl, onClose]);
 
-  return (
+  return createPortal(
     <div
       ref={ref}
-      className="absolute left-full top-0 ml-1 z-[9998] bg-[var(--color-primary)] rounded-r-lg shadow-xl overflow-hidden min-w-[200px]"
-      style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+      style={{ position: 'fixed', top: rect.top, left: rect.right + 4, zIndex: 99999 }}
+      className="bg-[var(--color-primary)] rounded-r-lg shadow-2xl overflow-hidden min-w-[210px]"
+      onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="px-4 py-2.5 border-b border-white/10">
+      <div className="px-4 py-2 border-b border-white/10">
         <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">{item.label}</span>
       </div>
-      <div>
-        {item.children!.map((child) => {
-          const ChildIcon = child.icon;
-          return (
-            <NavLink
-              key={child.path}
-              to={child.path!}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                  isActive
-                    ? 'bg-[var(--color-secondary)] text-[var(--color-primary)] font-medium'
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] hover:text-white'
-                }`
-              }
-            >
-              <ChildIcon className="w-4 h-4 flex-shrink-0" />
-              <span>{child.label}</span>
-            </NavLink>
-          );
-        })}
-      </div>
+      {item.children!.map((child) => {
+        const ChildIcon = child.icon;
+        return (
+          <NavLink
+            key={child.path}
+            to={child.path!}
+            onClick={onClose}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                isActive
+                  ? 'bg-[var(--color-secondary)] text-[var(--color-primary)] font-medium'
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] hover:text-white'
+              }`
+            }
+          >
+            <ChildIcon className="w-4 h-4 flex-shrink-0" />
+            <span>{child.label}</span>
+          </NavLink>
+        );
+      })}
+    </div>,
+    document.body
+  );
+};
+
+// ── Portal-based tooltip for collapsed leaf items ──
+interface TooltipPortalProps {
+  label: string;
+  anchorEl: HTMLElement;
+}
+
+const TooltipPortal = ({ label, anchorEl }: TooltipPortalProps) => {
+  const rect = anchorEl.getBoundingClientRect();
+  const top = rect.top + rect.height / 2;
+  const left = rect.right + 8;
+
+  return createPortal(
+    <div
+      style={{ position: 'fixed', top, left, transform: 'translateY(-50%)', zIndex: 99999, pointerEvents: 'none' }}
+      className="bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-lg whitespace-nowrap"
+    >
+      {label}
+    </div>,
+    document.body
+  );
+};
+
+// ── Collapsed leaf item with tooltip ──
+interface CollapsedLeafProps {
+  item: MenuItem;
+}
+
+const CollapsedLeaf = ({ item }: CollapsedLeafProps) => {
+  const [hovered, setHovered] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const Icon = item.icon;
+
+  return (
+    <div ref={ref} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <NavLink
+        to={item.path!}
+        title={item.label}
+        className={({ isActive }) =>
+          `flex items-center justify-center py-3 px-4 text-sm transition-colors ${
+            isActive
+              ? 'bg-[var(--color-secondary)] text-[var(--color-primary)] font-medium'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] hover:text-white'
+          }`
+        }
+      >
+        <Icon className="w-5 h-5 flex-shrink-0" />
+      </NavLink>
+      {hovered && ref.current && <TooltipPortal label={item.label} anchorEl={ref.current} />}
+    </div>
+  );
+};
+
+// ── Collapsed parent item with flyout ──
+interface CollapsedParentProps {
+  item: MenuItem;
+  isChildActive: boolean;
+}
+
+const CollapsedParent = ({ item, isChildActive }: CollapsedParentProps) => {
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const Icon = item.icon;
+  const location = useLocation();
+
+  useEffect(() => {
+    setFlyoutOpen(false);
+  }, [location.pathname]);
+
+  return (
+    <div ref={ref} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <button
+        onClick={() => setFlyoutOpen((v) => !v)}
+        title={item.label}
+        className={`w-full flex items-center justify-center py-3 px-4 text-sm transition-colors ${
+          isChildActive || flyoutOpen
+            ? 'bg-[var(--color-primary-light)] text-white'
+            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] hover:text-white'
+        }`}
+      >
+        <Icon className="w-5 h-5 flex-shrink-0" />
+      </button>
+      {flyoutOpen && ref.current && (
+        <FlyoutMenu item={item} anchorEl={ref.current} onClose={() => setFlyoutOpen(false)} />
+      )}
+      {hovered && !flyoutOpen && ref.current && (
+        <TooltipPortal label={item.label} anchorEl={ref.current} />
+      )}
     </div>
   );
 };
 
 export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) => {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const [flyoutItem, setFlyoutItem] = useState<MenuItem | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -182,14 +266,9 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
     if (collapsed) setExpandedItems([]);
   }, [collapsed]);
 
-  // Close flyout on route change
-  useEffect(() => {
-    setFlyoutItem(null);
-  }, [location.pathname]);
-
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
-      prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]
+      prev.includes(label) ? prev.filter((i) => i !== label) : [...prev, label]
     );
   };
 
@@ -205,31 +284,15 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
     const Icon = item.icon;
     const childActive = isChildActive(item);
 
-    if (item.children) {
-      // ── COLLAPSED MODE: icon-only button that opens a flyout ──
-      if (collapsed) {
-        const isFlyoutOpen = flyoutItem?.label === item.label;
-        return (
-          <div key={item.label} className="relative">
-            <button
-              onClick={() => setFlyoutItem(isFlyoutOpen ? null : item)}
-              title={item.label}
-              className={`w-full flex items-center justify-center py-3 px-4 text-sm transition-colors ${
-                childActive || isFlyoutOpen
-                  ? 'bg-[var(--color-primary-light)] text-white'
-                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] hover:text-white'
-              }`}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-            </button>
-            {isFlyoutOpen && (
-              <CollapsedFlyout item={item} onClose={() => setFlyoutItem(null)} />
-            )}
-          </div>
-        );
+    if (collapsed) {
+      if (item.children) {
+        return <CollapsedParent key={item.label} item={item} isChildActive={childActive} />;
       }
+      return <CollapsedLeaf key={item.label} item={item} />;
+    }
 
-      // ── EXPANDED MODE: accordion ──
+    // ── Expanded mode ──
+    if (item.children) {
       return (
         <div key={item.label}>
           <button
@@ -259,31 +322,6 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
       );
     }
 
-    // ── LEAF ITEM ──
-    if (collapsed) {
-      return (
-        <div key={item.label} className="relative group">
-          <NavLink
-            to={item.path!}
-            title={item.label}
-            className={({ isActive }) =>
-              `flex items-center justify-center py-3 px-4 text-sm transition-colors ${
-                isActive
-                  ? 'bg-[var(--color-secondary)] text-[var(--color-primary)] font-medium'
-                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)] hover:text-white'
-              }`
-            }
-          >
-            <Icon className="w-5 h-5 flex-shrink-0" />
-          </NavLink>
-          {/* Tooltip — purely visual, pointer-events-none */}
-          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-[9999] pointer-events-none select-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-            <IconTooltip label={item.label} />
-          </div>
-        </div>
-      );
-    }
-
     return (
       <NavLink
         key={item.label}
@@ -307,13 +345,10 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
   return (
     <>
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
       )}
       <aside
-        className={`h-screen bg-[var(--color-primary)] flex flex-col fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out overflow-visible ${
+        className={`h-screen bg-[var(--color-primary)] flex flex-col fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out ${
           collapsed ? 'w-[72px]' : 'w-64'
         } ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
@@ -346,7 +381,7 @@ export const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto overflow-x-visible py-2">
+        <nav className="flex-1 overflow-y-auto py-2">
           {menuItems.map((item) => renderMenuItem(item))}
         </nav>
       </aside>
