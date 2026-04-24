@@ -204,22 +204,17 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     const LOCKED_STATUSES = ['Requested', 'Paid', 'Rejected'];
 
     setPaymentTerms((prev) => {
-      const lockedAmount = prev
-        .filter((t) => t.status && LOCKED_STATUSES.includes(t.status))
-        .reduce((acc, t) => acc + (t.amount || 0), 0);
-
-      const remainingTotal = Math.max(0, invoiceTotal - lockedAmount);
-
       return prev.map((term) => {
         const isLocked = term.status && LOCKED_STATUSES.includes(term.status);
         if (isLocked) return term;
 
         if (term.percentage > 0) {
-          const calculatedAmount = toNumber(divide(multiply(remainingTotal, term.percentage), 100));
+          // Percentage is always a share of the full invoice total, not the remaining portion
+          const calculatedAmount = toNumber(divide(multiply(invoiceTotal, term.percentage), 100));
           return { ...term, amount: calculatedAmount };
         } else if (term.amount > 0) {
-          const calculatedPercentage = remainingTotal > 0
-            ? toNumber(multiply(divide(term.amount, remainingTotal), 100))
+          const calculatedPercentage = invoiceTotal > 0
+            ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
             : 0;
           return { ...term, percentage: calculatedPercentage };
         }
