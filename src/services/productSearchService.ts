@@ -11,6 +11,7 @@ export interface HierarchyNode {
 export interface SearchProductRequest {
   supplierId: number;
   subTypeIds: number[];
+  onlyPurchasedFromSupplier: boolean;
 }
 
 export interface SearchProductResult {

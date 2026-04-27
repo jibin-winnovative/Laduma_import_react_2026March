@@ -55,6 +55,7 @@ export const SearchProductModal = ({
   const [monthSelection, setMonthSelection] = useState(1);
   const [selectedColorFilters, setSelectedColorFilters] = useState<Set<string>>(new Set());
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [onlyPurchasedFromSupplier, setOnlyPurchasedFromSupplier] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -72,6 +73,7 @@ export const SearchProductModal = ({
       setMonthSelection(1);
       setSelectedColorFilters(new Set());
       setShowSelectedOnly(false);
+      setOnlyPurchasedFromSupplier(false);
     }
   }, [isOpen]);
 
@@ -225,6 +227,7 @@ export const SearchProductModal = ({
       const results = await productSearchService.searchProducts({
         supplierId,
         subTypeIds,
+        onlyPurchasedFromSupplier,
       });
       setProducts(results);
       setSelectedProductIds(new Set());
@@ -250,6 +253,7 @@ export const SearchProductModal = ({
     setEditableData(new Map());
     setSelectedColorFilters(new Set());
     setShowSelectedOnly(false);
+    setOnlyPurchasedFromSupplier(false);
   };
 
   const handleRowCheckboxChange = (productId: number) => {
@@ -473,7 +477,7 @@ export const SearchProductModal = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Button
                   type="button"
                   onClick={handleSearch}
@@ -486,6 +490,17 @@ export const SearchProductModal = ({
                 <Button type="button" onClick={handleReset} variant="secondary">
                   Reset
                 </Button>
+                <label className="flex items-center gap-2 cursor-pointer select-none border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors bg-white">
+                  <input
+                    type="checkbox"
+                    checked={onlyPurchasedFromSupplier}
+                    onChange={(e) => setOnlyPurchasedFromSupplier(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  />
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    Show only previously purchased products
+                  </span>
+                </label>
               </div>
 
 
