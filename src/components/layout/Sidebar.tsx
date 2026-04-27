@@ -24,6 +24,7 @@ import {
   Receipt,
   Container,
   Landmark,
+  BarChart2,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -92,6 +93,14 @@ const menuItems: MenuItem[] = [
       { label: 'Ocean Freight Payment', path: '/ocean-freight-payments', icon: Ship },
       { label: 'Local Payment', path: '/local-payments', icon: Truck },
       { label: 'ETA Payment Status', path: '/eta-payment-status', icon: FileText },
+    ],
+  },
+  {
+    label: 'Reports',
+    icon: BarChart2,
+    children: [
+      { label: 'PO Reports', path: '/reports/po-reports', icon: FileText },
+      { label: 'PO Payments Report', path: '/reports/po-payments-report', icon: Receipt },
     ],
   },
 ];
