@@ -112,8 +112,8 @@ function App() {
                         <Route path="/local-payments" element={<LocalPaymentPage />} />
                         <Route path="/eta-payment-status" element={<ETAPaymentStatusPage />} />
 
-                        <Route path="/reports/po-reports" element={<POReportsPage />} />
-                        <Route path="/reports/po-payments-report" element={<POPaymentsReportPage />} />
+                        <Route path="/reports/purchase-orders" element={<POReportsPage />} />
+                        <Route path="/reports/po-payments" element={<POPaymentsReportPage />} />
                       </Routes>
                     </MainLayout>
                   </ProtectedRoute>

@@ -63,7 +63,13 @@ export const SupplierCouponDiscountsPage = () => {
     [searchTerm, filterNature, filterSupplierId, filterActive]
   );
 
-  useEffect(() => { fetchItems(1); }, [fetchItems]);
+  useEffect(() => {
+    fetchItems(1);
+  }, [fetchItems]);
+
+  const handleSearch = () => {
+    fetchItems(1);
+  };
 
   const handleReset = () => {
     setSearchTerm('');
@@ -94,21 +100,25 @@ export const SupplierCouponDiscountsPage = () => {
 
   const formatAmount = (n: number) =>
     `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   const formatDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString() : '—';
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">Supplier Coupons/Discounts</h1>
           <p className="text-sm text-gray-500 mt-1">{totalRecords} record{totalRecords !== 1 ? 's' : ''} found</p>
         </div>
         <Button variant="primary" onClick={() => setShowAddModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />Add New
+          <Plus className="w-4 h-4 mr-2" />
+          Add New
         </Button>
       </div>
 
+      {/* Filters */}
       <Card className="p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative">
@@ -118,68 +128,148 @@ export const SupplierCouponDiscountsPage = () => {
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchItems(1)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
-          <select value={filterSupplierId} onChange={(e) => setFilterSupplierId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+          <select
+            value={filterSupplierId}
+            onChange={(e) => setFilterSupplierId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+          >
             <option value="">All Suppliers</option>
-            {suppliers.map((s) => <option key={s.supplierId} value={s.supplierId}>{s.supplierName}</option>)}
+            {suppliers.map((s) => (
+              <option key={s.supplierId} value={s.supplierId}>
+                {s.supplierName}
+              </option>
+            ))}
           </select>
-          <select value={filterNature} onChange={(e) => setFilterNature(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+          <select
+            value={filterNature}
+            onChange={(e) => setFilterNature(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+          >
             <option value="">All Natures</option>
-            {NATURE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+            {NATURE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
           </select>
-          <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+          <select
+            value={filterActive}
+            onChange={(e) => setFilterActive(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+          >
             <option value="">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
           </select>
         </div>
         <div className="flex gap-2 mt-3">
-          <Button variant="primary" size="sm" onClick={() => fetchItems(1)}><Search className="w-4 h-4 mr-1" />Search</Button>
-          <Button variant="outline" size="sm" onClick={handleReset}><X className="w-4 h-4 mr-1" />Reset</Button>
-          <Button variant="outline" size="sm" onClick={() => fetchItems(currentPage)}><RefreshCw className="w-4 h-4 mr-1" />Refresh</Button>
+          <Button variant="primary" size="sm" onClick={handleSearch}>
+            <Search className="w-4 h-4 mr-1" /> Search
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleReset}>
+            <X className="w-4 h-4 mr-1" /> Reset
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fetchItems(currentPage)}>
+            <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+          </Button>
         </div>
       </Card>
 
+      {/* Table */}
       <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Supplier', 'Nature', 'Date', 'Amount (USD)', 'Used (USD)', 'Remaining (USD)', 'Remarks', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
+                {['Supplier', 'Nature', 'Date', 'Amount (USD)', 'Used (USD)', 'Remaining (USD)', 'Remarks', 'Status', 'Actions'].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  )
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" /></div></td></tr>
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
+                    </div>
+                  </td>
+                </tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">No records found.</td></tr>
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                    No records found.
+                  </td>
+                </tr>
               ) : (
                 items.map((item) => (
                   <tr key={item.supplierCouponDiscountId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{item.supplierName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 font-medium">{item.nature}</span>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {item.supplierName}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDate(item.couponDate)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">{formatAmount(item.amountUsd)}</td>
-                    <td className="px-4 py-3 text-sm text-orange-600 whitespace-nowrap">{formatAmount(item.usedAmountUsd)}</td>
-                    <td className="px-4 py-3 text-sm text-green-600 font-medium whitespace-nowrap">{formatAmount(item.remainingAmountUsd)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{item.remarks || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 font-medium">
+                        {item.nature}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                      {formatDate(item.couponDate)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">
+                      {formatAmount(item.amountUsd)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-orange-600 whitespace-nowrap">
+                      {formatAmount(item.usedAmountUsd)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-green-600 font-medium whitespace-nowrap">
+                      {formatAmount(item.remainingAmountUsd)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                      {item.remarks || '—'}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${item.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                          item.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
                         {item.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setViewId(item.supplierCouponDiscountId)} className="text-gray-400 hover:text-[var(--color-primary)] transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => setEditId(item.supplierCouponDiscountId)} className="text-gray-400 hover:text-blue-600 transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => setDeleteId(item.supplierCouponDiscountId)} className="text-gray-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        <button
+                          onClick={() => setViewId(item.supplierCouponDiscountId)}
+                          className="text-gray-400 hover:text-[var(--color-primary)] transition-colors"
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditId(item.supplierCouponDiscountId)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(item.supplierCouponDiscountId)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -188,32 +278,88 @@ export const SupplierCouponDiscountsPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <p className="text-sm text-gray-500">Page {currentPage} of {totalPages} — {totalRecords} records</p>
+            <p className="text-sm text-gray-500">
+              Page {currentPage} of {totalPages} &mdash; {totalRecords} records
+            </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => fetchItems(currentPage - 1)}>Previous</Button>
-              <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => fetchItems(currentPage + 1)}>Next</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => fetchItems(currentPage - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => fetchItems(currentPage + 1)}
+              >
+                Next
+              </Button>
             </div>
           </div>
         )}
       </Card>
 
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Supplier Coupon/Discount" size="lg">
+      {/* Add Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add Supplier Coupon/Discount"
+        size="lg"
+      >
         <SupplierCouponDiscountForm mode="add" onClose={() => setShowAddModal(false)} onSuccess={handleSuccess} />
       </Modal>
-      <Modal isOpen={editId !== null} onClose={() => setEditId(null)} title="Edit Supplier Coupon/Discount" size="lg">
-        {editId && <SupplierCouponDiscountForm mode="edit" id={editId} onClose={() => setEditId(null)} onSuccess={handleSuccess} />}
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={editId !== null}
+        onClose={() => setEditId(null)}
+        title="Edit Supplier Coupon/Discount"
+        size="lg"
+      >
+        {editId && (
+          <SupplierCouponDiscountForm
+            mode="edit"
+            id={editId}
+            onClose={() => setEditId(null)}
+            onSuccess={handleSuccess}
+          />
+        )}
       </Modal>
-      <Modal isOpen={viewId !== null} onClose={() => setViewId(null)} title="Supplier Coupon/Discount Details" size="lg">
+
+      {/* View Modal */}
+      <Modal
+        isOpen={viewId !== null}
+        onClose={() => setViewId(null)}
+        title="Supplier Coupon/Discount Details"
+        size="lg"
+      >
         {viewId && <ViewSupplierCouponDiscount id={viewId} onClose={() => setViewId(null)} />}
       </Modal>
-      <Modal isOpen={deleteId !== null} onClose={() => setDeleteId(null)} title="Confirm Delete" size="sm">
+
+      {/* Delete Confirm Modal */}
+      <Modal
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        title="Confirm Delete"
+        size="sm"
+      >
         <div className="space-y-4">
           <p className="text-gray-700">Are you sure you want to delete this record? This action cannot be undone.</p>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>Cancel</Button>
-            <Button variant="danger" onClick={handleDelete} disabled={deleteLoading}>{deleteLoading ? 'Deleting...' : 'Delete'}</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDelete} disabled={deleteLoading}>
+              {deleteLoading ? 'Deleting...' : 'Delete'}
+            </Button>
           </div>
         </div>
       </Modal>

@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  Pencil, Eye, Search, FileText, Clock, Ship, DollarSign, Plus,
-  FileEdit, CheckCircle, Send, Truck, PackageCheck, PackageOpen, CheckCheck, XCircle
-} from 'lucide-react';
+import { Pencil, Eye, Search, FileText, Clock, Ship, DollarSign, Plus, File as FileEdit, CheckCircle, Send, Truck, PackageCheck, PackageOpen, CheckCheck, XCircle, Activity } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { Modal } from '../../components/ui/Modal';
 import { MultiSelect } from '../../components/ui/MultiSelect';
 import { companiesService } from '../../services/companiesService';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
+import { POOperationalStatusWorkflow } from './POOperationalStatusWorkflow';
 
 interface PurchaseOrder {
   purchaseOrderId: number;
@@ -18,6 +17,7 @@ interface PurchaseOrder {
   shipmentTypeName: string | null;
   poDate: string;
   poStatus: string;
+  operationalStatus?: string | null;
   totalAmount: number;
   expectedShipmentYear: number | null;
   expectedShipmentMonth: number | null;
@@ -41,6 +41,7 @@ export const PurchaseOrderList = ({ onView, onEdit, onAdd }: PurchaseOrderListPr
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [operationalStatusPO, setOperationalStatusPO] = useState<PurchaseOrder | null>(null);
   const pageSize = 10;
 
   const [summary, setSummary] = useState({
@@ -408,6 +409,9 @@ export const PurchaseOrderList = ({ onView, onEdit, onAdd }: PurchaseOrderListPr
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Operational Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -418,13 +422,13 @@ export const PurchaseOrderList = ({ onView, onEdit, onAdd }: PurchaseOrderListPr
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : purchaseOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
                     No purchase orders found
                   </td>
                 </tr>
@@ -463,6 +467,16 @@ export const PurchaseOrderList = ({ onView, onEdit, onAdd }: PurchaseOrderListPr
                           );
                         })()}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {po.operationalStatus ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Activity className="w-3 h-3" />
+                            {po.operationalStatus}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {po.currencyCode || ''} {po.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
@@ -482,6 +496,15 @@ export const PurchaseOrderList = ({ onView, onEdit, onAdd }: PurchaseOrderListPr
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
+                          {po.poStatus === 'Approved' && (
+                            <button
+                              onClick={() => setOperationalStatusPO(po)}
+                              className="text-emerald-600 hover:text-emerald-900"
+                              title="Update Operational Status"
+                            >
+                              <Activity className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -524,6 +547,34 @@ export const PurchaseOrderList = ({ onView, onEdit, onAdd }: PurchaseOrderListPr
           </div>
         )}
       </Card>
+
+      {operationalStatusPO && (
+        <Modal
+          isOpen={true}
+          onClose={() => setOperationalStatusPO(null)}
+          title={`Operational Status — ${operationalStatusPO.poNumber}`}
+        >
+          <div className="space-y-4">
+            {operationalStatusPO.operationalStatus && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Current:</span>
+                <span className="px-2.5 py-1 text-sm font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {operationalStatusPO.operationalStatus}
+                </span>
+              </div>
+            )}
+            <POOperationalStatusWorkflow
+              purchaseOrderId={operationalStatusPO.purchaseOrderId}
+              poStatus={operationalStatusPO.poStatus}
+              operationalStatus={operationalStatusPO.operationalStatus}
+              onStatusChanged={() => {
+                setOperationalStatusPO(null);
+                fetchPurchaseOrders();
+              }}
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

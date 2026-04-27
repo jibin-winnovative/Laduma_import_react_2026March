@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,7 +32,7 @@ import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { SearchProductModal } from './SearchProductModal';
 import type { SearchProductResult } from '../../services/productSearchService';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
-import { supplierCouponDiscountsService, type AvailableSupplierCouponDiscount } from '../../services/supplierCouponDiscountsService';
+import { supplierCouponDiscountsService, NATURE_OPTIONS as _NATURE_OPTIONS, type AvailableSupplierCouponDiscount } from '../../services/supplierCouponDiscountsService';
 import { removeTrailingZeros } from '../../utils/numberUtils';
 import { SupplierForm } from '../Masters/SupplierForm';
 import { Modal } from '../../components/ui/Modal';
@@ -114,6 +114,7 @@ interface PurchaseOrderFormProps {
 }
 
 export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }: PurchaseOrderFormProps) => {
+  const paymentTermsLoadedRef = useRef(false);
   const [loading, setLoading] = useState(mode === 'edit' && !!purchaseOrderId);
   const [companies, setCompanies] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -203,6 +204,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
 
   const [displayCurrencyCode, setDisplayCurrencyCode] = useState('');
 
+  // Load available coupons/discounts when supplier changes
   useEffect(() => {
     if (!selectedSupplierId) {
       setAvailableCoupons([]);
@@ -217,7 +219,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       .then(setAvailableCoupons)
       .catch(() => setAvailableCoupons([]))
       .finally(() => setLoadingCoupons(false));
-    setCouponAllocations((prev) => (prev.length === 0 ? prev : []));
+    // Clear allocations only when supplier actually changes (not on initial load)
+    setCouponAllocations((prev) => {
+      if (prev.length === 0) return prev;
+      return [];
+    });
   }, [selectedSupplierId, purchaseOrderId]);
 
   const invoiceTotal = useMemo(() => {
@@ -227,24 +233,57 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   }, [items, charges]);
 
   useEffect(() => {
-    setPaymentTerms((prev) =>
-      prev.map((term) => {
-        if (term.amount > 0) {
-          const calculatedPercentage = invoiceTotal > 0 ? toNumber(multiply(divide(term.amount, invoiceTotal), 100)) : 0;
-          return {
-            ...term,
-            percentage: calculatedPercentage,
-          };
-        } else if (term.percentage > 0) {
-          const calculatedAmount = toNumber(divide(multiply(invoiceTotal, term.percentage), 100));
-          return {
-            ...term,
-            amount: calculatedAmount,
-          };
+    // On initial edit load the amounts are already correct from the API — skip recalculation.
+    // Only recalculate when the user subsequently changes items/charges.
+    if (!paymentTermsLoadedRef.current) {
+      paymentTermsLoadedRef.current = true;
+      return;
+    }
+
+    const LOCKED_STATUSES = ['Requested', 'Paid', 'Rejected'];
+
+    setPaymentTerms((prev) => {
+      const lockedAmount = prev
+        .filter((t) => t.status && LOCKED_STATUSES.includes(t.status))
+        .reduce((acc, t) => acc + (t.amount || 0), 0);
+
+      // Remaining amount to be distributed among Pending (unlocked) terms
+      const remainingForPending = Math.max(0, invoiceTotal - lockedAmount);
+
+      const pendingTerms = prev.filter((t) => !(t.status && LOCKED_STATUSES.includes(t.status)));
+      const totalPendingPct = pendingTerms.reduce((acc, t) => acc + (t.percentage || 0), 0);
+
+      return prev.map((term) => {
+        const isLocked = term.status && LOCKED_STATUSES.includes(term.status);
+
+        if (isLocked) {
+          // Locked terms: keep amount fixed, update % to reflect real share of new invoice total
+          const updatedPct =
+            invoiceTotal > 0
+              ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
+              : term.percentage;
+          return { ...term, percentage: updatedPct };
+        }
+
+        // Pending terms: distribute remaining amount proportionally, update both % and amount
+        if (term.percentage > 0) {
+          const share = totalPendingPct > 0 ? term.percentage / totalPendingPct : 0;
+          const calculatedAmount = toNumber(multiply(remainingForPending, share));
+          const calculatedPct =
+            invoiceTotal > 0
+              ? toNumber(multiply(divide(calculatedAmount, invoiceTotal), 100))
+              : term.percentage;
+          return { ...term, amount: calculatedAmount, percentage: calculatedPct };
+        } else if (term.amount > 0) {
+          const calculatedPct =
+            invoiceTotal > 0
+              ? toNumber(multiply(divide(term.amount, invoiceTotal), 100))
+              : 0;
+          return { ...term, percentage: calculatedPct };
         }
         return term;
-      })
-    );
+      });
+    });
   }, [invoiceTotal]);
 
   useEffect(() => {
@@ -431,13 +470,22 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         })));
       }
 
-      // Populate payment terms
+      // Populate payment terms — derive % from loaded amounts so display is accurate
       if (data.payments && data.payments.length > 0) {
+        const invoiceTotalForPct = data.payments.reduce(
+          (acc: number, p: any) => acc + (p.expectedAmount || 0),
+          0
+        );
+        // Reset the guard so the upcoming invoiceTotal change (from setting items) is skipped
+        paymentTermsLoadedRef.current = false;
         setPaymentTerms(data.payments.map((payment: any) => ({
           id: `pt-${payment.purchaseOrderPaymentId}`,
           purchaseOrderPaymentId: payment.purchaseOrderPaymentId,
           description: payment.description,
-          percentage: payment.percentage,
+          percentage:
+            invoiceTotalForPct > 0
+              ? toNumber(multiply(divide(payment.expectedAmount, invoiceTotalForPct), 100))
+              : payment.percentage,
           amount: payment.expectedAmount,
           expectedDate: payment.expectedDate ? payment.expectedDate.split('T')[0] : '',
           status: payment.status,
@@ -620,24 +668,19 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       alert(`Cannot edit this payment term because its status is "${term.status}".`);
       return;
     }
+
     setPaymentTerms(paymentTerms.map(term => {
       if (term.id === id) {
         if (field === 'percentage') {
           const pct = value;
+          // % is entered as a share of the full invoice total
           const calculatedAmount = toNumber(divide(multiply(invoiceTotal, pct), 100));
-          return {
-            ...term,
-            percentage: pct,
-            amount: calculatedAmount
-          };
+          return { ...term, percentage: pct, amount: calculatedAmount };
         } else if (field === 'amount') {
           const amt = value;
-          const calculatedPercentage = invoiceTotal > 0 ? toNumber(multiply(divide(amt, invoiceTotal), 100)) : 0;
-          return {
-            ...term,
-            amount: amt,
-            percentage: calculatedPercentage
-          };
+          const calculatedPercentage =
+            invoiceTotal > 0 ? toNumber(multiply(divide(amt, invoiceTotal), 100)) : 0;
+          return { ...term, amount: amt, percentage: calculatedPercentage };
         }
         return { ...term, [field]: value };
       }
@@ -1987,6 +2030,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
             </div>
           </Card>
 
+          {/* Applied Supplier Coupons/Discounts */}
           {selectedSupplierId && (
             <Card className="p-6">
               <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
@@ -2002,9 +2046,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                     ])
                   }
                 >
-                  <Plus className="w-4 h-4 mr-2" />Add
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add
                 </Button>
               </div>
+
               {loadingCoupons ? (
                 <div className="flex justify-center py-6">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]" />
@@ -2018,13 +2064,17 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                       <thead className="bg-gray-50">
                         <tr>
                           {['Coupon/Discount', 'Available Balance', 'Allocated Amount (USD)', 'Remarks', ''].map((h) => (
-                            <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                            <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {h}
+                            </th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {couponAllocations.map((alloc) => {
-                          const selected = availableCoupons.find((c) => c.supplierCouponDiscountId === alloc.supplierCouponDiscountId);
+                          const selected = availableCoupons.find(
+                            (c) => c.supplierCouponDiscountId === alloc.supplierCouponDiscountId
+                          );
                           const available = selected ? selected.remainingAmountUsd : 0;
                           const exceedsBalance = alloc.allocatedAmountUsd > available && available > 0;
                           return (
@@ -2035,7 +2085,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                                   onChange={(e) => {
                                     const id = parseInt(e.target.value, 10);
                                     setCouponAllocations((prev) =>
-                                      prev.map((a) => a.id === alloc.id ? { ...a, supplierCouponDiscountId: isNaN(id) ? 0 : id, allocatedAmountUsd: 0 } : a)
+                                      prev.map((a) =>
+                                        a.id === alloc.id
+                                          ? { ...a, supplierCouponDiscountId: isNaN(id) ? 0 : id, allocatedAmountUsd: 0 }
+                                          : a
+                                      )
                                     );
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
@@ -2049,7 +2103,9 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                                 </select>
                               </td>
                               <td className="px-4 py-3 text-sm text-green-700 font-medium whitespace-nowrap">
-                                {selected ? `$${selected.remainingAmountUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                {selected
+                                  ? `$${selected.remainingAmountUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : '—'}
                               </td>
                               <td className="px-4 py-3 w-44">
                                 <input
@@ -2059,18 +2115,28 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                                   value={alloc.allocatedAmountUsd || ''}
                                   onChange={(e) => {
                                     const val = parseFloat(e.target.value) || 0;
-                                    setCouponAllocations((prev) => prev.map((a) => a.id === alloc.id ? { ...a, allocatedAmountUsd: val } : a));
+                                    setCouponAllocations((prev) =>
+                                      prev.map((a) => (a.id === alloc.id ? { ...a, allocatedAmountUsd: val } : a))
+                                    );
                                   }}
                                   placeholder="0.00"
-                                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm ${exceedsBalance ? 'border-red-500' : 'border-gray-300'}`}
+                                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm ${
+                                    exceedsBalance ? 'border-red-500' : 'border-gray-300'
+                                  }`}
                                 />
-                                {exceedsBalance && <p className="text-xs text-red-600 mt-1">Exceeds available balance</p>}
+                                {exceedsBalance && (
+                                  <p className="text-xs text-red-600 mt-1">Exceeds available balance</p>
+                                )}
                               </td>
                               <td className="px-4 py-3">
                                 <input
                                   type="text"
                                   value={alloc.remarks}
-                                  onChange={(e) => setCouponAllocations((prev) => prev.map((a) => a.id === alloc.id ? { ...a, remarks: e.target.value } : a))}
+                                  onChange={(e) =>
+                                    setCouponAllocations((prev) =>
+                                      prev.map((a) => (a.id === alloc.id ? { ...a, remarks: e.target.value } : a))
+                                    )
+                                  }
                                   placeholder="Remarks"
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                                 />
@@ -2078,7 +2144,9 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                               <td className="px-4 py-3">
                                 <button
                                   type="button"
-                                  onClick={() => setCouponAllocations((prev) => prev.filter((a) => a.id !== alloc.id))}
+                                  onClick={() =>
+                                    setCouponAllocations((prev) => prev.filter((a) => a.id !== alloc.id))
+                                  }
                                   className="text-red-600 hover:text-red-900 transition-colors"
                                   title="Remove"
                                 >
@@ -2094,7 +2162,9 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                   {couponAllocations.length > 0 && (
                     <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between">
                       <span className="font-medium text-gray-700">Total Discount:</span>
-                      <span className="font-semibold text-red-600">- ${totalCouponDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="font-semibold text-red-600">
+                        - ${totalCouponDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
                   )}
                 </>

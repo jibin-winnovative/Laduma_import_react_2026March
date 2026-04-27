@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, FileText, Calendar, User, Package, DollarSign, Ship, MapPin, File as FileEdit, CheckCircle, Send, Truck, PackageCheck, PackageOpen, CheckCheck, XCircle, Download, ExternalLink, Printer } from 'lucide-react';
+import { X, FileText, Calendar, User, Package, DollarSign, Ship, MapPin, File as FileEdit, CheckCircle, Send, Truck, PackageCheck, PackageOpen, CheckCheck, XCircle, Download, ExternalLink, Printer, Activity } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
@@ -92,6 +92,7 @@ interface PurchaseOrderDetails {
   totalAmount: number;
   poStatus: string;
   paymentStatus: string;
+  operationalStatus?: string | null;
   isApproved: boolean;
   approvedBy: string | null;
   approvedAt: string | null;
@@ -297,6 +298,12 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
                 </span>
               );
             })()}
+            {purchaseOrder.operationalStatus && (
+              <span className="px-3 py-1.5 text-sm font-semibold rounded-lg flex items-center gap-2 bg-white/20 text-white border border-white/30">
+                <Activity className="w-4 h-4" />
+                {purchaseOrder.operationalStatus}
+              </span>
+            )}
           </div>
         </div>
 

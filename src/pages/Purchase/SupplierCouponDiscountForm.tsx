@@ -39,6 +39,7 @@ export const SupplierCouponDiscountForm = ({ mode, id, onClose, onSuccess }: Pro
     handleSubmit,
     formState: { errors },
     setValue,
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -90,6 +91,7 @@ export const SupplierCouponDiscountForm = ({ mode, id, onClose, onSuccess }: Pro
       setError('Amount must be greater than 0.');
       return;
     }
+
     setSaving(true);
     setError('');
     try {
@@ -101,6 +103,7 @@ export const SupplierCouponDiscountForm = ({ mode, id, onClose, onSuccess }: Pro
         couponDate: data.couponDate,
         isActive: data.isActive,
       };
+
       if (mode === 'edit' && id) {
         await supplierCouponDiscountsService.update({ ...payload, supplierCouponDiscountId: id });
       } else {
@@ -132,7 +135,9 @@ export const SupplierCouponDiscountForm = ({ mode, id, onClose, onSuccess }: Pro
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
       )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Supplier */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Supplier <span className="text-red-500">*</span>
@@ -140,11 +145,15 @@ export const SupplierCouponDiscountForm = ({ mode, id, onClose, onSuccess }: Pro
           <select {...register('supplierId')} className={fieldClass(!!errors.supplierId)}>
             <option value="">Select Supplier</option>
             {suppliers.map((s) => (
-              <option key={s.supplierId} value={s.supplierId}>{s.supplierName}</option>
+              <option key={s.supplierId} value={s.supplierId}>
+                {s.supplierName}
+              </option>
             ))}
           </select>
           {errors.supplierId && <p className="text-red-500 text-xs mt-1">{errors.supplierId.message}</p>}
         </div>
+
+        {/* Nature */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nature <span className="text-red-500">*</span>
@@ -152,36 +161,72 @@ export const SupplierCouponDiscountForm = ({ mode, id, onClose, onSuccess }: Pro
           <select {...register('nature')} className={fieldClass(!!errors.nature)}>
             <option value="">Select Nature</option>
             {NATURE_OPTIONS.map((n) => (
-              <option key={n} value={n}>{n}</option>
+              <option key={n} value={n}>
+                {n}
+              </option>
             ))}
           </select>
           {errors.nature && <p className="text-red-500 text-xs mt-1">{errors.nature.message}</p>}
         </div>
+
+        {/* Amount */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Amount (USD) <span className="text-red-500">*</span>
           </label>
-          <input type="number" step="0.01" min="0.01" {...register('amountUsd')} placeholder="0.00" className={fieldClass(!!errors.amountUsd)} />
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            {...register('amountUsd')}
+            placeholder="0.00"
+            className={fieldClass(!!errors.amountUsd)}
+          />
           {errors.amountUsd && <p className="text-red-500 text-xs mt-1">{errors.amountUsd.message}</p>}
         </div>
+
+        {/* Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Date <span className="text-red-500">*</span>
           </label>
-          <input type="date" {...register('couponDate')} className={fieldClass(!!errors.couponDate)} />
+          <input
+            type="date"
+            {...register('couponDate')}
+            className={fieldClass(!!errors.couponDate)}
+          />
           {errors.couponDate && <p className="text-red-500 text-xs mt-1">{errors.couponDate.message}</p>}
         </div>
+
+        {/* Remarks */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
-          <textarea {...register('remarks')} rows={3} placeholder="Enter remarks..." className={fieldClass(false)} />
+          <textarea
+            {...register('remarks')}
+            rows={3}
+            placeholder="Enter remarks..."
+            className={fieldClass(false)}
+          />
         </div>
+
+        {/* Is Active */}
         <div className="md:col-span-2 flex items-center gap-2">
-          <input type="checkbox" id="isActive" {...register('isActive')} className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-          <label htmlFor="isActive" className="text-sm font-medium text-gray-700">Active</label>
+          <input
+            type="checkbox"
+            id="isActive"
+            {...register('isActive')}
+            className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+          />
+          <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+            Active
+          </label>
         </div>
       </div>
+
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
         <Button type="submit" variant="primary" disabled={saving}>
           {saving ? 'Saving...' : mode === 'edit' ? 'Update' : 'Create'}
         </Button>

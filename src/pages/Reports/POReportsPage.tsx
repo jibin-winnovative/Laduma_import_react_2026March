@@ -1,238 +1,451 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, X, FileText, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Download, Activity, File as FileEdit, CheckCircle, Send, CheckCheck, XCircle, FileText } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { purchaseOrdersService, type PurchaseOrderResponse } from '../../services/purchaseOrdersService';
-import { suppliersService } from '../../services/suppliersService';
+import { MultiSelect } from '../../components/ui/MultiSelect';
 import { companiesService } from '../../services/companiesService';
+import { suppliersService } from '../../services/suppliersService';
+import { poReportsService, POReportRow, POReportSearchParams } from '../../services/poReportsService';
 
-const PAGE_SIZE = 20;
+const STATUS_OPTIONS = [
+  { value: 'Draft', label: 'Draft' },
+  { value: 'Approved', label: 'Approved' },
+  { value: 'Submitted', label: 'Submitted' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Rejected', label: 'Rejected' },
+];
 
-const STATUS_OPTIONS = ['Draft', 'Submitted', 'Approved', 'Rejected', 'Cancelled'];
+const OPERATIONAL_STATUS_OPTIONS = [
+  { value: 'Goods Ready From Supplier', label: 'Goods Ready From Supplier' },
+  { value: 'Customs Clearance', label: 'Customs Clearance' },
+  { value: 'Goods Collected By Transporter', label: 'Goods Collected By Transporter' },
+  { value: 'Goods Receipt In Warehouse', label: 'Goods Receipt In Warehouse' },
+  { value: 'GRV Completed', label: 'GRV Completed' },
+];
 
-const statusColor = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case 'approved': return 'bg-green-100 text-green-800';
-    case 'submitted': return 'bg-blue-100 text-blue-800';
-    case 'rejected': return 'bg-red-100 text-red-800';
-    case 'cancelled': return 'bg-gray-100 text-gray-600';
-    default: return 'bg-yellow-100 text-yellow-800';
+const PAGE_SIZE = 10;
+
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case 'Draft': return { icon: FileEdit, color: 'text-amber-600' };
+    case 'Approved': return { icon: CheckCircle, color: 'text-green-700' };
+    case 'Submitted': return { icon: Send, color: 'text-cyan-700' };
+    case 'Completed': return { icon: CheckCheck, color: 'text-green-700' };
+    case 'Rejected': return { icon: XCircle, color: 'text-red-700' };
+    default: return { icon: FileText, color: 'text-gray-500' };
   }
 };
 
-export const POReportsPage = () => {
-  const [items, setItems] = useState<PurchaseOrderResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+interface Toast {
+  id: number;
+  type: 'success' | 'error';
+  message: string;
+}
 
+let toastId = 0;
+
+export const POReportsPage = () => {
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterSupplierId, setFilterSupplierId] = useState('');
-  const [filterCompanyId, setFilterCompanyId] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedOperationalStatuses, setSelectedOperationalStatuses] = useState<string[]>([]);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  const [suppliers, setSuppliers] = useState<{ supplierId: number; supplierName: string }[]>([]);
-  const [companies, setCompanies] = useState<{ companyId: number; companyName: string }[]>([]);
+  const [rows, setRows] = useState<POReportRow[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+
+  const addToast = (type: 'success' | 'error', message: string) => {
+    const id = ++toastId;
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+  };
 
   useEffect(() => {
-    suppliersService.getAll()
-      .then((d: any) => setSuppliers(Array.isArray(d) ? d : d?.data ?? []))
-      .catch(() => {});
-    companiesService.getAll()
-      .then((d: any) => setCompanies(Array.isArray(d) ? d : d?.data ?? []))
-      .catch(() => {});
+    const loadDropdowns = async () => {
+      try {
+        const [companiesRes, suppliersRes] = await Promise.all([
+          companiesService.getActive(),
+          suppliersService.getDropdown(),
+        ]);
+        setCompanies(companiesRes || []);
+        setSuppliers(suppliersRes || []);
+      } catch {
+        // silently ignore — dropdowns are best-effort
+      }
+    };
+    loadDropdowns();
   }, []);
 
-  const fetchItems = useCallback(async (page = 1) => {
+  const buildParams = (page: number): POReportSearchParams => ({
+    companyId: selectedCompanyId,
+    supplierId: selectedSupplierId,
+    searchTerm: searchTerm || undefined,
+    statuses: selectedStatuses,
+    operationalStatuses: selectedOperationalStatuses,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+    pageNumber: page,
+    pageSize: PAGE_SIZE,
+  });
+
+  const runSearch = async (page: number) => {
     setLoading(true);
+    setSearched(true);
     try {
-      const params: any = { pageNumber: page, pageSize: PAGE_SIZE };
-      if (searchTerm) params.searchTerm = searchTerm;
-      if (filterStatus) params.statuses = [filterStatus];
-      if (filterSupplierId) params.supplierId = parseInt(filterSupplierId, 10);
-      if (filterCompanyId) params.companyId = parseInt(filterCompanyId, 10);
-      if (fromDate) params.fromDate = fromDate;
-      if (toDate) params.toDate = toDate;
-      const result = await purchaseOrdersService.getList(params);
-      setItems(result.data ?? []);
-      setTotalRecords(result.totalRecords ?? 0);
-      setTotalPages(result.totalPages ?? 1);
-      setCurrentPage(result.currentPage ?? page);
+      const res = await poReportsService.search(buildParams(page));
+      setRows(res.data || []);
+      setTotalRecords(res.totalRecords || 0);
+      setCurrentPage(page);
     } catch {
-      setItems([]);
+      setRows([]);
+      setTotalRecords(0);
+      addToast('error', 'Failed to load report data.');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterStatus, filterSupplierId, filterCompanyId, fromDate, toDate]);
+  };
 
-  useEffect(() => { fetchItems(1); }, [fetchItems]);
+  const handleSearch = () => {
+    runSearch(1);
+  };
 
   const handleReset = () => {
+    setSelectedCompanyId(null);
+    setSelectedSupplierId(null);
     setSearchTerm('');
-    setFilterStatus('');
-    setFilterSupplierId('');
-    setFilterCompanyId('');
+    setSelectedStatuses([]);
+    setSelectedOperationalStatuses([]);
     setFromDate('');
     setToDate('');
+    setRows([]);
+    setTotalRecords(0);
+    setCurrentPage(1);
+    setSearched(false);
   };
 
-  const handleExportCSV = () => {
-    if (!items.length) return;
-    const headers = ['PO Number', 'PO Date', 'Supplier', 'Company', 'Currency', 'Status', 'Total Amount'];
-    const rows = items.map(r => [
-      r.poNumber,
-      r.poDate ? new Date(r.poDate).toLocaleDateString() : '',
-      r.supplierName ?? '',
-      r.companyName ?? '',
-      r.currencyCode ?? '',
-      r.status ?? '',
-      r.totalAmount ?? '',
-    ]);
-    const csv = [headers, ...rows].map(row => row.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `po-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await poReportsService.exportExcel(buildParams(currentPage));
+      addToast('success', 'Excel export downloaded successfully.');
+    } catch {
+      addToast('error', 'Failed to export Excel. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const formatDate = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString() : '—';
-  const formatAmount = (n: number | null | undefined) =>
-    n != null ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+  const handlePageChange = (page: number) => {
+    runSearch(page);
+  };
+
+  const formatDate = (val: string | null) => {
+    if (!val) return '—';
+    try { return new Date(val).toLocaleDateString(); } catch { return val; }
+  };
+
+  const formatAmount = (val: number | null) => {
+    if (val == null) return '—';
+    return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-primary)]">PO Reports</h1>
-          <p className="text-sm text-gray-500 mt-1">{totalRecords} record{totalRecords !== 1 ? 's' : ''} found</p>
-        </div>
-        <Button variant="outline" onClick={handleExportCSV} disabled={!items.length}>
-          <Download className="w-4 h-4 mr-2" />Export CSV
-        </Button>
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 z-[99999] space-y-2 pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white transition-all duration-300 ${
+              t.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`}
+          >
+            {t.message}
+          </div>
+        ))}
       </div>
 
-      <Card className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search PO number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchItems(1)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">PO Reports</h1>
+          <p className="text-[var(--color-text-secondary)] mt-1">
+            Search and export purchase order data
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card className="p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Company */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Company</label>
+            <select
+              value={selectedCompanyId ?? ''}
+              onChange={(e) => setSelectedCompanyId(e.target.value ? parseInt(e.target.value, 10) : null)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-white text-[var(--color-text)]"
+            >
+              <option value="">All Companies</option>
+              {companies.map((c) => (
+                <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Supplier */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Supplier</label>
+            <select
+              value={selectedSupplierId ?? ''}
+              onChange={(e) => setSelectedSupplierId(e.target.value ? parseInt(e.target.value, 10) : null)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-white text-[var(--color-text)]"
+            >
+              <option value="">All Suppliers</option>
+              {suppliers.map((s) => (
+                <option key={s.supplierId} value={s.supplierId}>{s.supplierName}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search term */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="PO Number / Supplier..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Statuses */}
+          <div>
+            <MultiSelect
+              label="Statuses"
+              options={STATUS_OPTIONS}
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+              placeholder="All statuses..."
             />
           </div>
-          <select
-            value={filterSupplierId}
-            onChange={(e) => setFilterSupplierId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-          >
-            <option value="">All Suppliers</option>
-            {suppliers.map((s) => <option key={s.supplierId} value={s.supplierId}>{s.supplierName}</option>)}
-          </select>
-          <select
-            value={filterCompanyId}
-            onChange={(e) => setFilterCompanyId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-          >
-            <option value="">All Companies</option>
-            {companies.map((c) => <option key={c.companyId} value={c.companyId}>{c.companyName}</option>)}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-          >
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+
+          {/* Operational Statuses */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">From Date</label>
+            <MultiSelect
+              label="Operational Statuses"
+              options={OPERATIONAL_STATUS_OPTIONS}
+              selectedValues={selectedOperationalStatuses}
+              onChange={setSelectedOperationalStatuses}
+              placeholder="All operational statuses..."
+            />
+          </div>
+
+          {/* From Date */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">From Date</label>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
+
+          {/* To Date */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">To Date</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">To Date</label>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             />
           </div>
-        </div>
-        <div className="flex gap-2 mt-3">
-          <Button variant="primary" size="sm" onClick={() => fetchItems(1)}><Search className="w-4 h-4 mr-1" />Search</Button>
-          <Button variant="outline" size="sm" onClick={handleReset}><X className="w-4 h-4 mr-1" />Reset</Button>
-          <Button variant="outline" size="sm" onClick={() => fetchItems(currentPage)}><RefreshCw className="w-4 h-4 mr-1" />Refresh</Button>
+
+          {/* Actions */}
+          <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-2">
+            <Button
+              onClick={handleSearch}
+              disabled={loading}
+              className="flex-1 sm:flex-none bg-[var(--color-primary)] hover:opacity-90 text-white flex items-center justify-center gap-2"
+            >
+              <Search className="w-4 h-4" />
+              {loading ? 'Searching...' : 'Search'}
+            </Button>
+            <Button onClick={handleReset} variant="secondary" disabled={loading}>
+              Reset
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={exporting || !searched}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? 'Exporting...' : 'Export Excel'}
+            </Button>
+          </div>
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden">
+      {/* Results table */}
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['PO Number', 'PO Date', 'Supplier', 'Company', 'Currency', 'Status', 'Total Amount', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                {[
+                  'PO Number',
+                  'PO Date',
+                  'Supplier',
+                  'PO Amount',
+                  'Total CBM',
+                  'Exporter Port',
+                  'Type of Shipment',
+                  'Mode of Shipment',
+                  'Expected Delivery Month',
+                  'Status',
+                  'Operational Status',
+                  'Latest Completed Event',
+                ].map((col) => (
+                  <th
+                    key={col}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                  >
+                    {col}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center">
-                  <div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" /></div>
-                </td></tr>
-              ) : items.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-500">No records found.</td></tr>
-              ) : items.map((item) => (
-                <tr key={item.purchaseOrderId} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-[var(--color-primary)] whitespace-nowrap">{item.poNumber}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDate(item.poDate)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{item.supplierName ?? '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{item.companyName ?? '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{item.currencyCode ?? '—'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(item.status)}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-right">{formatAmount(item.totalAmount)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => purchaseOrdersService.printPdf(item.purchaseOrderId).catch(() => {})}
-                      title="Print PDF"
-                      className="text-gray-500 hover:text-[var(--color-primary)] transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
+                <tr>
+                  <td colSpan={12} className="px-6 py-8 text-center text-sm text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                      Loading...
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : !searched ? (
+                <tr>
+                  <td colSpan={12} className="px-6 py-10 text-center text-sm text-gray-400">
+                    Use the filters above and click Search to view results.
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={12} className="px-6 py-8 text-center text-sm text-gray-500">
+                    No records found for the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => {
+                  const statusCfg = getStatusConfig(row.status);
+                  const StatusIcon = statusCfg.icon;
+                  return (
+                    <tr key={row.purchaseOrderId} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {row.poNumber}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(row.poDate)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {row.supplierName || '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                        {formatAmount(row.poAmount)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
+                        {row.totalCBM != null ? row.totalCBM.toFixed(3) : '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {row.exportPortName || '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {row.shipmentTypeName || '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {row.modeOfShipment || '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {row.expectedDeliveryMonth || '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${statusCfg.color}`}>
+                          <StatusIcon className="w-3.5 h-3.5" />
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {row.operationalStatus ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Activity className="w-3 h-3" />
+                            {row.operationalStatus}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {row.latestCompletedEventStatus || '—'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages} &mdash; {totalRecords} total records
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => fetchItems(currentPage - 1)} disabled={currentPage <= 1}>Previous</Button>
-              <Button variant="outline" size="sm" onClick={() => fetchItems(currentPage + 1)} disabled={currentPage >= totalPages}>Next</Button>
+        {/* Pagination */}
+        {searched && !loading && rows.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-200 sm:px-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalRecords)} of{' '}
+                {totalRecords} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  variant="secondary"
+                  className="px-3 py-1 text-sm"
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  variant="secondary"
+                  className="px-3 py-1 text-sm"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </div>
         )}
