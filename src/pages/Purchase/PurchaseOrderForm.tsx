@@ -75,6 +75,7 @@ interface POItem {
   totalCBM: number;
   receivedQty: number;
   balanceQty: number;
+  isSampleItem: boolean;
 }
 
 interface Charge {
@@ -227,7 +228,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   }, [selectedSupplierId, purchaseOrderId]);
 
   const invoiceTotal = useMemo(() => {
-    const sub = sum(items.map(item => item.amount));
+    const sub = sum(items.filter(item => !item.isSampleItem).map(item => item.amount));
     const chg = sum(charges.map(charge => charge.amount));
     return roundTo4Decimals(toNumber(sub.plus(chg)));
   }, [items, charges]);
@@ -458,6 +459,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           totalCBM: item.totalCBM || 0,
           receivedQty: item.receivedQty || 0,
           balanceQty: item.pendingQty || 0,
+          isSampleItem: item.isSampleItem ?? false,
         })));
       }
 
@@ -908,7 +910,15 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     await uploadSingleAttachment(index, { ...attachment, status: 'pending', retryCount: 0 }, entityId);
   };
 
-  const subtotal = useMemo(() => roundTo4Decimals(toNumber(sum(items.map(item => item.amount)))), [items]);
+  const allItemsAreSample = useMemo(
+    () => items.length > 0 && items.every(x => x.isSampleItem),
+    [items]
+  );
+
+  const subtotal = useMemo(
+    () => roundTo4Decimals(toNumber(sum(items.filter(item => !item.isSampleItem).map(item => item.amount)))),
+    [items]
+  );
 
   const totalCharges = useMemo(() => roundTo4Decimals(toNumber(sum(charges.map(charge => charge.amount)))), [charges]);
 
@@ -986,6 +996,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           totalCBM: toNumber(multiply(qty, product.cbm || 0)),
           receivedQty: 0,
           balanceQty: qty,
+          isSampleItem: false,
         };
       });
 
@@ -1028,6 +1039,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
               totalCBM: toNumber(multiply(qty, product.cbm || 0)),
               receivedQty: 0,
               balanceQty: qty,
+              isSampleItem: false,
             };
           });
           setItems(newItems);
@@ -1082,34 +1094,38 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       return;
     }
 
-    // Validate item quantities and prices
-    const invalidItems = items.filter(item => item.qty <= 0 || item.priceUSD <= 0);
+    // Validate item quantities and prices (sample items are exempt from price > 0 check)
+    const invalidItems = items.filter(item => item.qty <= 0 || (!item.isSampleItem && item.priceUSD <= 0));
     if (invalidItems.length > 0) {
       const errorIds = new Set(invalidItems.map(item => item.id));
       setItemValidationErrors(errorIds);
-      alert('All items must have quantity and price greater than 0');
+      alert('All items must have quantity greater than 0, and non-sample items must have price greater than 0');
       return;
     }
     setItemValidationErrors(new Set());
 
-    // Validate payment terms
-    if (paymentTerms.length === 0) {
-      alert('At least one payment term is required');
-      return;
-    }
+    const currentAllItemsAreSample = items.length > 0 && items.every(x => x.isSampleItem);
 
-    const roundedPaymentTotal = Math.round(totalPaymentAmount * 100) / 100;
-    const roundedInvoiceTotal = Math.round(invoiceTotal * 100) / 100;
+    if (!currentAllItemsAreSample) {
+      // Validate payment terms only when there are non-sample items
+      if (paymentTerms.length === 0) {
+        alert('At least one payment term is required');
+        return;
+      }
 
-    if (Math.abs(roundedPaymentTotal - roundedInvoiceTotal) > 0.01) {
-      alert(`Total payment amount (${displayCurrencyCode} ${roundedPaymentTotal.toFixed(2)}) must equal Total Invoice Amount (${displayCurrencyCode} ${roundedInvoiceTotal.toFixed(2)})`);
-      return;
-    }
+      const roundedPaymentTotal = Math.round(totalPaymentAmount * 100) / 100;
+      const roundedInvoiceTotal = Math.round(invoiceTotal * 100) / 100;
 
-    const missingDates = paymentTerms.some(term => !term.expectedDate);
-    if (missingDates) {
-      alert('Expected Date is required for all payment terms');
-      return;
+      if (Math.abs(roundedPaymentTotal - roundedInvoiceTotal) > 0.01) {
+        alert(`Total payment amount (${displayCurrencyCode} ${roundedPaymentTotal.toFixed(2)}) must equal Total Invoice Amount (${displayCurrencyCode} ${roundedInvoiceTotal.toFixed(2)})`);
+        return;
+      }
+
+      const missingDates = paymentTerms.some(term => !term.expectedDate);
+      if (missingDates) {
+        alert('Expected Date is required for all payment terms');
+        return;
+      }
     }
 
     // Validate coupon allocations
@@ -1177,8 +1193,9 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           itemName: item.itemName,
           uom: item.uom,
           orderedQty: item.qty,
-          unitPriceForeign: item.priceUSD,
-          cbm: item.cbm,
+          isSampleItem: item.isSampleItem,
+          unitPriceForeign: item.isSampleItem ? 0 : item.priceUSD,
+          cbm: item.isSampleItem ? 0 : item.cbm,
           grossWeight: 0,
         };
       });
@@ -1191,14 +1208,17 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           amount: charge.amount,
         }));
 
-      // Transform payment terms to payments
-      const transformedPayments = paymentTerms.map(term => ({
-        purchaseOrderPaymentId: term.purchaseOrderPaymentId || null,
-        description: term.description,
-        percentage: term.percentage,
-        amount: term.amount,
-        expectedDate: term.expectedDate,
-      }));
+      // Transform payment terms to payments (empty for sample-only POs)
+      const currentAllSample = items.length > 0 && items.every(x => x.isSampleItem);
+      const transformedPayments = currentAllSample
+        ? []
+        : paymentTerms.map(term => ({
+            purchaseOrderPaymentId: term.purchaseOrderPaymentId || null,
+            description: term.description,
+            percentage: term.percentage,
+            amount: term.amount,
+            expectedDate: term.expectedDate,
+          }));
 
       // Build payload according to backend API contract - convert string IDs to numbers
       const payload = {
@@ -1718,6 +1738,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">UOM</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-amber-600 uppercase bg-amber-50">Sample Item</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price (USD)</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">CBM</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
@@ -1734,7 +1755,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                 <tbody className="bg-white divide-y divide-gray-200">
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={mode === 'edit' ? 13 : 11} className="px-4 py-8 text-center text-sm text-gray-500">
+                      <td colSpan={mode === 'edit' ? 14 : 12} className="px-4 py-8 text-center text-sm text-gray-500">
                         No items added. Click "Import Products" to add items.
                       </td>
                     </tr>
@@ -1769,11 +1790,34 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           />
                         </td>
                         <td className="px-4 py-2 text-sm">{item.uom}</td>
+                        <td className="px-4 py-2 text-center bg-amber-50">
+                          <input
+                            type="checkbox"
+                            checked={item.isSampleItem}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setItems(prev => prev.map(i => {
+                                if (i.id !== item.id) return i;
+                                return {
+                                  ...i,
+                                  isSampleItem: checked,
+                                  priceUSD: checked ? 0 : i.priceUSD,
+                                  cbm: checked ? 0 : i.cbm,
+                                  amount: checked ? 0 : i.amount,
+                                  totalCBM: checked ? 0 : i.totalCBM,
+                                };
+                              }));
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                            title="Mark as sample item"
+                          />
+                        </td>
                         <td className="px-4 py-2">
                           <input
                             type="number"
                             step="any"
-                            value={item.priceUSD}
+                            value={item.isSampleItem ? 0 : item.priceUSD}
+                            disabled={item.isSampleItem}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
@@ -1787,14 +1831,15 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                               }
                             }}
                             placeholder="0"
-                            className={`w-24 px-2 py-1 border rounded text-sm ${hasError ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`w-24 px-2 py-1 border rounded text-sm ${item.isSampleItem ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : hasError ? 'border-red-500' : 'border-gray-300'}`}
                           />
                         </td>
                         <td className="px-4 py-2">
                           <input
                             type="number"
                             step="any"
-                            value={item.cbm}
+                            value={item.isSampleItem ? 0 : item.cbm}
+                            disabled={item.isSampleItem}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
@@ -1808,10 +1853,15 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                               }
                             }}
                             placeholder="0"
-                            className={`w-24 px-2 py-1 border rounded text-sm ${hasError ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`w-24 px-2 py-1 border rounded text-sm ${item.isSampleItem ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : hasError ? 'border-red-500' : 'border-gray-300'}`}
                           />
                         </td>
                         <td className="px-4 py-2">
+                          {item.isSampleItem ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                              0 (Sample)
+                            </span>
+                          ) : (
                           <input
                             type="number"
                             step="any"
@@ -1831,6 +1881,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                             placeholder="0"
                             className={`w-24 px-2 py-1 border rounded text-sm ${hasError ? 'border-red-500' : 'border-gray-300'}`}
                           />
+                          )}
                         </td>
                         <td className="px-4 py-2">
                           <input
@@ -2172,6 +2223,16 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
             </Card>
           )}
 
+          {allItemsAreSample ? (
+            <Card className="p-6">
+              <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                <p className="text-sm text-amber-800 font-medium">
+                  Payment Terms are not required for sample-only purchase orders.
+                </p>
+              </div>
+            </Card>
+          ) : (
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
               <h3 className="text-lg font-semibold text-[var(--color-primary)]">Payment Terms</h3>
@@ -2364,6 +2425,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
               })()}
             </div>
           </Card>
+          )}
 
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">

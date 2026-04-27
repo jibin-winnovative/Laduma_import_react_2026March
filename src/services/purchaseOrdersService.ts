@@ -10,6 +10,7 @@ export interface PurchaseOrderItem {
   unitPriceForeign: number;
   cbm: number;
   grossWeight: number;
+  isSampleItem: boolean;
 }
 
 export interface PurchaseOrderCharge {
