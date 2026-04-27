@@ -32,7 +32,6 @@ import { BanksPage } from './pages/Masters/BanksPage';
 import { AttachmentTypesPage } from './pages/Masters/AttachmentTypesPage';
 import { PurchaseOrderPage } from './pages/Purchase/PurchaseOrderPage';
 import { POPaymentsPage } from './pages/Purchase/POPaymentsPage';
-import { SupplierCouponDiscountsPage } from './pages/Purchase/SupplierCouponDiscountsPage';
 import AccountsPayablePage from './pages/Payments/AccountsPayablePage';
 import { ContainerManagementPage } from './pages/Shipment/ContainerManagementPage';
 import { ContainerForm } from './pages/Shipment/ContainerForm';
@@ -41,8 +40,6 @@ import { ClearingPaymentPage } from './pages/Shipment/ClearingPaymentPage';
 import { OceanFreightPaymentPage } from './pages/Shipment/OceanFreightPaymentPage';
 import { LocalPaymentPage } from './pages/Shipment/LocalPaymentPage';
 import { ETAPaymentStatusPage } from './pages/Shipment/ETAPaymentStatusPage';
-import { POReportsPage } from './pages/Reports/POReportsPage';
-import { POPaymentsReportPage } from './pages/Reports/POPaymentsReportPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,7 +96,6 @@ function App() {
                         <Route path="/purchase/purchase-orders" element={<PurchaseOrderPage />} />
                         <Route path="/purchase/purchase-orders/:id" element={<PurchaseOrderPage />} />
                         <Route path="/purchase/po-payments" element={<POPaymentsPage />} />
-                        <Route path="/purchase/supplier-coupon-discounts" element={<SupplierCouponDiscountsPage />} />
 
                         <Route path="/payments/accounts-payable" element={<AccountsPayablePage />} />
 
@@ -111,9 +107,6 @@ function App() {
                         <Route path="/ocean-freight-payments" element={<OceanFreightPaymentPage />} />
                         <Route path="/local-payments" element={<LocalPaymentPage />} />
                         <Route path="/eta-payment-status" element={<ETAPaymentStatusPage />} />
-
-                        <Route path="/reports/purchase-orders" element={<POReportsPage />} />
-                        <Route path="/reports/po-payments" element={<POPaymentsReportPage />} />
                       </Routes>
                     </MainLayout>
                   </ProtectedRoute>
