@@ -1195,7 +1195,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           orderedQty: item.qty,
           isSampleItem: item.isSampleItem,
           unitPriceForeign: item.isSampleItem ? 0 : item.priceUSD,
-          cbm: item.isSampleItem ? 0 : item.cbm,
+          cbm: item.cbm,
           grossWeight: 0,
         };
       });
@@ -1802,9 +1802,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                                   ...i,
                                   isSampleItem: checked,
                                   priceUSD: checked ? 0 : i.priceUSD,
-                                  cbm: checked ? 0 : i.cbm,
                                   amount: checked ? 0 : i.amount,
-                                  totalCBM: checked ? 0 : i.totalCBM,
                                 };
                               }));
                             }}
@@ -1838,8 +1836,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                           <input
                             type="number"
                             step="any"
-                            value={item.isSampleItem ? 0 : item.cbm}
-                            disabled={item.isSampleItem}
+                            value={item.cbm}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const value = e.target.value;
@@ -1853,7 +1850,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                               }
                             }}
                             placeholder="0"
-                            className={`w-24 px-2 py-1 border rounded text-sm ${item.isSampleItem ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : hasError ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`w-24 px-2 py-1 border rounded text-sm ${hasError ? 'border-red-500' : 'border-gray-300'}`}
                           />
                         </td>
                         <td className="px-4 py-2">
