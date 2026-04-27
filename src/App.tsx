@@ -32,6 +32,7 @@ import { BanksPage } from './pages/Masters/BanksPage';
 import { AttachmentTypesPage } from './pages/Masters/AttachmentTypesPage';
 import { PurchaseOrderPage } from './pages/Purchase/PurchaseOrderPage';
 import { POPaymentsPage } from './pages/Purchase/POPaymentsPage';
+import { SupplierCouponDiscountsPage } from './pages/Purchase/SupplierCouponDiscountsPage';
 import AccountsPayablePage from './pages/Payments/AccountsPayablePage';
 import { ContainerManagementPage } from './pages/Shipment/ContainerManagementPage';
 import { ContainerForm } from './pages/Shipment/ContainerForm';
@@ -98,6 +99,7 @@ function App() {
                         <Route path="/purchase/purchase-orders" element={<PurchaseOrderPage />} />
                         <Route path="/purchase/purchase-orders/:id" element={<PurchaseOrderPage />} />
                         <Route path="/purchase/po-payments" element={<POPaymentsPage />} />
+                        <Route path="/purchase/supplier-coupon-discounts" element={<SupplierCouponDiscountsPage />} />
 
                         <Route path="/payments/accounts-payable" element={<AccountsPayablePage />} />
 

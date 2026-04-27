@@ -73,6 +73,7 @@ const menuItems: MenuItem[] = [
     children: [
       { label: 'Purchase Order', path: '/purchase/purchase-orders', icon: FileText },
       { label: 'PO Payments', path: '/purchase/po-payments', icon: DollarSign },
+      { label: 'Supplier Coupons/Discounts', path: '/purchase/supplier-coupon-discounts', icon: Tags },
     ],
   },
   {

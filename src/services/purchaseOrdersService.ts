@@ -24,6 +24,12 @@ export interface PurchaseOrderPayment {
   expectedDate: string;
 }
 
+export interface SupplierCouponDiscountAllocation {
+  supplierCouponDiscountId: number;
+  allocatedAmountUsd: number;
+  remarks: string;
+}
+
 export interface CreatePurchaseOrderRequest {
   companyId: number;
   poNumber: string;
@@ -41,6 +47,7 @@ export interface CreatePurchaseOrderRequest {
   items: PurchaseOrderItem[];
   charges: PurchaseOrderCharge[];
   payments: PurchaseOrderPayment[];
+  supplierCouponDiscountAllocations: SupplierCouponDiscountAllocation[];
 }
 
 export interface UpdatePurchaseOrderRequest extends CreatePurchaseOrderRequest {
