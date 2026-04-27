@@ -233,11 +233,6 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     return roundTo4Decimals(toNumber(sub.plus(chg)));
   }, [items, charges]);
 
-  const invoiceTotal = useMemo(
-    () => Math.max(0, roundTo4Decimals(invoiceSubtotalPlusCharges - totalCouponDiscount)),
-    [invoiceSubtotalPlusCharges, totalCouponDiscount]
-  );
-
   useEffect(() => {
     // On initial edit load the amounts are already correct from the API — skip recalculation.
     // Only recalculate when the user subsequently changes items/charges.
@@ -938,6 +933,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const totalCouponDiscount = useMemo(
     () => couponAllocations.reduce((acc, a) => acc + (a.allocatedAmountUsd || 0), 0),
     [couponAllocations]
+  );
+
+  const invoiceTotal = useMemo(
+    () => Math.max(0, roundTo4Decimals(invoiceSubtotalPlusCharges - totalCouponDiscount)),
+    [invoiceSubtotalPlusCharges, totalCouponDiscount]
   );
 
   const totalQuantity = useMemo(() => toNumber(sum(items.map(item => item.qty))), [items]);
