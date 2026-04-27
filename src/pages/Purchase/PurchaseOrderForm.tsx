@@ -227,11 +227,16 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     });
   }, [selectedSupplierId, purchaseOrderId]);
 
-  const invoiceTotal = useMemo(() => {
+  const invoiceSubtotalPlusCharges = useMemo(() => {
     const sub = sum(items.filter(item => !item.isSampleItem).map(item => item.amount));
     const chg = sum(charges.map(charge => charge.amount));
     return roundTo4Decimals(toNumber(sub.plus(chg)));
   }, [items, charges]);
+
+  const invoiceTotal = useMemo(
+    () => Math.max(0, roundTo4Decimals(invoiceSubtotalPlusCharges - totalCouponDiscount)),
+    [invoiceSubtotalPlusCharges, totalCouponDiscount]
+  );
 
   useEffect(() => {
     // On initial edit load the amounts are already correct from the API — skip recalculation.
@@ -935,11 +940,6 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     [couponAllocations]
   );
 
-  const grandTotal = useMemo(
-    () => Math.max(0, roundTo4Decimals(invoiceTotal - totalCouponDiscount)),
-    [invoiceTotal, totalCouponDiscount]
-  );
-
   const totalQuantity = useMemo(() => toNumber(sum(items.map(item => item.qty))), [items]);
 
   const totalCBM = useMemo(() => toNumber(sum(items.map(item => item.totalCBM))), [items]);
@@ -1149,7 +1149,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       alert('Duplicate coupon/discount selected. Each coupon/discount can only be applied once per PO.');
       return;
     }
-    if (totalCouponDiscount > invoiceTotal) {
+    if (totalCouponDiscount > invoiceSubtotalPlusCharges) {
       alert('Total coupon/discount allocation cannot exceed the PO gross total.');
       return;
     }
@@ -2050,39 +2050,6 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
             )}
           </Card>
 
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">Invoice Summary</h3>
-
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Invoice:</span>
-                  <span className="font-medium">{displayCurrencyCode} {removeTrailingZeros(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Add-on Charges:</span>
-                  <span className="font-medium">{displayCurrencyCode} {removeTrailingZeros(totalCharges)}</span>
-                </div>
-                <div className="flex justify-between text-base font-semibold pt-2 border-t border-blue-300">
-                  <span>Total Invoice Amount:</span>
-                  <span className="text-blue-700">{displayCurrencyCode} {removeTrailingZeros(invoiceTotal)}</span>
-                </div>
-                {totalCouponDiscount > 0 && (
-                  <>
-                    <div className="flex justify-between text-sm text-red-600">
-                      <span>Supplier Coupon/Discount:</span>
-                      <span className="font-medium">- {removeTrailingZeros(roundTo4Decimals(totalCouponDiscount))}</span>
-                    </div>
-                    <div className="flex justify-between text-base font-bold pt-2 border-t border-blue-300">
-                      <span>Grand Total:</span>
-                      <span className="text-blue-800">{displayCurrencyCode} {removeTrailingZeros(grandTotal)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </Card>
-
           {/* Supplier Coupons/Discounts */}
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
@@ -2238,6 +2205,31 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                 )}
               </>
             )}
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">Invoice Summary</h3>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Item Subtotal:</span>
+                  <span className="font-medium">{displayCurrencyCode} {removeTrailingZeros(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Add-on Charges:</span>
+                  <span className="font-medium">{displayCurrencyCode} {removeTrailingZeros(totalCharges)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-red-600">
+                  <span>Supplier Coupons/Discounts:</span>
+                  <span className="font-medium">- {displayCurrencyCode} {removeTrailingZeros(roundTo4Decimals(totalCouponDiscount))}</span>
+                </div>
+                <div className="flex justify-between text-base font-semibold pt-2 border-t border-blue-300">
+                  <span>Total Invoice Amount:</span>
+                  <span className="text-blue-700">{displayCurrencyCode} {removeTrailingZeros(invoiceTotal)}</span>
+                </div>
+              </div>
+            </div>
           </Card>
 
           {allItemsAreSample ? (
