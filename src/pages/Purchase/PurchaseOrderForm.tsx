@@ -32,6 +32,7 @@ import { attachmentTypesService } from '../../services/attachmentTypesService';
 import { SearchProductModal } from './SearchProductModal';
 import type { SearchProductResult } from '../../services/productSearchService';
 import { purchaseOrdersService } from '../../services/purchaseOrdersService';
+import { supplierCouponDiscountsService, type AvailableSupplierCouponDiscount } from '../../services/supplierCouponDiscountsService';
 import { removeTrailingZeros } from '../../utils/numberUtils';
 import { SupplierForm } from '../Masters/SupplierForm';
 import { Modal } from '../../components/ui/Modal';
@@ -133,6 +134,14 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([
     { id: `pt-${Date.now()}`, description: '', percentage: 0, amount: 0, expectedDate: '' }
   ]);
+  const [couponAllocations, setCouponAllocations] = useState<{
+    id: string;
+    supplierCouponDiscountId: number;
+    allocatedAmountUsd: number;
+    remarks: string;
+  }[]>([]);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableSupplierCouponDiscount[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [attachmentTypeOptions, setAttachmentTypeOptions] = useState<{ id: number; name: string }[]>([]);
@@ -193,6 +202,23 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   const companyId = watch('companyId');
 
   const [displayCurrencyCode, setDisplayCurrencyCode] = useState('');
+
+  useEffect(() => {
+    if (!selectedSupplierId) {
+      setAvailableCoupons([]);
+      setCouponAllocations([]);
+      return;
+    }
+    const sid = parseInt(selectedSupplierId, 10);
+    if (isNaN(sid)) return;
+    setLoadingCoupons(true);
+    supplierCouponDiscountsService
+      .getAvailable(sid, purchaseOrderId)
+      .then(setAvailableCoupons)
+      .catch(() => setAvailableCoupons([]))
+      .finally(() => setLoadingCoupons(false));
+    setCouponAllocations((prev) => (prev.length === 0 ? prev : []));
+  }, [selectedSupplierId, purchaseOrderId]);
 
   const invoiceTotal = useMemo(() => {
     const sub = sum(items.map(item => item.amount));
@@ -417,6 +443,18 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           status: payment.status,
           isPaid: payment.isPaid,
         })));
+      }
+
+      // Populate coupon/discount allocations
+      if (data.supplierCouponDiscountAllocations && data.supplierCouponDiscountAllocations.length > 0) {
+        setCouponAllocations(
+          data.supplierCouponDiscountAllocations.map((a: any) => ({
+            id: `ca-${a.supplierCouponDiscountId}-${Date.now()}`,
+            supplierCouponDiscountId: a.supplierCouponDiscountId,
+            allocatedAmountUsd: a.allocatedAmountUsd,
+            remarks: a.remarks ?? '',
+          }))
+        );
       }
 
       // Populate existing attachments
@@ -839,6 +877,16 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
 
   const totalProducts = useMemo(() => items.length, [items]);
 
+  const totalCouponDiscount = useMemo(
+    () => couponAllocations.reduce((acc, a) => acc + (a.allocatedAmountUsd || 0), 0),
+    [couponAllocations]
+  );
+
+  const grandTotal = useMemo(
+    () => Math.max(0, roundTo4Decimals(invoiceTotal - totalCouponDiscount)),
+    [invoiceTotal, totalCouponDiscount]
+  );
+
   const totalQuantity = useMemo(() => toNumber(sum(items.map(item => item.qty))), [items]);
 
   const totalCBM = useMemo(() => toNumber(sum(items.map(item => item.totalCBM))), [items]);
@@ -1021,6 +1069,27 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       return;
     }
 
+    // Validate coupon allocations
+    for (const alloc of couponAllocations) {
+      if (alloc.supplierCouponDiscountId === 0) {
+        alert('Please select a coupon/discount for all allocation rows or remove empty rows.');
+        return;
+      }
+      if (alloc.allocatedAmountUsd <= 0) {
+        alert('Allocated amount must be greater than 0 for all coupon/discount rows.');
+        return;
+      }
+      const coupon = availableCoupons.find((c) => c.supplierCouponDiscountId === alloc.supplierCouponDiscountId);
+      if (coupon && alloc.allocatedAmountUsd > coupon.remainingAmountUsd) {
+        alert(`Allocated amount exceeds available balance for "${coupon.nature}".`);
+        return;
+      }
+    }
+    if (totalCouponDiscount > invoiceTotal) {
+      alert('Total coupon/discount allocation cannot exceed the PO gross total.');
+      return;
+    }
+
     // Validate addon charges
     const invalidCharges = charges.filter(charge => charge.addonChargeId > 0 && charge.amount <= 0);
     if (invalidCharges.length > 0) {
@@ -1108,6 +1177,13 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         items: transformedItems,
         charges: transformedCharges,
         payments: transformedPayments,
+        supplierCouponDiscountAllocations: couponAllocations
+          .filter(a => a.supplierCouponDiscountId > 0 && a.allocatedAmountUsd > 0)
+          .map(a => ({
+            supplierCouponDiscountId: a.supplierCouponDiscountId,
+            allocatedAmountUsd: a.allocatedAmountUsd,
+            remarks: a.remarks,
+          })),
       };
 
       console.log('=== PAYLOAD DEBUG ===');
@@ -1895,9 +1971,136 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
                   <span>Total Invoice Amount:</span>
                   <span className="text-blue-700">{displayCurrencyCode} {removeTrailingZeros(invoiceTotal)}</span>
                 </div>
+                {totalCouponDiscount > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-red-600">
+                      <span>Supplier Coupon/Discount:</span>
+                      <span className="font-medium">- {removeTrailingZeros(roundTo4Decimals(totalCouponDiscount))}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold pt-2 border-t border-blue-300">
+                      <span>Grand Total:</span>
+                      <span className="text-blue-800">{displayCurrencyCode} {removeTrailingZeros(grandTotal)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </Card>
+
+          {selectedSupplierId && (
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
+                <h3 className="text-lg font-semibold text-[var(--color-primary)]">Applied Supplier Coupons/Discounts</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCouponAllocations((prev) => [
+                      ...prev,
+                      { id: `ca-${Date.now()}`, supplierCouponDiscountId: 0, allocatedAmountUsd: 0, remarks: '' },
+                    ])
+                  }
+                >
+                  <Plus className="w-4 h-4 mr-2" />Add
+                </Button>
+              </div>
+              {loadingCoupons ? (
+                <div className="flex justify-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]" />
+                </div>
+              ) : availableCoupons.length === 0 && couponAllocations.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No available coupons/discounts for this supplier.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {['Coupon/Discount', 'Available Balance', 'Allocated Amount (USD)', 'Remarks', ''].map((h) => (
+                            <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {couponAllocations.map((alloc) => {
+                          const selected = availableCoupons.find((c) => c.supplierCouponDiscountId === alloc.supplierCouponDiscountId);
+                          const available = selected ? selected.remainingAmountUsd : 0;
+                          const exceedsBalance = alloc.allocatedAmountUsd > available && available > 0;
+                          return (
+                            <tr key={alloc.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 w-64">
+                                <select
+                                  value={alloc.supplierCouponDiscountId || ''}
+                                  onChange={(e) => {
+                                    const id = parseInt(e.target.value, 10);
+                                    setCouponAllocations((prev) =>
+                                      prev.map((a) => a.id === alloc.id ? { ...a, supplierCouponDiscountId: isNaN(id) ? 0 : id, allocatedAmountUsd: 0 } : a)
+                                    );
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                                >
+                                  <option value="">Select coupon/discount</option>
+                                  {availableCoupons.map((c) => (
+                                    <option key={c.supplierCouponDiscountId} value={c.supplierCouponDiscountId}>
+                                      {c.nature} — ${c.remainingAmountUsd.toFixed(2)} available
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-green-700 font-medium whitespace-nowrap">
+                                {selected ? `$${selected.remainingAmountUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                              </td>
+                              <td className="px-4 py-3 w-44">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={alloc.allocatedAmountUsd || ''}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setCouponAllocations((prev) => prev.map((a) => a.id === alloc.id ? { ...a, allocatedAmountUsd: val } : a));
+                                  }}
+                                  placeholder="0.00"
+                                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm ${exceedsBalance ? 'border-red-500' : 'border-gray-300'}`}
+                                />
+                                {exceedsBalance && <p className="text-xs text-red-600 mt-1">Exceeds available balance</p>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="text"
+                                  value={alloc.remarks}
+                                  onChange={(e) => setCouponAllocations((prev) => prev.map((a) => a.id === alloc.id ? { ...a, remarks: e.target.value } : a))}
+                                  placeholder="Remarks"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setCouponAllocations((prev) => prev.filter((a) => a.id !== alloc.id))}
+                                  className="text-red-600 hover:text-red-900 transition-colors"
+                                  title="Remove"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {couponAllocations.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between">
+                      <span className="font-medium text-gray-700">Total Discount:</span>
+                      <span className="font-semibold text-red-600">- ${totalCouponDiscount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          )}
 
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-[var(--color-secondary)]">
