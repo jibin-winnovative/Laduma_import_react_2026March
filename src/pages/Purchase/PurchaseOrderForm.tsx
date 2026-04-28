@@ -330,11 +330,11 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     if (!selectedSupplierId) return;
     if (mode === 'add') {
       fetchSupplierPaymentTerms(Number(selectedSupplierId));
+      suppliersService.getTopPort(Number(selectedSupplierId)).then((topPort) => {
+        if (!topPort) return;
+        setValue('exportPortId', String(topPort.portId), { shouldValidate: true });
+      });
     }
-    suppliersService.getTopPort(Number(selectedSupplierId)).then((topPort) => {
-      if (!topPort) return;
-      setValue('exportPortId', String(topPort.portId), { shouldValidate: true });
-    });
   }, [selectedSupplierId]);
 
   useEffect(() => {
