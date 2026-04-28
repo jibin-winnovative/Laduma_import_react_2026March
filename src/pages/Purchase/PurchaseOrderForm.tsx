@@ -117,6 +117,7 @@ interface PurchaseOrderFormProps {
 export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }: PurchaseOrderFormProps) => {
   const paymentTermsLoadedRef = useRef(false);
   const formInitializedRef = useRef(false);
+  const pendingCouponAllocationsRef = useRef<{ id: string; supplierCouponDiscountId: number; allocatedAmountUsd: number; remarks: string; }[] | null>(null);
   const [loading, setLoading] = useState(mode === 'edit' && !!purchaseOrderId);
   const [companies, setCompanies] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -215,16 +216,26 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
     }
     const sid = parseInt(selectedSupplierId, 10);
     if (isNaN(sid)) return;
-    setLoadingCoupons(true);
-    supplierCouponDiscountsService
-      .getAvailable(sid, purchaseOrderId)
-      .then(setAvailableCoupons)
-      .catch(() => setAvailableCoupons([]))
-      .finally(() => setLoadingCoupons(false));
-    // Clear allocations only when supplier changes after the form has been initialized
+
+    // Clear allocations only when supplier changes after initialization
     if (formInitializedRef.current) {
       setCouponAllocations([]);
     }
+
+    setLoadingCoupons(true);
+    supplierCouponDiscountsService
+      .getAvailable(sid, purchaseOrderId)
+      .then((coupons) => {
+        setAvailableCoupons(coupons);
+        // Restore edit-loaded allocations after available coupons are fetched
+        if (pendingCouponAllocationsRef.current) {
+          setCouponAllocations(pendingCouponAllocationsRef.current);
+          pendingCouponAllocationsRef.current = null;
+          formInitializedRef.current = true;
+        }
+      })
+      .catch(() => setAvailableCoupons([]))
+      .finally(() => setLoadingCoupons(false));
   }, [selectedSupplierId, purchaseOrderId]);
 
   const invoiceSubtotalPlusCharges = useMemo(() => {
@@ -506,16 +517,17 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         })));
       }
 
-      // Populate coupon/discount allocations
+      // Stage coupon/discount allocations to be applied after getAvailable resolves
       if (data.supplierCouponDiscountAllocations && data.supplierCouponDiscountAllocations.length > 0) {
-        setCouponAllocations(
-          data.supplierCouponDiscountAllocations.map((a: any) => ({
-            id: `ca-${a.supplierCouponDiscountId}-${Date.now()}`,
-            supplierCouponDiscountId: a.supplierCouponDiscountId,
-            allocatedAmountUsd: a.allocatedAmountUsd,
-            remarks: a.remarks ?? '',
-          }))
-        );
+        pendingCouponAllocationsRef.current = data.supplierCouponDiscountAllocations.map((a: any) => ({
+          id: `ca-${a.supplierCouponDiscountId}-${Date.now()}`,
+          supplierCouponDiscountId: a.supplierCouponDiscountId,
+          allocatedAmountUsd: a.allocatedAmountUsd,
+          remarks: a.remarks ?? '',
+        }));
+      } else {
+        // No allocations — mark initialized now since the supplier effect won't restore anything
+        formInitializedRef.current = true;
       }
 
       // Populate existing attachments
@@ -528,8 +540,6 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           category: att.category,
         })));
       }
-
-      formInitializedRef.current = true;
 
     } catch (error: any) {
       console.error('Failed to fetch purchase order:', error);
