@@ -87,6 +87,7 @@ interface PurchaseOrderDetails {
   expectedShipmentPeriod: string | null;
   subTotalForeign: number;
   chargesForeign: number;
+  supplierCouponDiscountTotalForeign: number;
   grandTotalForeign: number;
   grandTotalLocal: number;
   totalAmount: number;
@@ -100,6 +101,14 @@ interface PurchaseOrderDetails {
   charges: PurchaseOrderCharge[];
   payments: PurchaseOrderPayment[];
   attachments: PurchaseOrderAttachment[];
+  supplierCouponDiscountAllocations: {
+    supplierCouponDiscountAllocationId: number;
+    supplierCouponDiscountId: number;
+    nature: string;
+    allocatedAmountUsd: number;
+    remarks: string | null;
+    allocatedAt: string;
+  }[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string | null;
@@ -594,23 +603,66 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
         </Card>
       )}
 
+      {purchaseOrder.supplierCouponDiscountAllocations?.length > 0 && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4">Supplier Coupons/Discounts</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupon/Discount</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Allocated Amount (USD)</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {purchaseOrder.supplierCouponDiscountAllocations.map((a) => (
+                  <tr key={a.supplierCouponDiscountAllocationId} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 text-sm text-gray-900">{a.nature}</td>
+                    <td className="px-4 py-4 text-sm font-medium text-red-600 text-right">
+                      - {formatCurrency(a.allocatedAmountUsd, purchaseOrder.currencyCode)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-500">{a.remarks || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-50">
+                <tr>
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Total Discount:</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-red-600 text-right">
+                    - {formatCurrency(purchaseOrder.supplierCouponDiscountTotalForeign, purchaseOrder.currencyCode)}
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-4">Order Summary</h3>
         <div className="space-y-3 max-w-md ml-auto">
           <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-            <span className="text-base text-[var(--color-text-secondary)]">Subtotal:</span>
+            <span className="text-base text-[var(--color-text-secondary)]">Item Subtotal:</span>
             <span className="text-base font-semibold text-[var(--color-text)]">
               {formatCurrency(purchaseOrder.subTotalForeign, purchaseOrder.currencyCode)}
             </span>
           </div>
           <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-            <span className="text-base text-[var(--color-text-secondary)]">Additional Charges:</span>
+            <span className="text-base text-[var(--color-text-secondary)]">Add-on Charges:</span>
             <span className="text-base font-semibold text-[var(--color-text)]">
               {formatCurrency(purchaseOrder.chargesForeign, purchaseOrder.currencyCode)}
             </span>
           </div>
+          <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+            <span className="text-base text-red-600">Supplier Coupons/Discounts:</span>
+            <span className="text-base font-semibold text-red-600">
+              - {formatCurrency(purchaseOrder.supplierCouponDiscountTotalForeign || 0, purchaseOrder.currencyCode)}
+            </span>
+          </div>
           <div className="flex justify-between items-center pt-4 px-4 py-4 rounded-lg" style={{ backgroundColor: 'rgba(var(--color-primary-rgb, 59, 130, 246), 0.1)' }}>
-            <span className="text-xl font-bold text-[var(--color-text)]">Grand Total:</span>
+            <span className="text-xl font-bold text-[var(--color-text)]">Total Invoice Amount:</span>
             <span className="text-xl font-bold" style={{ color: 'var(--color-primary)' }}>
               {formatCurrency(purchaseOrder.grandTotalForeign, purchaseOrder.currencyCode)}
             </span>
