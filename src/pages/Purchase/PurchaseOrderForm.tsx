@@ -116,6 +116,7 @@ interface PurchaseOrderFormProps {
 
 export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }: PurchaseOrderFormProps) => {
   const paymentTermsLoadedRef = useRef(false);
+  const formInitializedRef = useRef(false);
   const [loading, setLoading] = useState(mode === 'edit' && !!purchaseOrderId);
   const [companies, setCompanies] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -209,7 +210,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
   useEffect(() => {
     if (!selectedSupplierId) {
       setAvailableCoupons([]);
-      setCouponAllocations([]);
+      if (formInitializedRef.current) setCouponAllocations([]);
       return;
     }
     const sid = parseInt(selectedSupplierId, 10);
@@ -220,11 +221,10 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
       .then(setAvailableCoupons)
       .catch(() => setAvailableCoupons([]))
       .finally(() => setLoadingCoupons(false));
-    // Clear allocations only when supplier actually changes (not on initial load)
-    setCouponAllocations((prev) => {
-      if (prev.length === 0) return prev;
-      return [];
-    });
+    // Clear allocations only when supplier changes after the form has been initialized
+    if (formInitializedRef.current) {
+      setCouponAllocations([]);
+    }
   }, [selectedSupplierId, purchaseOrderId]);
 
   const invoiceSubtotalPlusCharges = useMemo(() => {
@@ -312,6 +312,7 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
         } else {
           // If not in edit mode, clear loading state after dropdown data is loaded
           setLoading(false);
+          formInitializedRef.current = true;
         }
       } catch (error) {
         console.error('Failed to initialize form:', error);
@@ -527,6 +528,8 @@ export const PurchaseOrderForm = ({ mode, purchaseOrderId, onClose, onSuccess }:
           category: att.category,
         })));
       }
+
+      formInitializedRef.current = true;
 
     } catch (error: any) {
       console.error('Failed to fetch purchase order:', error);
