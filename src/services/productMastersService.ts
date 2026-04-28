@@ -147,7 +147,11 @@ const productMastersService = {
     if (params.productId) queryParams.append('productId', params.productId.toString());
 
     const response: any = await api.get(`${BASE_PATH}/itemcode-exists?${queryParams.toString()}`);
-    return response?.data?.data?.exists || false;
+    const body = response?.data;
+    if (body && body.success === false) {
+      throw new Error(body.message || 'Failed to check item code');
+    }
+    return body?.data?.exists || false;
   },
 
   checkBarcodeExists: async (params: BarcodeExistsParams): Promise<boolean> => {
@@ -156,7 +160,11 @@ const productMastersService = {
     if (params.productId) queryParams.append('productId', params.productId.toString());
 
     const response: any = await api.get(`${BASE_PATH}/barcode-exists?${queryParams.toString()}`);
-    return response?.data?.data?.exists || false;
+    const body = response?.data;
+    if (body && body.success === false) {
+      throw new Error(body.message || 'Failed to check barcode');
+    }
+    return body?.data?.exists || false;
   },
 
   getQuickSummary: async (): Promise<ProductMasterQuickSummary> => {

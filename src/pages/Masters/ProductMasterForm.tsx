@@ -286,8 +286,9 @@ export const ProductMasterForm = ({ mode, productId, onClose, onSuccess }: Produ
       if (exists) {
         setError('itemCode', { message: 'Item Code already exists' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to check item code uniqueness:', error);
+      setError('itemCode', { message: error?.message || 'Unable to verify item code — please try again' });
     }
   };
 
@@ -303,8 +304,9 @@ export const ProductMasterForm = ({ mode, productId, onClose, onSuccess }: Produ
       if (exists) {
         setError('barcode', { message: 'Barcode already exists' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to check barcode uniqueness:', error);
+      setError('barcode', { message: error?.message || 'Unable to verify barcode — please try again' });
     }
   };
 
