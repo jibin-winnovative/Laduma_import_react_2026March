@@ -28,6 +28,7 @@ export const PurchaseOrderPage = () => {
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | undefined>();
   const [printDialogPoId, setPrintDialogPoId] = useState<number | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [printWithDiscount, setPrintWithDiscount] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -72,12 +73,17 @@ export const PurchaseOrderPage = () => {
     if (!printDialogPoId) return;
     setPrinting(true);
     try {
-      await purchaseOrdersService.printPdf(printDialogPoId);
+      if (printWithDiscount) {
+        await purchaseOrdersService.printPdfAdjustedDiscounts(printDialogPoId);
+      } else {
+        await purchaseOrdersService.printPdf(printDialogPoId);
+      }
     } catch {
       alert('PDF generation failed. You can print it from the view screen.');
     } finally {
       setPrinting(false);
       setPrintDialogPoId(null);
+      setPrintWithDiscount(false);
     }
   };
 
@@ -130,14 +136,28 @@ export const PurchaseOrderPage = () => {
                 Print Purchase Order
               </h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               Purchase Order saved successfully. Do you want to print the PO now?
             </p>
+            <label className="flex items-start gap-3 mb-6 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={printWithDiscount}
+                onChange={(e) => setPrintWithDiscount(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-medium">Print with discount applied</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Supplier coupon/discount value is proportionally distributed into item prices
+                </span>
+              </span>
+            </label>
             <div className="flex items-center justify-end gap-3">
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setPrintDialogPoId(null)}
+                onClick={() => { setPrintDialogPoId(null); setPrintWithDiscount(false); }}
               >
                 No, Skip
               </Button>

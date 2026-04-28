@@ -224,11 +224,17 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
   };
 
   const [printLoading, setPrintLoading] = useState(false);
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
 
-  const handlePrintPdf = async () => {
+  const handlePrintPdf = async (withDiscount = false) => {
     setPrintLoading(true);
+    setShowPrintMenu(false);
     try {
-      await purchaseOrdersService.printPdf(purchaseOrderId);
+      if (withDiscount) {
+        await purchaseOrdersService.printPdfAdjustedDiscounts(purchaseOrderId);
+      } else {
+        await purchaseOrdersService.printPdf(purchaseOrderId);
+      }
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       alert('Failed to generate PDF. Please try again.');
@@ -268,14 +274,55 @@ export const ViewPurchaseOrder = ({ purchaseOrderId, onClose }: ViewPurchaseOrde
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={handlePrintPdf}
-            disabled={printLoading}
-            className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white"
-          >
-            <Printer className="w-4 h-4" />
-            {printLoading ? 'Generating...' : 'Print PDF'}
-          </Button>
+          <div className="relative">
+            <div className="flex rounded-lg overflow-hidden border border-[var(--color-primary)] shadow-sm">
+              <button
+                onClick={() => handlePrintPdf(false)}
+                disabled={printLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                {printLoading ? 'Generating...' : 'Print PDF'}
+              </button>
+              <button
+                onClick={() => setShowPrintMenu((v) => !v)}
+                disabled={printLoading}
+                className="flex items-center px-2 py-2 text-sm bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white border-l border-white/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                aria-label="More print options"
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            {showPrintMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowPrintMenu(false)} />
+                <div className="absolute right-0 mt-1 w-64 rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-20 overflow-hidden">
+                  <button
+                    onClick={() => handlePrintPdf(false)}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700"
+                  >
+                    <div className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200">
+                      <Printer className="w-4 h-4 text-gray-500" />
+                      Print Normal
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-6">Standard PO with original prices</p>
+                  </button>
+                  <button
+                    onClick={() => handlePrintPdf(true)}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-200">
+                      <Printer className="w-4 h-4 text-gray-500" />
+                      Print with Discount Applied
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-6">Discount distributed proportionally into item prices</p>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <Button onClick={onClose} variant="secondary" className="flex items-center gap-2">
             <X className="w-4 h-4" />
             Close
