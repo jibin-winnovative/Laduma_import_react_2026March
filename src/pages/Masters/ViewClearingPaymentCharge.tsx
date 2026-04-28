@@ -147,6 +147,26 @@ export const ViewClearingPaymentCharge = ({
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1">
+                        Include in Costing
+                      </label>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${charge.isIncludedInCosting ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                        {charge.isIncludedInCosting ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <label className="text-sm font-medium text-gray-600 block mb-1">
+                        Is Duty
+                      </label>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${charge.isDuty ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>
+                        {charge.isDuty ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <label className="text-sm font-medium text-gray-600 block mb-1">
                       Status

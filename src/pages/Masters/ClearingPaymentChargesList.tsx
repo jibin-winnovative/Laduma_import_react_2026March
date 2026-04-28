@@ -261,6 +261,12 @@ export const ClearingPaymentChargesList = () => {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   VAT (%)
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  In Costing
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Is Duty
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
@@ -272,13 +278,13 @@ export const ClearingPaymentChargesList = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : charges.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                     No clearing payment charges found
                   </td>
                 </tr>
@@ -293,6 +299,20 @@ export const ClearingPaymentChargesList = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-[var(--color-text)]">
                       {item.vat != null ? `${item.vat}%` : '-'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
+                      {item.isIncludedInCosting ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Yes</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">No</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
+                      {item.isDuty ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Yes</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">No</span>
+                      )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       {item.isActive ? (

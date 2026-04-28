@@ -23,6 +23,8 @@ const clearingPaymentChargeSchema = z.object({
     .refine((val) => !val || val.trim() === '' || (!isNaN(Number(val)) && Number(val) >= 0), {
       message: 'VAT must be a valid non-negative number',
     }),
+  isIncludedInCosting: z.boolean(),
+  isDuty: z.boolean(),
   isActive: z.boolean(),
 });
 
@@ -52,10 +54,12 @@ export const ClearingPaymentChargeForm = ({
   } = useForm<ClearingPaymentChargeFormData>({
     resolver: zodResolver(clearingPaymentChargeSchema),
     defaultValues: {
-      isActive: true,
       chargeName: '',
       description: '',
       vat: '',
+      isIncludedInCosting: false,
+      isDuty: false,
+      isActive: true,
     },
   });
 
@@ -74,6 +78,8 @@ export const ClearingPaymentChargeForm = ({
       setValue('chargeName', data.chargeName);
       setValue('description', data.description || '');
       setValue('vat', data.vat != null ? String(data.vat) : '');
+      setValue('isIncludedInCosting', data.isIncludedInCosting ?? false);
+      setValue('isDuty', data.isDuty ?? false);
       setValue('isActive', data.isActive);
     } catch (error) {
       console.error('Failed to fetch clearing payment charge:', error);
@@ -95,6 +101,8 @@ export const ClearingPaymentChargeForm = ({
           chargeName: data.chargeName,
           description: data.description || '',
           vat: vatValue,
+          isIncludedInCosting: data.isIncludedInCosting,
+          isDuty: data.isDuty,
           isActive: true,
         });
         alert('Clearing payment charge created successfully!');
@@ -104,6 +112,8 @@ export const ClearingPaymentChargeForm = ({
           chargeName: data.chargeName,
           description: data.description || '',
           vat: vatValue,
+          isIncludedInCosting: data.isIncludedInCosting,
+          isDuty: data.isDuty,
           isActive: data.isActive,
         });
         alert('Clearing payment charge updated successfully!');
@@ -215,6 +225,42 @@ export const ClearingPaymentChargeForm = ({
                       {errors.vat && (
                         <p className="text-red-500 text-sm mt-1">{errors.vat.message}</p>
                       )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200">
+                        <input
+                          type="checkbox"
+                          id="isIncludedInCosting"
+                          {...register('isIncludedInCosting')}
+                          className="mt-0.5 w-5 h-5 text-[var(--color-primary)] border-gray-300 rounded focus:ring-[var(--color-primary)]"
+                        />
+                        <div>
+                          <label htmlFor="isIncludedInCosting" className="text-sm font-medium text-gray-900 block cursor-pointer">
+                            Include in Costing
+                          </label>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Add this charge to landed cost calculations
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200">
+                        <input
+                          type="checkbox"
+                          id="isDuty"
+                          {...register('isDuty')}
+                          className="mt-0.5 w-5 h-5 text-[var(--color-primary)] border-gray-300 rounded focus:ring-[var(--color-primary)]"
+                        />
+                        <div>
+                          <label htmlFor="isDuty" className="text-sm font-medium text-gray-900 block cursor-pointer">
+                            Is Duty
+                          </label>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Mark this charge as a customs duty
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
