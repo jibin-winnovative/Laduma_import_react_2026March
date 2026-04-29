@@ -28,6 +28,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   BarChart2,
+  Calculator,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -92,6 +93,13 @@ const menuItems: MenuItem[] = [
       { label: 'Ocean Freight Payment', path: '/ocean-freight-payments', icon: Ship },
       { label: 'Local Payment', path: '/local-payments', icon: Truck },
       { label: 'ETA Payment Status', path: '/eta-payment-status', icon: FileText },
+    ],
+  },
+  {
+    label: 'Costing',
+    icon: Calculator,
+    children: [
+      { label: 'Container Costing', path: '/costing/container-costing', icon: Container },
     ],
   },
   {
