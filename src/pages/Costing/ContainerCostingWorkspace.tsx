@@ -17,6 +17,7 @@ import {
   ArrowLeft,
   Info,
   AlertTriangle,
+  Bell,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -815,6 +816,7 @@ export const ContainerCostingWorkspace = () => {
               { icon: Calendar, label: 'ETD', value: fmtDate(summary?.etd) },
               { icon: Calendar, label: 'ETA', value: fmtDate(summary?.eta) },
               { icon: Package, label: 'PO Count', value: summary?.poCount },
+              { icon: Package, label: 'Total CBM', value: summary?.totalCbm !== undefined ? fmt(summary.totalCbm, 3) : '-' },
               { icon: Package, label: 'Total Items', value: summary?.totalItems },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-start gap-2">
@@ -829,20 +831,27 @@ export const ContainerCostingWorkspace = () => {
 
           {/* Financial summary row */}
           {(summary?.totalPoPaymentZar !== undefined || summary?.totalLandedAmount !== undefined) && (
-            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-              {[
-                { label: 'PO Payment (ZAR)', value: summary?.totalPoPaymentZar },
-                { label: 'Duty', value: summary?.totalDuty },
-                { label: 'Clearing Cost', value: summary?.totalClearingCost },
-                { label: 'Transportation', value: summary?.totalTransportation },
-                { label: 'Ocean Freight', value: summary?.totalOceanFreight },
-                { label: 'Total CBM', value: summary?.totalCbm, isCbm: true },
+            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {([
+                { label: 'PO Payment (ZAR)', value: summary?.totalPoPaymentZar, pending: summary?.hasPendingPoPayments },
+                { label: 'Duty', value: summary?.totalDuty, pending: summary?.hasPendingPoPayments },
+                { label: 'Clearing Cost', value: summary?.totalClearingCost, pending: summary?.hasPendingClearingPayments },
+                { label: 'Transportation', value: summary?.totalTransportation, pending: summary?.hasPendingTransportationPayments },
+                { label: 'Ocean Freight', value: summary?.totalOceanFreight, pending: summary?.hasPendingOceanFreightPayments },
                 { label: 'Landed Amount', value: summary?.totalLandedAmount, highlight: true },
-              ].map(({ label, value, isCbm, highlight }) => (
+              ] as { label: string; value?: number | null; pending?: boolean; highlight?: boolean }[]).map(({ label, value, pending, highlight }) => (
                 <div key={label} className={`rounded-lg p-2.5 ${highlight ? 'bg-white/20' : 'bg-white/10'}`}>
-                  <p className="text-[10px] text-white/50 uppercase tracking-wide leading-tight">{label}</p>
-                  <p className={`text-sm font-bold mt-0.5 text-white ${highlight ? '' : ''}`}>
-                    {value !== undefined && value !== null ? (isCbm ? fmt(value as number, 3) : fmt(value as number)) : '-'}
+                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <p className="text-[10px] text-white/50 uppercase tracking-wide leading-tight">{label}</p>
+                    {pending && (
+                      <span className="relative flex-shrink-0" title="Pending payment">
+                        <Bell className="w-3 h-3 text-amber-400" />
+                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-white">
+                    {value !== undefined && value !== null ? fmt(value) : '-'}
                   </p>
                 </div>
               ))}

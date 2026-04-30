@@ -58,6 +58,10 @@ export interface WorkspaceSummary {
   totalOceanFreight?: number;
   totalLandedAmount?: number;
   hasPendingPayments?: boolean;
+  hasPendingPoPayments?: boolean;
+  hasPendingClearingPayments?: boolean;
+  hasPendingTransportationPayments?: boolean;
+  hasPendingOceanFreightPayments?: boolean;
 }
 
 export type AllocationMethod = 'Amount' | 'CBM' | 'Custom';
@@ -207,3 +211,6 @@ export const containerCostingsService = {
     return unwrap(response);
   },
 };
+
+
+export { containerCostingsService }
