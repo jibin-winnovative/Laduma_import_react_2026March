@@ -44,6 +44,7 @@ import { ETAPaymentStatusPage } from './pages/Shipment/ETAPaymentStatusPage';
 import { POReportsPage } from './pages/Reports/POReportsPage';
 import { POPaymentsReportPage } from './pages/Reports/POPaymentsReportPage';
 import { ContainerCostingPage } from './pages/Costing/ContainerCostingPage';
+import { ContainerCostingWorkspace } from './pages/Costing/ContainerCostingWorkspace';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,7 +115,7 @@ function App() {
                         <Route path="/eta-payment-status" element={<ETAPaymentStatusPage />} />
 
                         <Route path="/costing/container-costing" element={<ContainerCostingPage />} />
-                        <Route path="/costing/container-costing/:id" element={<ContainerCostingPage />} />
+                        <Route path="/costing/container-costing/:id" element={<ContainerCostingWorkspace />} />
 
                         <Route path="/reports/purchase-orders" element={<POReportsPage />} />
                         <Route path="/reports/po-payments" element={<POPaymentsReportPage />} />
