@@ -211,6 +211,3 @@ export const containerCostingsService = {
     return unwrap(response);
   },
 };
-
-
-export { containerCostingsService }
