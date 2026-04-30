@@ -251,12 +251,31 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 // ── Number formatting ─────────────────────────────────────────────────────────
 const fmt = (n: number, d = 2) =>
-  isNaN(n) ? '0.00' : n.toLocaleString('en-ZA', { minimumFractionDigits: d, maximumFractionDigits: d });
+  isNaN(n) ? '0.00' : n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
 const fmtDate = (v?: string | null) => {
   if (!v) return '-';
   try { return new Date(v).toLocaleDateString(); } catch { return v; }
 };
+
+// ── Pure helper: build grid rows (outside component, no deps issue) ───────────
+function buildGridRows(items: WorkspaceItem[], heads: WorkspaceCostHead[], pricingState: PricingState): GridRow[] {
+  // Normalise loadedQuantity → quantity
+  const normalised = items.map(item => ({
+    ...item,
+    quantity: item.loadedQuantity ?? item.quantity,
+  }));
+  const allocated = allocateCosts(normalised, heads);
+  return allocated.map(item => {
+    const base: WorkspaceItem = {
+      ...item,
+      profitDcPercent: item.profitDcPercent > 0 ? item.profitDcPercent : pricingState.profitDcPercent,
+      branchGpPercent: item.branchGpPercent > 0 ? item.branchGpPercent : pricingState.branchGpPercent,
+      productTax: item.productTax > 0 ? item.productTax : pricingState.taxVatPercent,
+    };
+    return calcRow(base, pricingState.spRoundFinalAdjustment);
+  });
+}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export const ContainerCostingWorkspace = () => {
@@ -283,6 +302,8 @@ export const ContainerCostingWorkspace = () => {
   const [gridRows, setGridRows] = useState<GridRow[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('Basic');
   const tableRef = useRef<HTMLDivElement>(null);
+  // Guard against double-invocation in React StrictMode
+  const fetchedRef = useRef(false);
 
   const addToast = (type: 'success' | 'error', message: string) => {
     const toastIdVal = ++_toastId;
@@ -290,23 +311,7 @@ export const ContainerCostingWorkspace = () => {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== toastIdVal)), 4500);
   };
 
-  const buildGridRows = useCallback(
-    (items: WorkspaceItem[], heads: WorkspaceCostHead[], pricingState: PricingState): GridRow[] => {
-      const allocated = allocateCosts(items, heads);
-      return allocated.map(item => {
-        const base: WorkspaceItem = {
-          ...item,
-          profitDcPercent: item.profitDcPercent > 0 ? item.profitDcPercent : pricingState.profitDcPercent,
-          branchGpPercent: item.branchGpPercent > 0 ? item.branchGpPercent : pricingState.branchGpPercent,
-          productTax: item.productTax > 0 ? item.productTax : pricingState.taxVatPercent,
-        };
-        return calcRow(base, pricingState.spRoundFinalAdjustment);
-      });
-    },
-    []
-  );
-
-  const loadWorkspace = useCallback(async () => {
+  const loadWorkspace = async () => {
     if (!containerCostingId) return;
     setLoading(true);
     try {
@@ -333,9 +338,14 @@ export const ContainerCostingWorkspace = () => {
     } finally {
       setLoading(false);
     }
-  }, [containerCostingId, buildGridRows]);
+  };
 
-  useEffect(() => { loadWorkspace(); }, [loadWorkspace]);
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    loadWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Rebuild grid whenever costHeads or pricing changes (not on every keypress — use explicit recalculate)
   const handleRecalculate = () => {

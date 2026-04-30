@@ -82,6 +82,7 @@ export interface WorkspaceItem {
   itemCode: string;
   itemDescription: string;
   quantity: number;
+  loadedQuantity?: number;
   uom: string;
   cbm: number;
   unitPriceUsd: number;
